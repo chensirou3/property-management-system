@@ -26,37 +26,50 @@ async function submit() {
 
 <template>
   <div class="login-page">
-    <section class="login-visual">
-      <div class="login-brand"><span>物</span> 物业管理平台</div>
-      <div class="login-message">
-        <p class="eyebrow">PROPERTY MANAGEMENT</p>
-        <h1>让项目、资产与收费<br />保持清晰一致</h1>
-        <p>独立实现的物业运营工作台，覆盖基础档案、费用配置、收银账务与抄表流程。</p>
-        <div class="login-facts">
-          <div><strong>359</strong><span>合成房屋</span></div>
-          <div><strong>250</strong><span>合成车位</span></div>
-          <div><strong>22</strong><span>费用定义</span></div>
-        </div>
+    <header class="login-header">
+      <div class="login-header-brand">
+        <span class="cloud-mark">物</span>
+        <strong>物业云</strong>
+        <span class="login-product-name">物业管理系统</span>
       </div>
-      <div class="security-note">仅使用脱敏合成数据 · 外部通道默认模拟</div>
+      <nav class="login-nav" aria-label="产品导航">
+        <span class="active">首页</span>
+        <span>产品概览</span>
+        <span>功能说明</span>
+        <span>安全边界</span>
+        <span>使用帮助</span>
+      </nav>
+    </header>
+
+    <section class="login-banner" aria-label="产品简介">
+      <div class="login-banner-copy">
+        <p>PROPERTY MANAGEMENT CLOUD</p>
+        <h1>项目、资产、收费一体化管理</h1>
+        <span>以统一工作台承载物业运营的日常业务流程</span>
+      </div>
+      <div class="banner-orbit orbit-one"></div>
+      <div class="banner-orbit orbit-two"></div>
     </section>
-    <section class="login-panel">
-      <div class="login-card">
-        <p class="eyebrow dark">WELCOME BACK</p>
-        <h2>登录管理平台</h2>
-        <p class="muted">请输入本地环境管理员账号</p>
-        <el-form label-position="top" size="large" @submit.prevent="submit">
+
+    <main class="login-main">
+      <section class="login-card">
+        <div class="login-card-title">
+          <h2>账号登录</h2>
+          <span>欢迎使用物业管理系统</span>
+        </div>
+        <el-form class="login-form" label-position="top" size="large" @submit.prevent="submit">
           <el-form-item label="账号">
-            <el-input v-model="username" :prefix-icon="User" autocomplete="username" placeholder="请输入账号" />
+            <el-input v-model="username" :prefix-icon="User" autocomplete="username" aria-label="账号" placeholder="请输入账号" />
           </el-form-item>
           <el-form-item label="密码">
-            <el-input v-model="password" :prefix-icon="Lock" type="password" show-password autocomplete="current-password" placeholder="请输入密码" @keyup.enter="submit" />
+            <el-input v-model="password" :prefix-icon="Lock" type="password" show-password autocomplete="current-password" aria-label="密码" placeholder="请输入密码" @keyup.enter="submit" />
           </el-form-item>
           <el-button type="primary" native-type="submit" :loading="loading" class="login-submit">登录</el-button>
+          <p class="login-environment-note">本地重构环境 · 数据与外部通道均按安全边界运行</p>
         </el-form>
-        <el-alert type="info" :closable="false" show-icon title="开发环境账号由后端种子脚本生成，不使用目标站凭据。" />
-      </div>
-    </section>
+      </section>
+    </main>
+
+    <footer class="login-footer">物业管理系统 · 独立重构版本</footer>
   </div>
 </template>
-

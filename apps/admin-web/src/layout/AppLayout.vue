@@ -1,12 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowDown, Expand, Fold, Search, SwitchButton } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  Bell,
+  CircleClose,
+  Close,
+  Expand,
+  Fold,
+  Grid,
+  HomeFilled,
+  QuestionFilled,
+  RefreshRight,
+  SwitchButton,
+} from '@element-plus/icons-vue'
 import { navigation } from '../config/navigation'
 import { schemaFor } from '../config/pageSchemas'
 import { useAuthStore } from '../stores/auth'
 
+interface WorkspaceTab {
+  path: string
+  title: string
+}
+
+const TAB_STORAGE_KEY = 'pms_workspace_tabs'
 const collapsed = ref(false)
+const viewRefreshKey = ref(0)
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -18,11 +37,77 @@ const visibleNavigation = computed(() => navigation.map((group) => ({
     return auth.hasPermission(schemaFor(item.path)?.readPermission)
   }),
 })).filter((group) => group.children.length > 0))
+const currentGroupKey = computed(() => visibleNavigation.value.find((group) =>
+  group.children.some((item) => item.path === route.path))?.key || '')
+
+function restoreTabs(): WorkspaceTab[] {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(TAB_STORAGE_KEY) || '[]')
+    if (Array.isArray(saved)) {
+      return saved.filter((item) => typeof item?.path === 'string' && typeof item?.title === 'string')
+    }
+  } catch {
+    sessionStorage.removeItem(TAB_STORAGE_KEY)
+  }
+  return []
+}
+
+const workspaceTabs = ref<WorkspaceTab[]>(restoreTabs())
+
+function persistTabs() {
+  sessionStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(workspaceTabs.value.slice(-12)))
+}
+
+function ensureCurrentTab() {
+  if (route.meta.public || route.path === '/forbidden') return
+  const existing = workspaceTabs.value.find((item) => item.path === route.path)
+  if (existing) existing.title = currentTitle.value
+  else workspaceTabs.value.push({ path: route.path, title: currentTitle.value })
+  if (!workspaceTabs.value.some((item) => item.path === '/dashboard')) {
+    workspaceTabs.value.unshift({ path: '/dashboard', title: '项目看板' })
+  }
+  if (workspaceTabs.value.length > 12) {
+    workspaceTabs.value = [workspaceTabs.value[0], ...workspaceTabs.value.slice(-11)]
+  }
+  persistTabs()
+}
+
+function goToTab(path: string) {
+  if (path !== route.path) void router.push(path)
+}
+
+function closeTab(path: string) {
+  if (path === '/dashboard') return
+  const index = workspaceTabs.value.findIndex((item) => item.path === path)
+  if (index < 0) return
+  workspaceTabs.value.splice(index, 1)
+  persistTabs()
+  if (route.path === path) {
+    const next = workspaceTabs.value[Math.max(0, index - 1)] || workspaceTabs.value[0]
+    void router.push(next?.path || '/dashboard')
+  }
+}
+
+function closeOtherTabs() {
+  const current = workspaceTabs.value.find((item) => item.path === route.path)
+  workspaceTabs.value = [
+    { path: '/dashboard', title: '项目看板' },
+    ...(current && current.path !== '/dashboard' ? [current] : []),
+  ]
+  persistTabs()
+}
+
+function refreshCurrentPage() {
+  viewRefreshKey.value += 1
+}
 
 onMounted(async () => {
   await auth.loadProfile()
   await auth.loadProjects()
+  ensureCurrentTab()
 })
+
+watch(() => [route.path, currentTitle.value], ensureCurrentTab)
 
 function changeProject(projectId: string) {
   auth.setProject(projectId)
@@ -30,22 +115,64 @@ function changeProject(projectId: string) {
 
 function logout() {
   auth.logout()
-  router.push('/login')
+  sessionStorage.removeItem(TAB_STORAGE_KEY)
+  void router.push('/login')
 }
 </script>
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :class="{ collapsed }">
-      <div class="brand">
-        <div class="brand-mark">物</div>
-        <div v-show="!collapsed" class="brand-copy">
-          <strong>物业管理平台</strong>
-          <span>PROPERTY OPS</span>
-        </div>
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="cloud-mark">物</span>
+        <strong>物业云</strong>
+        <sup>®</sup>
       </div>
+      <button class="menu-toggle" type="button" aria-label="展开或收起菜单" @click="collapsed = !collapsed">
+        <el-icon><component :is="collapsed ? Expand : Fold" /></el-icon>
+      </button>
+      <div class="topbar-app"><el-icon><Grid /></el-icon><span>我的应用</span></div>
+      <div class="topbar-spacer"></div>
+      <el-select
+        :model-value="auth.currentProjectId"
+        class="project-select"
+        popper-class="project-select-popper"
+        placeholder="请选择项目"
+        @change="changeProject"
+      >
+        <el-option v-for="project in auth.projects" :key="project.id" :label="project.name" :value="project.id" />
+      </el-select>
+      <div class="topbar-tools">
+        <button type="button" aria-label="使用帮助"><el-icon><QuestionFilled /></el-icon></button>
+        <button type="button" aria-label="通知"><el-icon><Bell /></el-icon></button>
+      </div>
+      <el-dropdown>
+        <button class="user-button" type="button">
+          <span class="avatar">{{ auth.user?.displayName?.slice(0, 1) || '管' }}</span>
+          <span class="user-name">{{ auth.user?.displayName || '系统管理员' }}</span>
+          <el-icon><ArrowDown /></el-icon>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item disabled>{{ auth.user?.roles.join(' / ') }}</el-dropdown-item>
+            <el-dropdown-item :icon="SwitchButton" @click="logout">退出登录</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </header>
+
+    <aside class="sidebar" :class="{ collapsed }">
       <el-scrollbar class="menu-scroll">
-        <el-menu :default-active="route.path" router :collapse="collapsed" class="app-menu">
+        <el-menu
+          :key="currentGroupKey"
+          :default-active="route.path"
+          :default-openeds="currentGroupKey ? [currentGroupKey] : []"
+          router
+          unique-opened
+          :collapse="collapsed"
+          :collapse-transition="false"
+          class="app-menu"
+        >
           <el-sub-menu v-for="group in visibleNavigation" :key="group.key" :index="group.key">
             <template #title>
               <el-icon><component :is="group.icon" /></el-icon>
@@ -65,48 +192,49 @@ function logout() {
     </aside>
 
     <section class="main-region">
-      <header class="topbar">
-        <div class="project-context">
-          <span class="context-label">当前项目</span>
-          <el-select :model-value="auth.currentProjectId" class="project-select" placeholder="请选择项目" @change="changeProject">
-            <el-option v-for="project in auth.projects" :key="project.id" :label="project.name" :value="project.id" />
-          </el-select>
-          <el-tag type="warning" effect="plain">合成测试环境</el-tag>
+      <nav class="workspace-tabs" aria-label="已打开页面">
+        <button
+          v-for="tab in workspaceTabs"
+          :key="tab.path"
+          type="button"
+          class="workspace-tab"
+          :class="{ active: tab.path === route.path }"
+          @click="goToTab(tab.path)"
+        >
+          <el-icon v-if="tab.path === '/dashboard'"><HomeFilled /></el-icon>
+          <span>{{ tab.title }}</span>
+          <el-icon v-if="tab.path !== '/dashboard'" class="tab-close" @click.stop="closeTab(tab.path)"><Close /></el-icon>
+        </button>
+        <div class="workspace-tab-actions">
+          <el-tooltip content="刷新当前页面" placement="bottom">
+            <button type="button" aria-label="刷新当前页面" @click="refreshCurrentPage"><el-icon><RefreshRight /></el-icon></button>
+          </el-tooltip>
+          <el-tooltip content="关闭其他页签" placement="bottom">
+            <button type="button" aria-label="关闭其他页签" @click="closeOtherTabs"><el-icon><CircleClose /></el-icon></button>
+          </el-tooltip>
         </div>
-        <div class="top-actions">
-          <el-button text circle :icon="Search" aria-label="全局搜索" />
-          <el-dropdown>
-            <button class="user-button" type="button">
-              <span class="avatar">{{ auth.user?.displayName?.slice(0, 1) || '管' }}</span>
-              <span>{{ auth.user?.displayName || '系统管理员' }}</span>
-              <el-icon><ArrowDown /></el-icon>
-            </button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item disabled>{{ auth.user?.roles.join(' / ') }}</el-dropdown-item>
-                <el-dropdown-item :icon="SwitchButton" @click="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </header>
+      </nav>
 
       <div class="page-heading">
         <div>
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item>物业管理平台</el-breadcrumb-item>
+            <el-breadcrumb-item>我的应用</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
           <h1>{{ currentTitle }}</h1>
         </div>
         <div class="heading-status">
           <span class="status-dot"></span>
-          模拟支付 / 发票 / IoT
+          合成测试环境 · 外部通道模拟
         </div>
       </div>
 
       <main class="page-content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <KeepAlive :max="12">
+            <component :is="Component" :key="`${route.path}:${viewRefreshKey}`" />
+          </KeepAlive>
+        </router-view>
       </main>
     </section>
   </div>
