@@ -1,0 +1,54 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Verify backend
+        working-directory: apps/pms-api
+        run: mvn -B clean verify
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/admin-web/package-lock.json
+      - name: Install locked dependencies
+        working-directory: apps/admin-web
+        run: npm ci
+      - name: Dependency audit
+        working-directory: apps/admin-web
+        run: npm audit
+      - name: Unit tests
+        working-directory: apps/admin-web
+        run: npm test
+      - name: Production build
+        working-directory: apps/admin-web
+        run: npm run build
+
+  compose-definition:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose definition
+        env:
+          MYSQL_PASSWORD: ci-generated-placeholder
+          MYSQL_ROOT_PASSWORD: ci-generated-root-placeholder
+          REDIS_PASSWORD: ci-generated-redis-placeholder
+          JWT_SECRET: ci-placeholder-secret-at-least-32-characters
+          PMS_BOOTSTRAP_ADMIN_PASSWORD: ci-generated-admin-placeholder
+        run: docker compose config --quiet

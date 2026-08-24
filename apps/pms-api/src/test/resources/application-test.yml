@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:pms;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  redis:
+    repositories:
+      enabled: false
+
+pms:
+  security:
+    jwt-secret: test-only-secret-with-at-least-thirty-two-characters
+    access-token-minutes: 30
+  bootstrap:
+    admin-password: test-only-password
+

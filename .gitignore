@@ -1,0 +1,26 @@
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local environment and tools
+.env
+.tools/
+*.local
+
+# Frontend
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Backend
+target/
+*.log
+
+# Runtime data
+data/
+uploads/
+

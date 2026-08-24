@@ -1,0 +1,77 @@
+name: pms3-replica
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pms3_replica}
+      MYSQL_USER: ${MYSQL_USER:-pms3}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql80-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+
+  api:
+    build:
+      context: ./apps/pms-api
+    environment:
+      MYSQL_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-pms3_replica}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      MYSQL_USER: ${MYSQL_USER:-pms3}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      PMS_BOOTSTRAP_ADMIN_USERNAME: ${PMS_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      PMS_BOOTSTRAP_ADMIN_PASSWORD: ${PMS_BOOTSTRAP_ADMIN_PASSWORD:?set PMS_BOOTSTRAP_ADMIN_PASSWORD in .env}
+      PMS_API_PORT: 8088
+    ports:
+      - "${PMS_API_PORT:-8088}:8088"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8088/actuator/health | grep UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  web:
+    build:
+      context: ./apps/admin-web
+    ports:
+      - "${PMS_WEB_PORT:-5174}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  mysql80-data:
+  redis-data:

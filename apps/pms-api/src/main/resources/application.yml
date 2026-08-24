@@ -1,0 +1,62 @@
+server:
+  port: ${PMS_API_PORT:8088}
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: pms-api
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/pms3_replica?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${MYSQL_USER:pms3}
+    password: ${MYSQL_PASSWORD:}
+    hikari:
+      maximum-pool-size: 12
+      minimum-idle: 2
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 2s
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+  mvc:
+    problemdetails:
+      enabled: false
+
+pms:
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:30}
+  bootstrap:
+    admin-username: ${PMS_BOOTSTRAP_ADMIN_USERNAME:admin}
+    admin-password: ${PMS_BOOTSTRAP_ADMIN_PASSWORD:}
+  adapters:
+    payment: simulator
+    invoice: simulator
+    iot: simulator
+    java110: disabled
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  swagger-ui:
+    path: /docs
+    display-request-duration: true
+
+logging:
+  level:
+    root: INFO
+    com.propertyops.pms: INFO
+
