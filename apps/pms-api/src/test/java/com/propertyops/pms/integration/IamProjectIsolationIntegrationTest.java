@@ -133,7 +133,8 @@ class IamProjectIsolationIntegrationTest {
 
         mockMvc.perform(get("/api/v1/data/assets")
                         .header("Authorization", bearer(employeeToken))
-                        .param("communityId", PRIMARY_PROJECT))
+                        .param("communityId", PRIMARY_PROJECT)
+                        .param("status", "NORMAL"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(609));
 
