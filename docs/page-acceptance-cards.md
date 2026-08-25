@@ -384,7 +384,7 @@
 | 页面实现 | `versioned-config` |
 | 目标等级 | L1 / L2 / L3 |
 | 权限 | 页面读取 `fee:read`；写操作 `fee:write`；导出 `fee:export` |
-| 主要操作 | `create`、`edit`、`version`、`disable`、`export` |
+| 主要操作 | `create-definition`、`edit-definition`、`create-standard`、`add-version`、`disable-standard` |
 | 必备状态 | 正常、加载中、空数据、无权限、校验失败、请求失败、并发/业务冲突、批量部分失败 |
 | 来源索引 | PMS3页面与接口证据附录#08 |
 | 目标路由 | `/infee/setfee/136` |
@@ -395,23 +395,25 @@
 | 字段键 | 显示名称 | 类型 |
 |---|---|---|
 | `keyword` | 费用名称/编码 | 文本 |
-| `chargeType` | 费用类型 | 下拉选择 |
-| `status` | 状态 | 下拉选择 |
+| `feeType` | 费用类型 | 下拉选择 |
+| `enabled` | 启用状态 | 下拉选择 |
 
 ### 列模型
 
 | 字段键 | 显示名称 | 类型 |
 |---|---|---|
 | `code` | 费用编码 | 文本 |
-| `name` | 费用名称 | 文本 |
-| `chargeType` | 费用类型 | 状态 |
-| `billingCycle` | 计费周期 | 文本 |
-| `roundingRule` | 舍入规则 | 文本 |
-| `status` | 状态 | 状态 |
+| `displayName` | 费用名称 | 文本 |
+| `feeType` | 费用类型 | 状态 |
+| `subjectCode` | 会计科目 | 文本 |
+| `taxRate` | 税率 | 数值 |
+| `decimalScale` | 精度 | 数值 |
+| `roundingMode` | 舍入方式 | 状态 |
+| `enabled` | 状态 | 状态 |
 
 ### 验收记录
 
-- 业务假设：计费规则变更以版本生效，不覆盖历史。
+- 业务假设：财税字段和舍入由定义治理；标准变更追加生效版本，历史账单保存原快照。
 - 结构证据：待填写页面截图、目标扫描索引与三视口差异结果。
 - 功能证据：待填写 API、组件、E2E、权限与失败路径测试。
 - 数据证据：待填写数量/金额/关系对账；不适用时说明原因。
@@ -426,7 +428,7 @@
 | 页面实现 | `allocation-workspace` |
 | 目标等级 | L1 / L2 / L3 |
 | 权限 | 页面读取 `fee:read`；写操作 `fee:write`；导入 `fee:import`；导出 `fee:export` |
-| 主要操作 | `allocate`、`batch-allocate`、`preview`、`import`、`export` |
+| 主要操作 | `preview`、`assign`、`replay`、`cancel`、`refresh` |
 | 必备状态 | 正常、加载中、空数据、无权限、校验失败、请求失败、并发/业务冲突、批量部分失败 |
 | 来源索引 | PMS3页面与接口证据附录#09 |
 | 目标路由 | `/infee/feeset/141` |
@@ -436,24 +438,27 @@
 
 | 字段键 | 显示名称 | 类型 |
 |---|---|---|
-| `feeDefinitionId` | 费用项目 | 下拉选择 |
-| `assetScope` | 房产范围 | 树选择 |
+| `standardId` | 费用标准 | 下拉选择 |
+| `targetType` | 目标类型 | 下拉选择 |
+| `keyword` | 对象编码/名称 | 文本 |
 | `effectiveDate` | 生效日期 | 日期 |
 
 ### 列模型
 
 | 字段键 | 显示名称 | 类型 |
 |---|---|---|
-| `feeName` | 费用项目 | 文本 |
-| `assetName` | 房产/范围 | 文本 |
 | `standardName` | 费用标准 | 文本 |
+| `targetType` | 目标类型 | 状态 |
+| `targetCode` | 对象编码 | 文本 |
+| `targetName` | 对象名称 | 文本 |
+| `coefficient` | 系数 | 数值 |
 | `effectiveFrom` | 生效日期 | 日期 |
 | `effectiveTo` | 失效日期 | 日期 |
 | `status` | 状态 | 状态 |
 
 ### 验收记录
 
-- 业务假设：批量分配必须先预览命中范围。
+- 业务假设：批量分配必须先预览命中和冲突；取消截断有效期，不删除历史。
 - 结构证据：待填写页面截图、目标扫描索引与三视口差异结果。
 - 功能证据：待填写 API、组件、E2E、权限与失败路径测试。
 - 数据证据：待填写数量/金额/关系对账；不适用时说明原因。
@@ -468,7 +473,7 @@
 | 页面实现 | `receivable-workflow` |
 | 目标等级 | L1 / L2 / L3 |
 | 权限 | 页面读取 `fee:read`；写操作 `fee:write`；导出 `fee:export` |
-| 主要操作 | `preview`、`generate`、`view-task`、`export-errors` |
+| 主要操作 | `preview`、`enqueue`、`poll-task`、`view-items`、`view-errors`、`reconcile` |
 | 必备状态 | 正常、加载中、空数据、无权限、校验失败、请求失败、并发/业务冲突、批量部分失败 |
 | 来源索引 | PMS3页面与接口证据附录#10 |
 | 目标路由 | `/infee/receivable/163` |
@@ -479,8 +484,8 @@
 | 字段键 | 显示名称 | 类型 |
 |---|---|---|
 | `billingPeriod` | 账期 | 月份 |
-| `feeDefinitionId` | 费用项目 | 下拉选择 |
-| `assetScope` | 房产范围 | 树选择 |
+| `keyword` | 房屋编码/名称 | 文本 |
+| `assetIds` | 计费资产 | multi-select |
 
 ### 列模型
 
@@ -489,13 +494,15 @@
 | `assetName` | 房产 | 文本 |
 | `customerName` | 客户 | 脱敏文本 |
 | `feeName` | 费用项目 | 文本 |
-| `billingPeriod` | 账期 | 月份 |
+| `standardVersion` | 标准版本 | 文本 |
+| `calculationBasis` | 计算基础 | 状态 |
+| `roundingMode` | 舍入 | 状态 |
 | `amount` | 应收金额 | 金额 |
 | `validationStatus` | 校验结果 | 状态 |
 
 ### 验收记录
 
-- 业务假设：生成使用幂等请求键并保留批次。
+- 业务假设：生成使用请求键和请求哈希，异步落账并保存配置校验值与三项对账。
 - 结构证据：待填写页面截图、目标扫描索引与三视口差异结果。
 - 功能证据：待填写 API、组件、E2E、权限与失败路径测试。
 - 数据证据：待填写数量/金额/关系对账；不适用时说明原因。
@@ -508,9 +515,9 @@
 | 路由 | `/fees/temporary-receivables` |
 | 波次 / 领域 | A / `fees` |
 | 页面实现 | `temporary-receivable-workflow` |
-| 目标等级 | L1 / L2 |
+| 目标等级 | L1 / L2 / L3 |
 | 权限 | 页面读取 `fee:read`；写操作 `fee:write`；导入 `fee:import`；导出 `fee:export` |
-| 主要操作 | `add-line`、`validate`、`generate`、`import`、`export-errors` |
+| 主要操作 | `add-line`、`remove-line`、`validate-preview`、`enqueue`、`view-task`、`reconcile` |
 | 必备状态 | 正常、加载中、空数据、无权限、校验失败、请求失败、并发/业务冲突、批量部分失败 |
 | 来源索引 | PMS3页面与接口证据附录#11 |
 | 目标路由 | `/infee/receivableTemporary/297` |
@@ -530,14 +537,16 @@
 |---|---|---|
 | `assetName` | 房产 | 文本 |
 | `customerName` | 客户 | 脱敏文本 |
-| `feeName` | 费用项目 | 文本 |
+| `feeDefinition` | 临时费用定义 | 文本 |
 | `description` | 临时费用说明 | 文本 |
+| `quantity` | 数量 | 数值 |
+| `unitPrice` | 单价 | 金额 |
 | `amount` | 应收金额 | 金额 |
 | `status` | 状态 | 状态 |
 
 ### 验收记录
 
-- 业务假设：临时应收不复用周期计费规则。
+- 业务假设：临时应收只使用显式允许的定义，不复用周期分配规则；任务仍使用幂等和不可变快照。
 - 结构证据：待填写页面截图、目标扫描索引与三视口差异结果。
 - 功能证据：待填写 API、组件、E2E、权限与失败路径测试。
 - 数据证据：待填写数量/金额/关系对账；不适用时说明原因。

@@ -107,13 +107,29 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 
 ## 费用
 
+读取接口要求 `fee:read`，定义、标准、分配和生成任务写接口要求 `fee:write`；所有请求均由服务端重验 `communityId` 项目范围。金额使用 `BigDecimal`，版本/分配生效日为闭区间，重叠配置返回 `409`。
+
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/fee-standards` | 创建标准及第一个不可变版本 |
-| POST | `/fee-allocations:batch-assign` | 批量分配资产，重复分配跳过 |
-| POST | `/fee-allocations:batch-cancel` | 批量软停用分配 |
-| POST | `/receivable-jobs:preview` | 只计算不落账，返回公式快照 |
-| POST | `/receivable-jobs` | 幂等生成账单和明细 |
+| GET/POST | `/fees/definitions` | 查询或创建费用定义；包含会计科目、税务分类/税率、币种、精度、舍入和临时费用开关 |
+| PUT | `/fees/definitions/{id}` | 按版本更新定义；历史账单快照不随之改变 |
+| GET/POST | `/fees/standards` | 查询或创建标准及第一个不可变版本 |
+| GET/POST | `/fees/standards/{id}/versions` | 查询版本或追加新生效版本；拒绝有效期重叠 |
+| POST | `/fees/standards/{id}:disable` | 停用标准，不删除版本和历史引用 |
+| GET | `/fees/allocations` | 按项目、标准、目标和生效日查询分配 |
+| POST | `/fees/allocations:preview` | 只预览批量资产/仪表命中、冲突和可写数量 |
+| POST | `/fees/allocations:assign` | 按请求键批量分配；同请求重放返回原结果 |
+| POST | `/fees/allocations:cancel` | 按取消日期截断有效期并保留历史 |
+| POST | `/receivables:preview` | 周期应收无写入试算，返回公式、定义、版本、分配、精度、舍入和整批校验值 |
+| POST | `/receivable-jobs` | 使用 `Idempotency-Key` 创建周期异步任务；同键不同请求拒绝 |
+| GET | `/receivable-jobs` | 按项目和 PERIODIC/TEMPORARY 类型查询任务 |
+| GET | `/receivable-jobs/{id}` | 查看逐行结果、错误、账单引用和配置—应收—账单对账 |
+| POST | `/temporary-receivables:preview` | 校验临时费用明细并生成金额快照 |
+| POST | `/temporary-receivable-jobs` | 创建临时应收异步任务；仅接受允许临时使用的费用定义 |
+
+兼容旧客户端的 `/fee-standards`、`/fee-allocations:batch-assign`、`/fee-allocations:batch-cancel` 和 `/receivable-jobs:preview` POST 别名暂时保留；新页面和生成契约使用上述 `/fees/*` 与 `/receivables:preview` 路径。
+
+周期计算支持 `BUILDING_AREA`、`USABLE_AREA`、`FIXED` 和 `METER_USAGE`，再应用系数、最小/最大金额、定义级小数位和 `HALF_UP`/`HALF_EVEN`/`DOWN`/`UP`。创建任务后返回 QUEUED/RUNNING/COMPLETED/PARTIAL/FAILED 状态；业务失败保留错误明细和不一致对账，不静默覆盖既有账单。
 
 ## 收银和财务
 

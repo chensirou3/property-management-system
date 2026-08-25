@@ -64,6 +64,8 @@ npm run api:check:live
 
 `test:catalog-smoke` 覆盖 49/49 路由、标题、非占位内容和横向溢出；`test:catalog-visual` 比对三个目标视口的 147 张 Windows/Chrome 基线。首次建立或受审 UI 变更时使用 `npx playwright test e2e/page-catalog.visual.spec.ts --update-snapshots`，人工检查后必须再执行一次不带更新参数的纯比对。
 
+Playwright 默认使用 1 个 worker。所有生命周期用例共用同一个持久验收后端，串行执行可以避免迁移批次、IAM 变更或应收任务在其他用例截图/查询期间产生瞬时数据污染；需要并行时必须先为每个 worker 提供独立数据库和独立管理员上下文，不能只调高 `--workers`。
+
 G3 房产—客户主链路可独立重复验证：
 
 ```powershell
@@ -80,13 +82,21 @@ npx playwright test e2e/migration-center-lifecycle.spec.ts --repeat-each=2 --wor
 
 测试从页面 17 载入“32 条合格 + 1 条错误”样本，依次执行 Raw 上传、错误隔离、审批、生产写入、对账和回滚。每次结束后 `migration_object_map.active`、未回滚 `migration_change_log` 和本批生产目标剩余数都必须为 0；Raw、Quarantine、状态事件和审计应继续保留作为证据。相同文件与映射版本会返回原批次，若需在回滚后重新演练，应生成新来源内容或提升映射版本。
 
+G5 费用与应收主链路可独立验证：
+
+```powershell
+npx playwright test e2e/fee-receivable-lifecycle.spec.ts --workers=1
+```
+
+用例检查页面 8 定义财税/舍入列、页面 9 分配预览、页面 10 周期试算与异步任务、页面 11 临时费用试算与异步任务；两个任务详情都必须完成且不能出现“不一致”。运行库再次执行会使用相同请求键安全重放，不会重复生成周期账单。若任务返回 `PERIODIC_BILL_CONFIGURATION_CONFLICT`，表示同一资产/账期已有不同配置快照的周期账单；应选择明确的验收资产/账期，不能删除或覆盖历史账单来让测试通过。
+
 ## 数据库迁移和备份
 
 - 应用启动时自动执行 Flyway；生产环境禁止修改已执行的迁移文件，只能新增版本。
 - 升级前使用 `mysqldump --single-transaction` 备份业务库，另行备份 `.env` 中的秘密到受控密码库。
 - 回滚代码前确认新迁移是否向后兼容；财务数据不得以删除迁移方式回退。
 - 恢复后必须检查 Flyway 状态、账单恒等式、孤儿外键、登录、仪表和支付模拟链路。
-- G4 恢复检查至少包括：Flyway 为 V12、空库 65 张表、主项目有效房屋/车位/客户/客户资产关系为 359/250/403/403、隔离项目具备 1/1/1/2/1 的网格/楼栋/单元/资产/客户链，以及迁移活动映射、未回滚变更、孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。
+- G5 恢复检查至少包括：Flyway 为 V14、空库 68 张表、主项目有效房屋/车位/客户/客户资产关系为 359/250/403/403、隔离项目具备 1/1/1/2/1 的网格/楼栋/单元/资产/客户链；费用定义/标准/分配为 23/16/743，允许临时费用的启用定义为 1；迁移活动映射、未回滚变更、孤儿关系、跨项目关系、重复有效关系、非法面积、ACTIVE 版本/分配重叠、周期账单重复、无效账单校验值和 COMPLETED 任务对账差异均为 0。
 
 ## 故障定位
 
@@ -94,4 +104,4 @@ npx playwright test e2e/migration-center-lifecycle.spec.ts --repeat-each=2 --wor
 - `401`：令牌缺失、过期或已由会话版本撤销；`403`：权限/项目范围不足，或首次改密前访问业务接口；`429`：账号/IP 登录失败达到阈值；`409`：版本冲突或幂等业务冲突；`400`：字段/业务规则错误。
 - MySQL/Redis 先查看 `docker compose ps` 健康状态，再检查端口占用和本地 `.env`。
 - Playwright 直接使用本机 Chrome；失败产物位于 `apps/admin-web/test-results` 和 `playwright-report`。
-- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与看板；G2—G4 使用 `test:catalog-smoke` 和 `test:catalog-visual` 覆盖 49 页。G4 只受审更新页面 17 的 3 张迁移中心图片，并在视觉测试中把批次列表固定为空响应，防止保留的审计批次导致截图漂移；原因、人工检查和摘要见 `visual-baselines.md`。
+- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与看板；G2—G5 使用 `test:catalog-smoke` 和 `test:catalog-visual` 覆盖 49 页。视觉测试把迁移批次和应收任务列表固定为空响应，防止依法保留的审计/任务证据导致截图漂移；真实 API 生命周期仍由专用 E2E 和后端集成测试覆盖。原因、人工检查和摘要见 `visual-baselines.md`。
