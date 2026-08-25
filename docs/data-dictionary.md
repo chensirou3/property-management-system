@@ -8,7 +8,7 @@
 - 金额为 `DECIMAL(18,2)`，用量、单价、系数和面积保留更高小数位。
 - JSON 快照用于保存公式、收据、适配器和计算上下文，避免未来规则变化改写历史。
 
-## 表分组（空库迁移后共 77 张业务/基础设施表）
+## 表分组（空库迁移后共 84 张业务/基础设施表）
 
 | 分组 | 核心表 | 作用 |
 |---|---|---|
@@ -23,6 +23,7 @@
 | 票据 | `receipt`、`receipt_number_segment`、`invoice_request` | 受控号段、收据快照、换开/作废证据和模拟发票结果 |
 | 财务治理 | `bill_adjustment`、`discount_policy`、`daily_settlement`、`financial_event` | 调账审批、折扣策略、日结锁定和统一不可变事件链 |
 | 仪表 | `meter`、`meter_reading_batch`、`meter_reading`、`meter_share_rule`、`meter_share_rule_version`、`meter_share_result`、`meter_replacement`、`iot_reading_inbox`、`meter_charge_reconciliation`、`meter_event` | 表具、连续读数、版本化公摊、IoT 入站、换表凭证、计量对账和事件链 |
+| 报表与通知 | `report_definition`、`report_export_job`、`report_export_event`、`receipt_print_job`、`receipt_print_item`、`notification_batch`、`notification_message` | 固定报表口径、异步制品/事件、打印快照/次数和模拟通知证据 |
 | 迁移治理 | `migration_batch`、`migration_raw_record`、`migration_quarantine_record`、`migration_canonical_record`、`migration_staging_record`、`migration_object_map`、`migration_reconciliation`、`migration_change_log`、`migration_batch_event` | 五层证据、源目标映射、审批执行、对账、状态轨迹与逆序回滚 |
 | 支撑 | `audit_log`、`outbox_event`、`system_dictionary`、导入/迁移任务表 | 审计、事件外盒、字典和作业状态 |
 
@@ -58,6 +59,10 @@
 28. 公摊结果必须引用账期有效的规则版本；同一规则、批次和资产参数相同可重放，参数不同必须冲突。
 29. IoT 模拟入站按适配器和来源引用唯一，保留原负载及 SHA-256；换表按幂等键唯一并保存新旧版本、连续读数、凭证号和快照校验值。
 30. `METER_USAGE` 分配只允许经已审核计量批次生成应收；账单明细嵌入原读数快照/校验值，每条读数最多计费一次，并保存 COUNT/USAGE/AMOUNT 三项对账。
+31. `report_definition.report_code` 和 `page_path` 分别唯一；报表只执行代码内固定查询与字段白名单，不接受任意 SQL、表名或列名。
+32. 报表导出任务的 `(community_id, request_key)` 唯一并保存请求 SHA-256；成功任务必须同时具备制品、MIME、行数、64 位制品校验和和完整状态事件。
+33. 打印任务的 `item_count` 必须等于 `receipt_print_item` 数量；每个明细冻结收据快照和 SHA-256，成功任务数与 `receipt.print_count` 一致。
+34. 通知批次渠道仅允许 `SMS_SIMULATOR`、`WECHAT_SIMULATOR`、`EMAIL_SIMULATOR` 且 `simulated=true`；成功/失败计数必须等于消息明细，正文快照和模拟引用不可为空。
 
 ## 合成项目基线
 

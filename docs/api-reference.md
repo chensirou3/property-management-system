@@ -191,3 +191,25 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 | GET | `/meter-reading-batches/{id}/reconciliation` | 查询 COUNT、USAGE、AMOUNT 三项计量源—账单差异 |
 
 读数固定保存公式输入、倍率、损耗、修正、公摊版本和 SHA-256；计量账单再嵌入原读数快照与原校验值，规则变化不会回写历史。面积公摊和计量公式的响应/账单快照包含 `assumptionRule=true`，明确表示仍需真实业务口径替换。G5 通用周期应收不会处理 `METER_USAGE` 分配，计量类应收只能从已审核批次生成。
+
+## 报表、导出、打印与通知
+
+报表读取按定义所属领域要求 `finance:read`、`report:read`、`notification:read`、`invoice:read`、`bank:read` 或 `property:read`；导出/下载要求对应 `*:export`，收据打印要求 `finance:print`。任务列表只返回调用者具备读取权限的报表任务，不能凭任务 ID 越权读取元数据或制品。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/reports/catalog` | 返回当前用户可见的 22 个固定定义、路径、行粒度、公式、字段白名单和固定算例 |
+| GET | `/reports/{reportCode}` | 按项目、固定筛选和服务端分页执行受控读模型，返回汇总、钻取、查询 SHA-256、数据源模式和耗时 |
+| POST | `/report-jobs` | 以 `Idempotency-Key` 创建 CSV/XLSX/PDF/PRINT 异步任务；保存请求哈希、筛选、选择列和水印 |
+| GET | `/report-jobs` | 按项目返回当前用户可读报表的任务、终态和制品元数据 |
+| GET | `/report-jobs/{id}` | 读取单个任务及状态事件；按报表所属域重新授权 |
+| GET | `/report-jobs/{id}/artifact` | 下载成功制品；要求对应导出权限并追加下载事件 |
+| POST | `/receipt-print-jobs` | 批量冻结已签发收据快照并异步生成 PDF/PRINT 制品 |
+| GET | `/receipt-print-jobs` | 查询项目内打印任务、模板版本、项数、制品和校验和 |
+| GET | `/receipt-print-jobs/{id}/artifact` | 下载打印制品；要求 `finance:print` |
+| POST | `/notification-batches` | 创建账单通知模拟批次；只接受 `*_SIMULATOR` 渠道并保存脱敏消息证据 |
+| GET | `/notification-batches` | 查询模拟批次、成功/失败计数和消息明细 |
+
+报表编码固定为：`TRANSACTION_SUMMARY`、`TRANSACTION_DETAILS`、`RECEIPT_BATCH_PRINT`、`PAYMENTS`、`ARREARS`、`BILL_NOTIFICATIONS`、`BILLS`、`COLLECTION_RATE`、`ARREARS_CLEARANCE_RATE`、`COMPREHENSIVE_QUERY`、`COLLECTION_CLEARANCE_SUMMARY`、`CHARGE_DETAILS`、`DISCOUNT_DETAILS`、`PREPAYMENTS`、`OWNERSHIP_TRANSFERS`、`REMINDERS`、`FEE_STATUS`、`INVOICE_STATISTICS`、`DEPOSITS`、`DAILY_SETTLEMENT_DETAILS`、`ADJUSTMENTS`、`BANK_TRUST`。
+
+客户端不得把 `queryChecksum` 当成授权凭据；它只证明本次筛选、口径版本和结果摘要。当前通知、银行信托和发票统计中的外部结果为明确模拟/内部台账模式，不能据此宣称真实投递、托收或税控查询成功。
