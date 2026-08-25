@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import AppLayout from '../layout/AppLayout.vue'
-import { flatNavigation } from '../config/navigation'
+import { allNavigationItems } from '../config/navigation'
+import { pageCatalog, pageFor } from '../config/pageCatalog'
 import { schemaFor } from '../config/pageSchemas'
 import { useAuthStore } from '../stores/auth'
 
@@ -13,17 +14,38 @@ const ReceivableWorkflowView = () => import('../views/ReceivableWorkflowView.vue
 const CashierView = () => import('../views/CashierView.vue')
 const MeterWorkbenchView = () => import('../views/MeterWorkbenchView.vue')
 const IamManagementView = () => import('../views/IamManagementView.vue')
+const CapabilityWorkspaceView = () => import('../views/CapabilityWorkspaceView.vue')
 
 const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
-const iamPaths = flatNavigation.filter((item) => item.path.startsWith('/enterprise/'))
+const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
 const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths, ...iamPaths.map((item) => item.path)])
-const genericRoutes: RouteRecordRaw[] = flatNavigation
-  .filter((item) => !specialPaths.has(item.path))
+
+function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
+  const page = pageFor(path)
+  return {
+    title: page?.title || fallbackTitle,
+    permission: page?.permissions.read || fallbackPermission,
+    pageNo: page?.pageNo,
+    wave: page?.wave,
+    implementation: page?.implementation,
+  }
+}
+
+const genericRoutes: RouteRecordRaw[] = allNavigationItems
+  .filter((item) => !specialPaths.has(item.path) && schemaFor(item.path))
   .map((item) => ({
     path: item.path.slice(1),
     name: item.path.replaceAll('/', '-').slice(1),
     component: GenericDataView,
-    meta: { title: item.title, permission: schemaFor(item.path)?.readPermission },
+    meta: pageMeta(item.path, item.title, schemaFor(item.path)?.readPermission),
+  }))
+const capabilityRoutes: RouteRecordRaw[] = pageCatalog
+  .filter((page) => !specialPaths.has(page.path) && !schemaFor(page.path))
+  .map((page) => ({
+    path: page.path.slice(1),
+    name: `capability-${page.pageNo}-${page.path.replaceAll('/', '-').slice(1)}`,
+    component: CapabilityWorkspaceView,
+    meta: pageMeta(page.path, page.title, page.permissions.read),
   }))
 
 const router = createRouter({
@@ -36,23 +58,24 @@ const router = createRouter({
       component: AppLayout,
       redirect: '/dashboard',
       children: [
-        { path: 'dashboard', name: 'dashboard', component: DashboardView, meta: { title: '项目看板' } },
+        { path: 'dashboard', name: 'dashboard', component: DashboardView, meta: pageMeta('/dashboard', '项目看板', 'dashboard:read') },
         { path: 'forbidden', name: 'forbidden', component: ForbiddenView, meta: { title: '无权访问' } },
-        { path: 'fees/receivables', name: 'receivable-workflow', component: ReceivableWorkflowView, meta: { title: '应收生成', permission: 'fee:read' } },
-        { path: 'cashier', name: 'cashier-workflow', component: CashierView, meta: { title: '收银台', permission: 'cashier:read' } },
+        { path: 'fees/receivables', name: 'receivable-workflow', component: ReceivableWorkflowView, meta: pageMeta('/fees/receivables', '应收生成', 'fee:read') },
+        { path: 'cashier', name: 'cashier-workflow', component: CashierView, meta: pageMeta('/cashier', '收银台', 'cashier:read') },
         ...meterWorkflowPaths.map((path) => ({
           path: path.slice(1),
           name: `workflow-${path.replaceAll('/', '-').slice(1)}`,
           component: MeterWorkbenchView,
-          meta: { title: flatNavigation.find((item) => item.path === path)?.title, permission: 'meter:read' },
+          meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'meter:read'),
         })),
         ...iamPaths.map((item) => ({
           path: item.path.slice(1),
           name: `iam-${item.path.split('/').at(-1)}`,
           component: IamManagementView,
-          meta: { title: item.title, permission: item.permission || 'iam:read' },
+          meta: pageMeta(item.path, item.title, item.permission || 'iam:read'),
         })),
         ...genericRoutes,
+        ...capabilityRoutes,
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/dashboard' },

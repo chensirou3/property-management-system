@@ -42,7 +42,19 @@ class MySqlMigrationIntegrationTest {
             }
             try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sys_permission WHERE code LIKE 'iam:%'")) {
                 assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(2);
+                assertThat(resultSet.getInt(1)).isEqualTo(3);
+            }
+            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sys_permission")) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getInt(1)).isEqualTo(65);
+            }
+            try (var resultSet = statement.executeQuery("""
+                    SELECT COUNT(*)
+                      FROM sys_role_permission
+                     WHERE role_id = '10000000-0000-0000-0000-000000000001'
+                    """)) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getInt(1)).isEqualTo(65);
             }
             try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM room_detail")) {
                 assertThat(resultSet.next()).isTrue();

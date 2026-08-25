@@ -50,7 +50,7 @@ function renderPage(page) {
 | 必备状态 | ${catalog.requiredStates.map((state) => stateLabels[state]).join('、')} |
 | 来源索引 | ${page.sourceRef} |
 | 目标路由 | \`${page.targetPath}\` |
-| 当前目录状态 | 已登记；路由、功能、测试和视觉证据按对应 Goal 阶段验收 |
+| 当前目录状态 | G2 路由、查询模型、列模型、权限码与状态骨架已登记；业务闭环、数据对账和最终视觉证据按对应 Goal 阶段验收 |
 
 ### 查询模型
 

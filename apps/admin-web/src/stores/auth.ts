@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { http } from '../api/http'
+import { pageCatalog } from '../config/pageCatalog'
+
+const mockPermissions = [...new Set([
+  'system:audit',
+  ...pageCatalog.flatMap((page) => Object.values(page.permissions).filter((permission): permission is string => Boolean(permission))),
+])]
 
 export interface SessionUser {
   id: string
@@ -37,7 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = {
         id: 'synthetic-admin', username, displayName: username,
         roles: ['PLATFORM_ADMIN'],
-        permissions: ['dashboard:read', 'property:read', 'property:write', 'fee:read', 'fee:write', 'cashier:read', 'cashier:write', 'meter:read', 'meter:write', 'system:audit', 'iam:read', 'iam:write'],
+        permissions: mockPermissions,
         projectIds: ['30000000-0000-0000-0000-000000000001'],
         passwordChangeRequired: false,
       }
@@ -54,7 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (token.value.startsWith('mock-')) {
       user.value = {
         id: 'synthetic-admin', username: 'admin', displayName: '系统管理员', roles: ['PLATFORM_ADMIN'],
-        permissions: ['dashboard:read', 'property:read', 'property:write', 'fee:read', 'fee:write', 'cashier:read', 'cashier:write', 'meter:read', 'meter:write', 'system:audit', 'iam:read', 'iam:write'],
+        permissions: mockPermissions,
         projectIds: ['30000000-0000-0000-0000-000000000001'],
         passwordChangeRequired: false,
       }
