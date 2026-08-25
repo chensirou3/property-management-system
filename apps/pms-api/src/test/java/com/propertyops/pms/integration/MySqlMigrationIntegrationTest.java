@@ -3,6 +3,7 @@ package com.propertyops.pms.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.DriverManager;
+import java.sql.Statement;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -28,42 +29,116 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isGreaterThan(0);
+        assertThat(result.migrationsExecuted).isEqualTo(11);
+        assertThat(result.targetSchemaVersion).isEqualTo("11");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
-            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM community")) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(2);
-            }
-            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM organization_unit")) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(3);
-            }
-            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sys_permission WHERE code LIKE 'iam:%'")) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(3);
-            }
-            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sys_permission")) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(65);
-            }
-            try (var resultSet = statement.executeQuery("""
+            assertCount(statement, "SELECT COUNT(*) FROM community", 2);
+            assertCount(statement, "SELECT COUNT(*) FROM organization_unit", 3);
+            assertCount(statement, "SELECT COUNT(*) FROM sys_permission WHERE code LIKE 'iam:%'", 3);
+            assertCount(statement, "SELECT COUNT(*) FROM sys_permission", 65);
+            assertCount(statement, """
                     SELECT COUNT(*)
                       FROM sys_role_permission
                      WHERE role_id = '10000000-0000-0000-0000-000000000001'
-                    """)) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(65);
-            }
-            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM room_detail")) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(359);
-            }
-            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM parking_space_detail")) {
-                assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isEqualTo(250);
-            }
+                    """, 65);
+
+            assertCount(statement, "SELECT COUNT(*) FROM grid_area", 1);
+            assertCount(statement, "SELECT COUNT(*) FROM building", 9);
+            assertCount(statement, "SELECT COUNT(*) FROM pms_unit", 5);
+            assertCount(statement, "SELECT COUNT(*) FROM room_detail", 360);
+            assertCount(statement, "SELECT COUNT(*) FROM parking_space_detail", 251);
+            assertCount(statement, "SELECT COUNT(*) FROM customer", 404);
+            assertCount(statement, "SELECT COUNT(*) FROM customer_asset_relation", 404);
+            assertCount(statement, "SELECT COUNT(*) FROM vehicle", 31);
+            assertCount(statement, "SELECT COUNT(*) FROM vehicle_parking_relation", 31);
+            assertCount(statement, "SELECT COUNT(*) FROM meter", 32);
+
+            var primaryProject = "30000000-0000-0000-0000-000000000001";
+            var isolatedProject = "30000000-0000-0000-0000-000000000002";
+            assertCount(statement, projectCount("grid_area", primaryProject), 0);
+            assertCount(statement, projectCount("building", primaryProject), 8);
+            assertCount(statement, projectCount("asset", primaryProject) + " AND asset_type = 'ROOM'", 359);
+            assertCount(statement, projectCount("asset", primaryProject) + " AND asset_type = 'PARKING'", 250);
+            assertCount(statement, projectCount("customer", primaryProject), 403);
+            assertCount(statement, projectCount("grid_area", isolatedProject), 1);
+            assertCount(statement, projectCount("building", isolatedProject), 1);
+            assertCount(statement, projectCount("pms_unit", isolatedProject), 1);
+            assertCount(statement, projectCount("asset", isolatedProject) + " AND asset_type = 'ROOM'", 1);
+            assertCount(statement, projectCount("asset", isolatedProject) + " AND asset_type = 'PARKING'", 1);
+            assertCount(statement, projectCount("customer", isolatedProject), 1);
+            assertCount(statement, projectCount("customer_asset_relation", isolatedProject), 1);
+            assertCount(statement, projectCount("vehicle", isolatedProject), 1);
+            assertCount(statement, projectCount("vehicle_parking_relation", isolatedProject), 1);
+            assertCount(statement, projectCount("meter", isolatedProject), 1);
+
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM pms_unit u
+                    JOIN building b ON b.id = u.building_id
+                    WHERE u.community_id <> b.community_id
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM asset a
+                    LEFT JOIN building b ON b.id = a.building_id
+                    LEFT JOIN pms_unit u ON u.id = a.unit_id
+                    WHERE (a.building_id IS NOT NULL AND (b.id IS NULL OR b.community_id <> a.community_id))
+                       OR (a.unit_id IS NOT NULL AND
+                           (u.id IS NULL OR u.community_id <> a.community_id OR u.building_id <> a.building_id))
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM customer_asset_relation r
+                    LEFT JOIN customer c ON c.id = r.customer_id
+                    LEFT JOIN asset a ON a.id = r.asset_id
+                    WHERE c.id IS NULL OR a.id IS NULL
+                       OR c.community_id <> r.community_id OR a.community_id <> r.community_id
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM vehicle_parking_relation r
+                    LEFT JOIN vehicle v ON v.id = r.vehicle_id
+                    LEFT JOIN asset a ON a.id = r.parking_asset_id
+                    LEFT JOIN customer c ON c.id = r.customer_id
+                    WHERE v.id IS NULL OR a.id IS NULL OR c.id IS NULL
+                       OR v.community_id <> r.community_id OR a.community_id <> r.community_id
+                       OR c.community_id <> r.community_id
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM meter m
+                    LEFT JOIN asset a ON a.id = m.asset_id
+                    LEFT JOIN meter p ON p.id = m.parent_meter_id
+                    WHERE (m.asset_id IS NOT NULL AND (a.id IS NULL OR a.community_id <> m.community_id))
+                       OR (m.parent_meter_id IS NOT NULL AND (p.id IS NULL OR p.community_id <> m.community_id))
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM (
+                        SELECT customer_id, asset_id, relation_type
+                        FROM customer_asset_relation
+                        WHERE status = 'ACTIVE' AND end_date IS NULL
+                        GROUP BY customer_id, asset_id, relation_type
+                        HAVING COUNT(*) > 1
+                    ) duplicates
+                    """, 0);
+            assertCount(statement, "SELECT COUNT(*) FROM asset WHERE usable_area > building_area", 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_schema = DATABASE()
+                      AND constraint_name IN (
+                        'fk_asset_unit_scope', 'uk_customer_no', 'uk_relation_active',
+                        'fk_relation_customer_scope', 'fk_relation_asset_scope',
+                        'uk_vehicle_parking_active', 'fk_meter_asset_scope', 'ck_asset_area'
+                      )
+                    """, 8);
+        }
+    }
+
+    private static String projectCount(String table, String communityId) {
+        return "SELECT COUNT(*) FROM " + table + " WHERE community_id = '" + communityId + "'";
+    }
+
+    private static void assertCount(Statement statement, String sql, int expected) throws Exception {
+        try (var resultSet = statement.executeQuery(sql)) {
+            assertThat(resultSet.next()).as(sql).isTrue();
+            assertThat(resultSet.getInt(1)).as(sql).isEqualTo(expected);
         }
     }
 }
