@@ -16,3 +16,5 @@ pms:
     access-token-minutes: 30
   bootstrap:
     admin-password: test-only-password
+  integrations:
+    callback-signing-secret: test-only-callback-secret-with-at-least-thirty-two-characters

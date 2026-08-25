@@ -9,11 +9,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.slf4j.MDC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class RequestIdFilter extends OncePerRequestFilter {
+    private static final Logger log = LoggerFactory.getLogger(RequestIdFilter.class);
     public static final String HEADER = "X-Request-Id";
     public static final String ATTRIBUTE = RequestIdFilter.class.getName() + ".requestId";
 
@@ -27,9 +30,13 @@ public class RequestIdFilter extends OncePerRequestFilter {
         request.setAttribute(ATTRIBUTE, requestId);
         response.setHeader(HEADER, requestId);
         MDC.put("requestId", requestId);
+        long started = System.nanoTime();
         try {
             chain.doFilter(request, response);
         } finally {
+            long durationMs = (System.nanoTime() - started) / 1_000_000;
+            log.info("http_request method={} path={} status={} durationMs={}", request.getMethod(),
+                    request.getRequestURI(), response.getStatus(), durationMs);
             MDC.remove("requestId");
         }
     }

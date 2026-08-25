@@ -14,7 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers(disabledWithoutDocker = true)
 class MySqlMigrationIntegrationTest {
     @Container
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
             .withDatabaseName("pms_migration_test")
             .withUsername("pms_test")
             .withPassword("pms_test_password");
@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(18);
-        assertThat(result.targetSchemaVersion).isEqualTo("18");
+        assertThat(result.migrationsExecuted).isEqualTo(19);
+        assertThat(result.targetSchemaVersion).isEqualTo("19");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -58,7 +58,7 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM fee_definition WHERE temporary_allowed=TRUE", 1);
             assertCount(statement, "SELECT COUNT(*) FROM receipt_number_segment", 2);
             assertCount(statement, "SELECT COUNT(*) FROM discount_policy", 1);
-            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 84);
+            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 88);
             assertCount(statement, "SELECT COUNT(*) FROM report_definition WHERE status='ACTIVE'", 22);
             assertCount(statement, """
                     SELECT COUNT(*) FROM report_definition
@@ -195,6 +195,31 @@ class MySqlMigrationIntegrationTest {
                         'ck_notification_simulated', 'ck_receipt_print_counter'
                       )
                     """, 8);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = DATABASE()
+                      AND table_name IN (
+                        'integration_adapter_policy', 'integration_callback_inbox',
+                        'integration_delivery_attempt', 'integration_dead_letter'
+                      )
+                    """, 4);
+            assertCount(statement, "SELECT COUNT(*) FROM integration_adapter_policy", 5);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM integration_adapter_policy
+                    WHERE production_ready=TRUE OR mode NOT IN ('SIMULATOR','DISABLED')
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM integration_adapter_policy
+                    WHERE adapter_code='JAVA110_DISABLED' AND mode='DISABLED' AND enabled=FALSE
+                    """, 1);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_schema = DATABASE()
+                      AND constraint_name IN (
+                        'uk_integration_callback', 'uk_integration_attempt',
+                        'uk_integration_dead_letter', 'ck_outbox_delivery_status'
+                      )
+                    """, 4);
             assertCount(statement, """
                     SELECT COUNT(*) FROM information_schema.table_constraints
                     WHERE constraint_schema = DATABASE()

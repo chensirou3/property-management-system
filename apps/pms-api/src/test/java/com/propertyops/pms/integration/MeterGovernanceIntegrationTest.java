@@ -41,7 +41,7 @@ class MeterGovernanceIntegrationTest {
     private static final String ADMIN_PASSWORD = "meter-integration-admin-password";
 
     @Container
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
             .withDatabaseName("pms_meter_test")
             .withUsername("pms_test")
             .withPassword("pms_test_password");

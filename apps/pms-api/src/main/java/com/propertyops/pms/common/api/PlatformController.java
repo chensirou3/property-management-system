@@ -17,9 +17,10 @@ public class PlatformController {
                 "environment", "synthetic-data",
                 "paymentAdapter", "simulator",
                 "invoiceAdapter", "simulator",
+                "bankAdapter", "simulator",
                 "iotAdapter", "simulator",
+                "java110Adapter", "disabled",
                 "serverTime", Instant.now().toString()
         );
     }
 }
-

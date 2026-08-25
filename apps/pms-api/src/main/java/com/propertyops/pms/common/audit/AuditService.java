@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 
 import com.propertyops.pms.security.SecurityContextService;
+import com.propertyops.pms.common.api.RequestIdFilter;
 
 @Service
 public class AuditService {
@@ -38,7 +39,7 @@ public class AuditService {
                 .addValue("action", action)
                 .addValue("resourceType", resourceType)
                 .addValue("resourceId", resourceId)
-                .addValue("requestId", request.getHeader("X-Request-Id"))
+                .addValue("requestId", request.getAttribute(RequestIdFilter.ATTRIBUTE))
                 .addValue("detail", json(detail))
                 .addValue("occurredAt", LocalDateTime.now(ZoneOffset.UTC));
         jdbc.update("""

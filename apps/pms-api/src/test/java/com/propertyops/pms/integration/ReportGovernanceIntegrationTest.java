@@ -41,7 +41,7 @@ class ReportGovernanceIntegrationTest {
     private static final String ADMIN_PASSWORD = "report-integration-admin-password";
 
     @Container
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
             .withDatabaseName("pms_report_test").withUsername("pms_test").withPassword("pms_test_password");
 
     @DynamicPropertySource

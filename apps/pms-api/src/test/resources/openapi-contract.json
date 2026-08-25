@@ -2096,6 +2096,244 @@
         }
       }
     },
+    "/api/v1/integrations/outbox-events:simulate": {
+      "post": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "createOutbox",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulatedOutboxRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/outbox-events:drain-simulated": {
+      "post": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "drain",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/outbox-events/{id}:simulate-delivery": {
+      "post": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "deliver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulatedDeliveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/dead-letters/{id}:replay": {
+      "post": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "replay",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/callbacks/{adapterCode}": {
+      "post": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "callback",
+        "parameters": [
+          {
+            "name": "adapterCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-PMS-Callback-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-PMS-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-PMS-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/adapters/{adapterCode}:test": {
+      "post": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "testAdapter",
+        "parameters": [
+          {
+            "name": "adapterCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/iam/users": {
       "get": {
         "tags": [
@@ -4644,6 +4882,37 @@
         }
       }
     },
+    "/api/v1/integrations/workbench": {
+      "get": {
+        "tags": [
+          "integration-governance-controller"
+        ],
+        "operationId": "workbench_1",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/iam/projects": {
       "get": {
         "tags": [
@@ -7061,6 +7330,48 @@
           "communityId",
           "receiptId",
           "title"
+        ]
+      },
+      "SimulatedOutboxRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 0
+          },
+          "eventType": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "communityId",
+          "eventType"
+        ]
+      },
+      "SimulatedDeliveryRequest": {
+        "type": "object",
+        "properties": {
+          "adapterCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "outcome": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "SUCCEEDED|RETRYABLE_FAILURE"
+          }
+        },
+        "required": [
+          "adapterCode",
+          "outcome"
         ]
       },
       "CreateUserRequest": {

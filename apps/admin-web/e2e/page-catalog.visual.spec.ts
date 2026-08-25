@@ -4,6 +4,13 @@ import { reportCodeByPath } from '../src/config/reporting'
 
 type VisualCatalogPage = { pageNo: number; title: string; path: string; columns: string[] }
 const pageCatalog = createRequire(import.meta.url)('../src/config/page-catalog.json').pages as VisualCatalogPage[]
+const selectedVisualPage = process.env.PMS_VISUAL_PAGE?.trim()
+const visualCatalog = selectedVisualPage
+  ? pageCatalog.filter((page) => String(page.pageNo) === selectedVisualPage)
+  : pageCatalog
+if (selectedVisualPage && visualCatalog.length !== 1) {
+  throw new Error(`PMS_VISUAL_PAGE must identify one catalog page; received ${selectedVisualPage}`)
+}
 const governedPageByCode = new Map(Object.entries(reportCodeByPath).map(([path, code]) => [
   code, pageCatalog.find((page) => page.path === path)!,
 ]))
@@ -74,6 +81,22 @@ const meterVisualBatchDetail = {
   iotEvidence: [{ id: 'visual-iot-1', adapterCode: 'IOT_SIMULATOR', simulated: true, status: 'APPLIED' }],
   reconciliation: [],
 }
+const integrationVisualWorkbench = {
+  communityId: '30000000-0000-0000-0000-000000000001',
+  adapters: [
+    { adapterCode: 'PAYMENT_SIMULATOR', providerType: 'PAYMENT', providerName: '支付模拟器', mode: 'SIMULATOR', enabled: true, productionReady: false, endpointMasked: 'local://payment-simulator', credentialStatus: 'NOT_REQUIRED', signingRequired: true, timeoutMs: 2000, maxAttempts: 3, retryBaseSeconds: 5, lastCheckedAt: '2026-08-25T10:20:00' },
+    { adapterCode: 'INVOICE_SIMULATOR', providerType: 'INVOICE', providerName: '发票模拟器', mode: 'SIMULATOR', enabled: true, productionReady: false, endpointMasked: 'local://invoice-simulator', credentialStatus: 'NOT_REQUIRED', signingRequired: true, timeoutMs: 2000, maxAttempts: 3, retryBaseSeconds: 5, lastCheckedAt: '2026-08-25T10:20:01' },
+    { adapterCode: 'BANK_TRUST_SIMULATOR', providerType: 'BANK', providerName: '银行信托模拟器', mode: 'SIMULATOR', enabled: true, productionReady: false, endpointMasked: 'local://bank-trust-simulator', credentialStatus: 'NOT_REQUIRED', signingRequired: true, timeoutMs: 3000, maxAttempts: 3, retryBaseSeconds: 10, lastCheckedAt: '2026-08-25T10:20:02' },
+    { adapterCode: 'IOT_SIMULATOR', providerType: 'IOT', providerName: 'IoT 模拟器', mode: 'SIMULATOR', enabled: true, productionReady: false, endpointMasked: 'local://iot-simulator', credentialStatus: 'NOT_REQUIRED', signingRequired: true, timeoutMs: 2000, maxAttempts: 3, retryBaseSeconds: 5, lastCheckedAt: '2026-08-25T10:20:03' },
+    { adapterCode: 'JAVA110_DISABLED', providerType: 'JAVA110', providerName: 'Java110 兼容适配器', mode: 'DISABLED', enabled: false, productionReady: false, endpointMasked: 'disabled://java110', credentialStatus: 'NOT_CONFIGURED', signingRequired: true, timeoutMs: 3000, maxAttempts: 3, retryBaseSeconds: 10 },
+  ],
+  outboxSummary: [{ status: 'PUBLISHED', itemCount: 64 }, { status: 'PENDING', itemCount: 2 }],
+  callbacks: [{ id: 'visual-callback-1', adapterCode: 'PAYMENT_SIMULATOR', callbackId: 'VIS-CALLBACK-0001', requestId: 'visual-request-0001', payloadChecksum: 'a'.repeat(64), replayCount: 1, status: 'PROCESSED', createdAt: '2026-08-25T10:21:00' }],
+  attempts: [{ id: 'visual-attempt-1', direction: 'OUTBOUND', adapterCode: 'PAYMENT_SIMULATOR', referenceId: 'visual-outbox-1', attemptNo: 1, outcome: 'SUCCEEDED', httpStatus: 200, durationMs: 8, createdAt: '2026-08-25T10:22:00' }],
+  deadLetters: [{ id: 'visual-dead-1', direction: 'OUTBOUND', adapterCode: 'PAYMENT_SIMULATOR', referenceId: 'visual-outbox-2', payloadChecksum: 'b'.repeat(64), reason: '视觉固定故障证据', retryCount: 3, status: 'RESOLVED', createdAt: '2026-08-25T10:19:00' }],
+  security: { signedCallbacks: true, maxSkewSeconds: 300, secretConfigured: true, secretsReadable: false },
+  observability: { health: '/actuator/health', readiness: '/actuator/health/readiness', metrics: '/actuator/prometheus', requestTraceHeader: 'X-Request-Id' },
+}
 const targetViewports = [
   { name: '1366x768', width: 1366, height: 768 },
   { name: '1440x900', width: 1440, height: 900 },
@@ -104,6 +127,13 @@ for (const viewport of targetViewports) {
     await page.route('**/api/v1/migrations/batches*', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], page: 1, size: 20, total: 0 }) })
+      } else {
+        await route.continue()
+      }
+    })
+    await page.route('**/api/v1/integrations/workbench*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(integrationVisualWorkbench) })
       } else {
         await route.continue()
       }
@@ -140,7 +170,7 @@ for (const viewport of targetViewports) {
     await page.getByRole('button', { name: '登录', exact: true }).click()
     await expect(page).toHaveURL(/\/dashboard$/)
 
-    for (const catalogPage of pageCatalog) {
+    for (const catalogPage of visualCatalog) {
       await page.goto(catalogPage.path)
       await expect(page.locator('.page-heading h1')).toHaveText(catalogPage.title)
       await page.locator('.el-loading-mask').first().waitFor({ state: 'detached', timeout: 8_000 }).catch(() => undefined)

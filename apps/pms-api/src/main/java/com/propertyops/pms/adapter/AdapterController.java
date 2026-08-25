@@ -13,13 +13,18 @@ import com.propertyops.pms.security.SecurityContextService;
 public class AdapterController {
     private final PaymentAdapter payment;
     private final InvoiceAdapter invoice;
+    private final BankTrustAdapter bank;
+    private final IotAdapter iot;
     private final Java110Adapter java110;
     private final SecurityContextService security;
 
-    public AdapterController(PaymentAdapter payment, InvoiceAdapter invoice, Java110Adapter java110,
+    public AdapterController(PaymentAdapter payment, InvoiceAdapter invoice, BankTrustAdapter bank,
+                             IotAdapter iot, Java110Adapter java110,
                              SecurityContextService security) {
         this.payment = payment;
         this.invoice = invoice;
+        this.bank = bank;
+        this.iot = iot;
         this.java110 = java110;
         this.security = security;
     }
@@ -30,7 +35,8 @@ public class AdapterController {
         return Map.of(
                 "payment", Map.of("adapter", payment.code(), "mode", "SIMULATOR", "productionReady", false),
                 "invoice", Map.of("adapter", invoice.code(), "mode", "SIMULATOR", "productionReady", false),
-                "iot", Map.of("adapter", "IOT_SIMULATOR", "mode", "SIMULATOR", "productionReady", false),
+                "bank", Map.of("adapter", bank.code(), "mode", "SIMULATOR", "productionReady", false),
+                "iot", Map.of("adapter", iot.code(), "mode", "SIMULATOR", "productionReady", false),
                 "java110", Map.of("adapter", java110.code(), "mode", java110.enabled() ? "ENABLED" : "DISABLED",
                         "productionReady", false)
         );

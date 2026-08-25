@@ -5,6 +5,8 @@ server:
 spring:
   application:
     name: pms-api
+  config:
+    import: optional:configtree:/run/secrets/
   datasource:
     url: ${MYSQL_URL:jdbc:mysql://localhost:3306/pms3_replica?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${MYSQL_USER:pms3}
@@ -42,17 +44,27 @@ pms:
   adapters:
     payment: simulator
     invoice: simulator
+    bank: simulator
     iot: simulator
     java110: disabled
+  integrations:
+    callback-signing-secret: ${PMS_CALLBACK_SIGNING_SECRET:${JWT_SECRET:}}
+    callback-max-skew-seconds: ${PMS_CALLBACK_MAX_SKEW_SECONDS:300}
 
 management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
 
 springdoc:
   swagger-ui:

@@ -224,9 +224,9 @@ public class ReceivableJobProcessor {
         jdbc.update("""
                 INSERT INTO outbox_event
                     (id, aggregate_type, aggregate_id, event_type, payload_json,
-                     status, available_at, retry_count, created_at)
+                     payload_checksum, status, available_at, retry_count, created_at, updated_at)
                 VALUES (:id, 'RECEIVABLE_JOB', :jobId, 'ReceivableJobCompleted', :payload,
-                        'PENDING', :now, 0, :now)
+                        SHA2(:payload, 256), 'PENDING', :now, 0, :now, :now)
                 """, Map.of("id", UUID.randomUUID().toString(), "jobId", jobId, "payload", json(payload), "now", now));
         jdbc.update("""
                 INSERT INTO audit_event

@@ -833,8 +833,10 @@ public class FinanceService {
         LocalDateTime now = now();
         jdbc.update("""
                 INSERT INTO outbox_event
-                    (id, aggregate_type, aggregate_id, event_type, payload_json, status, available_at, retry_count, created_at)
-                VALUES (:id, :aggregateType, :aggregateId, :eventType, :payload, 'PENDING', :now, 0, :now)
+                    (id, aggregate_type, aggregate_id, event_type, payload_json, payload_checksum,
+                     status, available_at, retry_count, created_at, updated_at)
+                VALUES (:id, :aggregateType, :aggregateId, :eventType, :payload, SHA2(:payload, 256),
+                        'PENDING', :now, 0, :now, :now)
                 """, Map.of("id", UUID.randomUUID().toString(), "aggregateType", aggregateType, "aggregateId", aggregateId,
                 "eventType", eventType, "payload", json(payload), "now", now));
     }

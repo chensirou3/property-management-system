@@ -41,7 +41,7 @@ class FeeReceivableIntegrationTest {
     private static final String ADMIN_PASSWORD = "fee-integration-admin-password";
 
     @Container
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
             .withDatabaseName("pms_fee_test")
             .withUsername("pms_test")
             .withPassword("pms_test_password");

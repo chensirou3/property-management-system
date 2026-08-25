@@ -1,0 +1,34 @@
+services:
+  api:
+    environment:
+      MYSQL_PASSWORD: null
+      REDIS_PASSWORD: null
+      JWT_SECRET: null
+      PMS_CALLBACK_SIGNING_SECRET: null
+      PMS_BOOTSTRAP_ADMIN_PASSWORD: null
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+      SPRINGDOC_API_DOCS_ENABLED: "false"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "false"
+    secrets:
+      - source: pms_mysql_password
+        target: MYSQL_PASSWORD
+      - source: pms_redis_password
+        target: REDIS_PASSWORD
+      - source: pms_jwt_secret
+        target: JWT_SECRET
+      - source: pms_callback_signing_secret
+        target: PMS_CALLBACK_SIGNING_SECRET
+      - source: pms_bootstrap_admin_password
+        target: PMS_BOOTSTRAP_ADMIN_PASSWORD
+
+secrets:
+  pms_mysql_password:
+    external: true
+  pms_redis_password:
+    external: true
+  pms_jwt_secret:
+    external: true
+  pms_callback_signing_secret:
+    external: true
+  pms_bootstrap_admin_password:
+    external: true

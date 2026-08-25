@@ -47,7 +47,7 @@ class IamProjectIsolationIntegrationTest {
     private static final String CHANGED_PASSWORD = "Changed-Employee-2026!";
 
     @Container
-    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
             .withDatabaseName("pms_iam_test")
             .withUsername("pms_test")
             .withPassword("pms_test_password");

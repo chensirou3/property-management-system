@@ -71,7 +71,8 @@ public class DashboardController {
                 "counts", counts,
                 "finance", finance,
                 "quality", quality,
-                "adapters", Map.of("payment", "simulator", "invoice", "simulator", "iot", "simulator", "java110", "disabled")
+                "adapters", Map.of("payment", "simulator", "invoice", "simulator", "bank", "simulator",
+                        "iot", "simulator", "java110", "disabled")
         );
     }
 
