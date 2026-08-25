@@ -18,13 +18,15 @@ const IamManagementView = () => import('../views/IamManagementView.vue')
 const CapabilityWorkspaceView = () => import('../views/CapabilityWorkspaceView.vue')
 const AssetWorkspaceView = () => import('../views/AssetWorkspaceView.vue')
 const CustomerRelationshipView = () => import('../views/CustomerRelationshipView.vue')
+const MigrationCenterView = () => import('../views/MigrationCenterView.vue')
 
 const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
 const assetWorkspacePaths = ['/archives/rooms', '/archives/parking-spaces']
 const customerWorkspacePaths = ['/archives/customers', '/archives/customer-assets']
+const migrationWorkspacePath = '/system/migrations'
 const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths,
-  ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths])
+  ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths, migrationWorkspacePath])
 
 function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
   const page = pageFor(path)
@@ -92,6 +94,8 @@ const router = createRouter({
           component: CustomerRelationshipView,
           meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'property:read'),
         })),
+        { path: migrationWorkspacePath.slice(1), name: 'migration-center', component: MigrationCenterView,
+          meta: pageMeta(migrationWorkspacePath, '数据迁移', 'migration:read') },
         ...genericRoutes,
         ...capabilityRoutes,
       ],

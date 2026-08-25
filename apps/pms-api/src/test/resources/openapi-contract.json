@@ -961,6 +961,300 @@
         }
       }
     },
+    "/api/v1/migrations/batches": {
+      "get": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "batches",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseBatchSummary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/batches/{id}:validate": {
+      "post": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "validate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/batches/{id}:rollback": {
+      "post": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "rollback",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/batches/{id}:reconcile": {
+      "post": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "reconcile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/batches/{id}:execute": {
+      "post": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "execute",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCommandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/batches/{id}:approve": {
+      "post": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "approve",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/meters/{id}:replace": {
       "post": {
         "tags": [
@@ -1217,7 +1511,7 @@
         "tags": [
           "meter-controller"
         ],
-        "operationId": "approve",
+        "operationId": "approve_1",
         "parameters": [
           {
             "name": "id",
@@ -1887,7 +2181,7 @@
         "tags": [
           "data-resource-controller"
         ],
-        "operationId": "create",
+        "operationId": "create_1",
         "parameters": [
           {
             "name": "resource",
@@ -2281,6 +2575,64 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/template": {
+      "get": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "template",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/csv;charset=UTF-8": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/migrations/batches/{id}": {
+      "get": {
+        "tags": [
+          "migration-controller"
+        ],
+        "operationId": "batch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDetail"
                 }
               }
             }
@@ -3365,6 +3717,360 @@
           "bills",
           "communityId",
           "paymentMethod"
+        ]
+      },
+      "CreateBatchRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceName": {
+            "type": "string",
+            "maxLength": 240,
+            "minLength": 0
+          },
+          "mappingVersion": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 0
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceRow"
+            },
+            "maxItems": 500,
+            "minItems": 0
+          }
+        },
+        "required": [
+          "communityId",
+          "mappingVersion",
+          "rows",
+          "sourceName"
+        ]
+      },
+      "SourceRow": {
+        "type": "object",
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "PROJECT|BUILDING|ASSET|CUSTOMER|RELATION"
+          },
+          "sourceId": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "resourceType",
+          "sourceId"
+        ]
+      },
+      "BatchDetail": {
+        "type": "object",
+        "properties": {
+          "batch": {
+            "$ref": "#/components/schemas/BatchSummary"
+          },
+          "rollbackToken": {
+            "type": "string"
+          },
+          "quarantine": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuarantineItem"
+            }
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjectMapping"
+            }
+          },
+          "reconciliation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationItem"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchEvent"
+            }
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BatchEvent": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string"
+          },
+          "fromStatus": {
+            "type": "string"
+          },
+          "toStatus": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BatchSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "communityId": {
+            "type": "string"
+          },
+          "batchNo": {
+            "type": "string"
+          },
+          "sourceName": {
+            "type": "string"
+          },
+          "mappingVersion": {
+            "type": "string"
+          },
+          "sourceSha256": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reviewStatus": {
+            "type": "string"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quarantineCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "canonicalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stagedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "importedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ObjectMapping": {
+        "type": "object",
+        "properties": {
+          "resourceType": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "targetCode": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "QuarantineItem": {
+        "type": "object",
+        "properties": {
+          "rowNo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resourceType": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "fieldName": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ReconciliationItem": {
+        "type": "object",
+        "properties": {
+          "metricName": {
+            "type": "string"
+          },
+          "sourceValue": {
+            "type": "number"
+          },
+          "targetValue": {
+            "type": "number"
+          },
+          "differenceValue": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "BatchCommandRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "communityId"
+        ]
+      },
+      "CommandResult": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string"
+          },
+          "batchNo": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "importedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skippedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RollbackRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rollbackToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "communityId",
+          "reason",
+          "rollbackToken"
+        ]
+      },
+      "ApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confirmPartial": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "communityId"
         ]
       },
       "ReplacementRequest": {
@@ -4556,6 +5262,29 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "PageResponseBatchSummary": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchSummary"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

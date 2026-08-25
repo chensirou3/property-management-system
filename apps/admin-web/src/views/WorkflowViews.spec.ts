@@ -5,6 +5,7 @@ import { http } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import ReceivableWorkflowView from './ReceivableWorkflowView.vue'
 import CashierView from './CashierView.vue'
+import MigrationCenterView from './MigrationCenterView.vue'
 
 function projectPinia() {
   const pinia = createPinia()
@@ -35,6 +36,13 @@ const globalOptions = (pinia: ReturnType<typeof createPinia>) => ({
     'el-result': true,
     'el-descriptions': true,
     'el-descriptions-item': true,
+    'el-dialog': { template: '<section><slot /><slot name="footer" /></section>' },
+    'el-drawer': { template: '<section><slot name="header" /><slot /></section>' },
+    'el-tabs': { template: '<div><slot /></div>' },
+    'el-tab-pane': { template: '<div><slot /></div>' },
+    'el-timeline': { template: '<div><slot /></div>' },
+    'el-timeline-item': { template: '<div><slot /></div>' },
+    'el-upload': { template: '<div><slot /></div>' },
   },
 })
 
@@ -64,6 +72,19 @@ describe('dedicated workflow pages', () => {
     expect(wrapper.text()).toContain('本地支付与开票模拟器')
     expect(get).toHaveBeenCalledWith('/cashier/context', expect.objectContaining({
       params: expect.objectContaining({ communityId: 'project-1' }),
+    }))
+  })
+
+  it('loads governed migration batches from the real migration API', async () => {
+    const get = vi.spyOn(http, 'get').mockResolvedValue({ data: { items: [], total: 0 } } as any)
+    const pinia = projectPinia()
+    const wrapper = mount(MigrationCenterView, { global: globalOptions(pinia) })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('真实迁移中心')
+    expect(wrapper.text()).toContain('共 0 条记录')
+    expect(get).toHaveBeenCalledWith('/migrations/batches', expect.objectContaining({
+      params: expect.objectContaining({ communityId: 'project-1', page: 1, size: 20 }),
     }))
   })
 })

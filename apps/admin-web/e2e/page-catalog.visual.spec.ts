@@ -20,6 +20,13 @@ for (const viewport of targetViewports) {
     test.setTimeout(600_000)
     if (!password) throw new Error('PMS_E2E_PASSWORD is required; do not commit a local password')
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await page.route('**/api/v1/migrations/batches*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], page: 1, size: 20, total: 0 }) })
+      } else {
+        await route.continue()
+      }
+    })
     await page.goto('/login')
     await page.getByRole('textbox', { name: '账号' }).fill(username)
     await page.getByRole('textbox', { name: '密码' }).fill(password)

@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(11);
-        assertThat(result.targetSchemaVersion).isEqualTo("11");
+        assertThat(result.migrationsExecuted).isEqualTo(12);
+        assertThat(result.targetSchemaVersion).isEqualTo("12");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -119,6 +119,15 @@ class MySqlMigrationIntegrationTest {
                     ) duplicates
                     """, 0);
             assertCount(statement, "SELECT COUNT(*) FROM asset WHERE usable_area > building_area", 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = DATABASE()
+                      AND table_name IN (
+                        'migration_batch', 'migration_raw_record', 'migration_quarantine_record',
+                        'migration_canonical_record', 'migration_staging_record', 'migration_object_map',
+                        'migration_reconciliation', 'migration_change_log', 'migration_batch_event'
+                      )
+                    """, 9);
             assertCount(statement, """
                     SELECT COUNT(*) FROM information_schema.table_constraints
                     WHERE constraint_schema = DATABASE()

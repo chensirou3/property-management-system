@@ -340,6 +340,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/migrations/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["batches"];
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/batches/{id}:validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["validate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/batches/{id}:rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/batches/{id}:reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/batches/{id}:execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["execute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/batches/{id}:approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/meters/{id}:replace": {
         parameters: {
             query?: never;
@@ -461,7 +557,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["approve"];
+        post: operations["approve_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -669,7 +765,7 @@ export interface paths {
         };
         get: operations["list"];
         put?: never;
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -812,6 +908,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["runtime"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["template"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/migrations/batches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["batch"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1188,6 +1316,127 @@ export interface components {
             paymentMethod: string;
             bills: components["schemas"]["BillPayment"][];
         };
+        CreateBatchRequest: {
+            communityId: string;
+            sourceName: string;
+            mappingVersion: string;
+            rows: components["schemas"]["SourceRow"][];
+        };
+        SourceRow: {
+            resourceType: string;
+            sourceId: string;
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        BatchDetail: {
+            batch?: components["schemas"]["BatchSummary"];
+            rollbackToken?: string;
+            quarantine?: components["schemas"]["QuarantineItem"][];
+            mappings?: components["schemas"]["ObjectMapping"][];
+            reconciliation?: components["schemas"]["ReconciliationItem"][];
+            events?: components["schemas"]["BatchEvent"][];
+            replayed?: boolean;
+        };
+        BatchEvent: {
+            eventType?: string;
+            fromStatus?: string;
+            toStatus?: string;
+            detail?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        BatchSummary: {
+            id?: string;
+            communityId?: string;
+            batchNo?: string;
+            sourceName?: string;
+            mappingVersion?: string;
+            sourceSha256?: string;
+            status?: string;
+            reviewStatus?: string;
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            quarantineCount?: number;
+            /** Format: int32 */
+            canonicalCount?: number;
+            /** Format: int32 */
+            stagedCount?: number;
+            /** Format: int32 */
+            importedCount?: number;
+            /** Format: int32 */
+            skippedCount?: number;
+            /** Format: int32 */
+            errorCount?: number;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ObjectMapping: {
+            resourceType?: string;
+            sourceId?: string;
+            targetId?: string;
+            targetCode?: string;
+            active?: boolean;
+        };
+        QuarantineItem: {
+            /** Format: int32 */
+            rowNo?: number;
+            resourceType?: string;
+            sourceId?: string;
+            errorCode?: string;
+            fieldName?: string;
+            message?: string;
+        };
+        ReconciliationItem: {
+            metricName?: string;
+            sourceValue?: number;
+            targetValue?: number;
+            differenceValue?: number;
+            status?: string;
+            detail?: {
+                [key: string]: unknown;
+            };
+        };
+        BatchCommandRequest: {
+            communityId: string;
+            /** Format: int64 */
+            expectedVersion?: number;
+        };
+        CommandResult: {
+            batchId?: string;
+            batchNo?: string;
+            status?: string;
+            /** Format: int32 */
+            importedCount?: number;
+            /** Format: int32 */
+            skippedCount?: number;
+            /** Format: int32 */
+            errorCount?: number;
+            /** Format: int64 */
+            version?: number;
+            replayed?: boolean;
+        };
+        RollbackRequest: {
+            communityId: string;
+            rollbackToken: string;
+            reason: string;
+            /** Format: int64 */
+            expectedVersion?: number;
+        };
+        ApprovalRequest: {
+            communityId: string;
+            confirmPartial?: boolean;
+            comment?: string;
+            /** Format: int64 */
+            expectedVersion?: number;
+        };
         ReplacementRequest: {
             communityId: string;
             newMeterNo: string;
@@ -1531,6 +1780,15 @@ export interface components {
             meterType?: string;
             meterClass?: string;
             status?: string;
+        };
+        PageResponseBatchSummary: {
+            items?: components["schemas"]["BatchSummary"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            total?: number;
         };
         ProjectView: {
             id?: string;
@@ -2171,6 +2429,186 @@ export interface operations {
             };
         };
     };
+    batches: {
+        parameters: {
+            query: {
+                communityId: string;
+                status?: string;
+                keyword?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseBatchSummary"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BatchDetail"];
+                };
+            };
+        };
+    };
+    validate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchCommandRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CommandResult"];
+                };
+            };
+        };
+    };
+    rollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollbackRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CommandResult"];
+                };
+            };
+        };
+    };
+    reconcile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchCommandRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CommandResult"];
+                };
+            };
+        };
+    };
+    execute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchCommandRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CommandResult"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CommandResult"];
+                };
+            };
+        };
+    };
     replace: {
         parameters: {
             query?: never;
@@ -2346,7 +2784,7 @@ export interface operations {
             };
         };
     };
-    approve: {
+    approve_1: {
         parameters: {
             query: {
                 communityId: string;
@@ -2820,7 +3258,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: {
                 communityId?: string;
@@ -3059,6 +3497,50 @@ export interface operations {
                     "*/*": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv;charset=UTF-8": string;
+                };
+            };
+        };
+    };
+    batch: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BatchDetail"];
                 };
             };
         };

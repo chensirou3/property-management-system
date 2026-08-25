@@ -8,7 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -321,6 +323,145 @@ class IamProjectIsolationIntegrationTest {
                   AND resource_id IN (:relationId, :assetId)
                 """, Map.of("communityId", PRIMARY_PROJECT, "relationId", relationId, "assetId", roomId), Long.class))
                 .isEqualTo(3);
+    }
+
+    @Test
+    void governedMigrationIsRepeatableIsolatedReconciledAndReversible() throws Exception {
+        String adminToken = login(ADMIN_USERNAME, ADMIN_PASSWORD);
+        String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String buildingCode = "MIG-B-" + suffix;
+        List<Map<String, Object>> rows = new ArrayList<>();
+        rows.add(body("resourceType", "PROJECT", "sourceId", "SRC-PROJECT-" + suffix,
+                "data", body("name", "迁移验收项目 " + suffix)));
+        rows.add(body("resourceType", "BUILDING", "sourceId", "SRC-BUILDING-" + suffix,
+                "data", body("projectSourceId", "SRC-PROJECT-" + suffix,
+                        "code", buildingCode, "name", "迁移验收楼栋 " + suffix,
+                        "buildingType", "RESIDENTIAL", "floorCount", 10)));
+        for (int index = 1; index <= 10; index++) {
+            String number = String.format("%02d", index);
+            rows.add(body("resourceType", "ASSET", "sourceId", "SRC-ROOM-" + suffix + "-" + number,
+                    "data", body("buildingSourceId", "SRC-BUILDING-" + suffix,
+                            "assetType", "ROOM", "code", "MIG-R-" + suffix + "-" + number,
+                            "displayName", "迁移验收房屋 " + number, "floorNo", String.valueOf(index),
+                            "buildingArea", 80 + index, "usableArea", 60 + index,
+                            "validFrom", "2026-08-25")));
+            rows.add(body("resourceType", "CUSTOMER", "sourceId", "SRC-CUSTOMER-" + suffix + "-" + number,
+                    "data", body("customerNo", "MIG-C-" + suffix + "-" + number,
+                            "displayName", "迁移验收客户 " + number, "customerType", "PERSON",
+                            "customerClass", "OWNER", "gender", "UNKNOWN", "remarks", "G4 合成验收样本")));
+            rows.add(body("resourceType", "RELATION", "sourceId", "SRC-RELATION-" + suffix + "-" + number,
+                    "data", body("customerSourceId", "SRC-CUSTOMER-" + suffix + "-" + number,
+                            "assetSourceId", "SRC-ROOM-" + suffix + "-" + number,
+                            "relationType", "OWNER", "primaryRelation", true, "startDate", "2026-08-25")));
+        }
+        rows.add(body("resourceType", "RELATION", "sourceId", "SRC-INVALID-RELATION-" + suffix,
+                "data", body("customerSourceId", "SRC-MISSING-CUSTOMER-" + suffix,
+                        "assetSourceId", "SRC-ROOM-" + suffix + "-01",
+                        "relationType", "OWNER", "primaryRelation", true, "startDate", "2026-08-25")));
+
+        Map<String, Object> createRequest = body("communityId", PRIMARY_PROJECT,
+                "sourceName", "G4-32-valid-plus-1-invalid-" + suffix,
+                "mappingVersion", "property-v1", "rows", rows);
+        JsonNode created = postJsonOk(adminToken, "/api/v1/migrations/batches", createRequest);
+        String batchId = created.path("batch").path("id").asText();
+        String rollbackToken = created.path("rollbackToken").asText();
+        assertThat(created.path("batch").path("status").asText()).isEqualTo("UPLOADED");
+        assertThat(created.path("batch").path("totalCount").asInt()).isEqualTo(33);
+        assertThat(created.path("replayed").asBoolean()).isFalse();
+        assertThat(rollbackToken).isNotBlank();
+
+        postJsonRequest(adminToken, "/api/v1/migrations/batches", createRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.batch.id").value(batchId))
+                .andExpect(jsonPath("$.replayed").value(true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM migration_raw_record WHERE batch_id=:batchId",
+                Map.of("batchId", batchId), Long.class)).isEqualTo(33);
+
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":validate",
+                body("communityId", PRIMARY_PROJECT, "expectedVersion", 0))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PARTIAL_FAILED"))
+                .andExpect(jsonPath("$.errorCount").value(1))
+                .andExpect(jsonPath("$.version").value(2));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM migration_canonical_record WHERE batch_id=:batchId",
+                Map.of("batchId", batchId), Long.class)).isEqualTo(32);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM migration_quarantine_record WHERE batch_id=:batchId",
+                Map.of("batchId", batchId), Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM building WHERE code=:code",
+                Map.of("code", buildingCode), Long.class)).isZero();
+
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":approve",
+                body("communityId", PRIMARY_PROJECT, "confirmPartial", false,
+                        "comment", "未确认错误隔离", "expectedVersion", 2))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MIGRATION_STATE_CONFLICT"));
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":approve",
+                body("communityId", PRIMARY_PROJECT, "confirmPartial", true,
+                        "comment", "确认仅执行 32 条合格记录", "expectedVersion", 2))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.version").value(3));
+
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":execute",
+                body("communityId", PRIMARY_PROJECT, "expectedVersion", 3))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.importedCount").value(31))
+                .andExpect(jsonPath("$.skippedCount").value(1))
+                .andExpect(jsonPath("$.version").value(5));
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":execute",
+                body("communityId", PRIMARY_PROJECT, "expectedVersion", 3))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.replayed").value(true))
+                .andExpect(jsonPath("$.version").value(5));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM migration_object_map WHERE batch_id=:batchId AND active=TRUE",
+                Map.of("batchId", batchId), Long.class)).isEqualTo(32);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM building WHERE code=:code",
+                Map.of("code", buildingCode), Long.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM migration_change_log WHERE batch_id=:batchId",
+                Map.of("batchId", batchId), Long.class)).isEqualTo(41);
+
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":reconcile",
+                body("communityId", PRIMARY_PROJECT, "expectedVersion", 5))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RECONCILED"))
+                .andExpect(jsonPath("$.version").value(6));
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM migration_reconciliation
+                WHERE batch_id=:batchId AND status='MISMATCH'
+                """, Map.of("batchId", batchId), Long.class)).isZero();
+
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":rollback",
+                body("communityId", PRIMARY_PROJECT, "rollbackToken", "wrong-token",
+                        "reason", "错误凭证拒绝", "expectedVersion", 6))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MIGRATION_STATE_CONFLICT"));
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":rollback",
+                body("communityId", PRIMARY_PROJECT, "rollbackToken", rollbackToken,
+                        "reason", "G4 可逆性验收", "expectedVersion", 6))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ROLLED_BACK"))
+                .andExpect(jsonPath("$.version").value(7));
+        postJsonRequest(adminToken, "/api/v1/migrations/batches/" + batchId + ":rollback",
+                body("communityId", PRIMARY_PROJECT, "rollbackToken", rollbackToken,
+                        "reason", "重复回滚", "expectedVersion", 6))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.replayed").value(true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM building WHERE code=:code",
+                Map.of("code", buildingCode), Long.class)).isZero();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM migration_change_log WHERE batch_id=:batchId AND rolled_back_at IS NULL
+                """, Map.of("batchId", batchId), Long.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM migration_raw_record WHERE batch_id=:batchId",
+                Map.of("batchId", batchId), Long.class)).isEqualTo(33);
+        assertThat(jdbc.queryForObject("""
+                SELECT target_value FROM migration_reconciliation
+                WHERE batch_id=:batchId AND metric_name='ROLLBACK_REMAINING_TARGET_COUNT'
+                """, Map.of("batchId", batchId), Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_event WHERE resource_id=:batchId
+                  AND action_code LIKE 'migration-batch:%'
+                """, Map.of("batchId", batchId), Long.class)).isEqualTo(6);
     }
 
     @Test
