@@ -7,9 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +23,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -28,6 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
 class IamProjectIsolationIntegrationTest {
+    private static final String SEEDED_ENTERPRISE = "31000000-0000-0000-0000-000000000001";
     private static final String PRIMARY_PROJECT = "30000000-0000-0000-0000-000000000001";
     private static final String ISOLATED_PROJECT = "30000000-0000-0000-0000-000000000002";
     private static final String PROJECT_MANAGER_ROLE = "10000000-0000-0000-0000-000000000002";
@@ -179,6 +184,284 @@ class IamProjectIsolationIntegrationTest {
         assertThat(leaked).isZero();
     }
 
+    @Test
+    void administratorCompletesIamLifecycleWithValidationConflictsAndProtectedTransitions() throws Exception {
+        String adminToken = login(ADMIN_USERNAME, ADMIN_PASSWORD);
+        String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String enterpriseCode = "E2E_ENT_" + suffix;
+        String organizationCode = "E2E_ORG_" + suffix;
+        String childOrganizationCode = "E2E_CHILD_" + suffix;
+        String positionCode = "E2E_POS_" + suffix;
+        String employeeNo = "E2E_EMP_" + suffix;
+        String roleCode = "E2E_ROLE_" + suffix;
+        String username = "integration-lifecycle-" + suffix.toLowerCase();
+        String initialPassword = "Lifecycle-Initial-2026!";
+        String resetPassword = "Lifecycle-Reset-2026!";
+
+        postJsonRequest(adminToken, "/api/v1/iam/enterprises",
+                body("code", "invalid code", "name", "校验失败企业"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+
+        JsonNode enterprise = postJsonOk(adminToken, "/api/v1/iam/enterprises",
+                body("code", enterpriseCode, "name", "生命周期测试企业"));
+        assertThat(enterprise.path("status").asText()).isEqualTo("ACTIVE");
+        assertThat(enterprise.path("version").asLong()).isZero();
+        String enterpriseId = enterprise.path("id").asText();
+
+        postJsonRequest(adminToken, "/api/v1/iam/enterprises",
+                body("code", enterpriseCode, "name", "重复企业"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_DUPLICATE_OR_INVALID_REFERENCE"));
+
+        enterprise = putJsonOk(adminToken, "/api/v1/iam/enterprises/" + enterpriseId,
+                body("name", "生命周期测试企业（已更新）", "status", "ACTIVE", "expectedVersion", 0));
+        assertThat(enterprise.path("version").asLong()).isEqualTo(1);
+        putJsonRequest(adminToken, "/api/v1/iam/enterprises/" + enterpriseId,
+                body("name", "过期覆盖", "status", "ACTIVE", "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("OPTIMISTIC_LOCK_CONFLICT"));
+
+        postJsonRequest(adminToken, "/api/v1/iam/organizations",
+                body("enterpriseId", enterpriseId, "communityId", PRIMARY_PROJECT,
+                        "code", "INVALID_PROJECT_" + suffix, "name", "跨企业项目",
+                        "organizationType", "PROJECT", "sortOrder", 1))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("IAM_INVALID_REFERENCE"));
+
+        JsonNode rootOrganization = postJsonOk(adminToken, "/api/v1/iam/organizations",
+                body("enterpriseId", SEEDED_ENTERPRISE, "code", organizationCode,
+                        "name", "生命周期测试总部", "organizationType", "COMPANY", "sortOrder", 10));
+        String rootOrganizationId = rootOrganization.path("id").asText();
+        JsonNode childOrganization = postJsonOk(adminToken, "/api/v1/iam/organizations",
+                body("enterpriseId", SEEDED_ENTERPRISE, "parentId", rootOrganizationId,
+                        "code", childOrganizationCode, "name", "生命周期测试部门",
+                        "organizationType", "DEPARTMENT", "sortOrder", 20));
+        String childOrganizationId = childOrganization.path("id").asText();
+
+        postJsonRequest(adminToken, "/api/v1/iam/organizations",
+                body("enterpriseId", SEEDED_ENTERPRISE, "code", organizationCode,
+                        "name", "重复组织", "organizationType", "DEPARTMENT", "sortOrder", 30))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_DUPLICATE_OR_INVALID_REFERENCE"));
+        putJsonRequest(adminToken, "/api/v1/iam/organizations/" + rootOrganizationId,
+                body("parentId", childOrganizationId, "name", "循环总部",
+                        "organizationType", "COMPANY", "sortOrder", 10,
+                        "status", "ACTIVE", "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ORGANIZATION_CYCLE"));
+
+        postJsonRequest(adminToken, "/api/v1/iam/positions",
+                body("enterpriseId", enterpriseId,
+                        "organizationId", "32000000-0000-0000-0000-000000000001",
+                        "code", "INVALID_POSITION_" + suffix, "name", "跨企业岗位"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("IAM_INVALID_REFERENCE"));
+        JsonNode position = postJsonOk(adminToken, "/api/v1/iam/positions",
+                body("enterpriseId", SEEDED_ENTERPRISE, "organizationId", rootOrganizationId,
+                        "code", positionCode, "name", "生命周期测试岗位", "description", "集成测试岗位"));
+        String positionId = position.path("id").asText();
+
+        postJsonRequest(adminToken, "/api/v1/iam/employees",
+                body("enterpriseId", SEEDED_ENTERPRISE, "organizationId", childOrganizationId,
+                        "positionId", positionId, "employeeNo", "INVALID_EMP_" + suffix,
+                        "displayName", "岗位组织不一致"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("IAM_INVALID_REFERENCE"));
+        JsonNode employee = postJsonOk(adminToken, "/api/v1/iam/employees",
+                body("enterpriseId", SEEDED_ENTERPRISE, "organizationId", rootOrganizationId,
+                        "positionId", positionId, "employeeNo", employeeNo,
+                        "displayName", "生命周期测试人员", "mobileMasked", "139****2026",
+                        "hireDate", "2026-08-01"));
+        String employeeId = employee.path("id").asText();
+
+        postJsonRequest(adminToken, "/api/v1/iam/employees",
+                body("enterpriseId", SEEDED_ENTERPRISE, "organizationId", rootOrganizationId,
+                        "positionId", positionId, "employeeNo", employeeNo, "displayName", "重复人员"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_DUPLICATE_OR_INVALID_REFERENCE"));
+        putJsonRequest(adminToken, "/api/v1/iam/employees/" + employeeId,
+                body("organizationId", rootOrganizationId, "positionId", positionId,
+                        "displayName", "生命周期测试人员", "mobileMasked", "139****2026",
+                        "employmentStatus", "LEFT", "hireDate", "2026-08-01", "expectedVersion", 0))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("LEAVE_DATE_REQUIRED"));
+        String iamReadPermission = jdbc.queryForObject(
+                "SELECT id FROM sys_permission WHERE code='iam:read'", Map.of(), String.class);
+        postJsonRequest(adminToken, "/api/v1/iam/roles",
+                body("enterpriseId", enterpriseId, "code", "INVALID_ROLE_" + suffix,
+                        "name", "无效权限角色", "permissionIds", Set.of(UUID.randomUUID().toString())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("IAM_INVALID_REFERENCE"));
+        JsonNode foreignRole = postJsonOk(adminToken, "/api/v1/iam/roles",
+                body("enterpriseId", enterpriseId, "code", "FOREIGN_ROLE_" + suffix,
+                        "name", "跨企业测试角色", "permissionIds", Set.of(iamReadPermission)));
+        String foreignRoleId = foreignRole.path("id").asText();
+        JsonNode role = postJsonOk(adminToken, "/api/v1/iam/roles",
+                body("enterpriseId", SEEDED_ENTERPRISE, "code", roleCode, "name", "生命周期测试角色",
+                        "description", "仅用于集成测试", "permissionIds", Set.of(iamReadPermission)));
+        String roleId = role.path("id").asText();
+
+        postJsonRequest(adminToken, "/api/v1/iam/roles",
+                body("enterpriseId", SEEDED_ENTERPRISE, "code", roleCode, "name", "重复角色",
+                        "permissionIds", Set.of(iamReadPermission)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_DUPLICATE_OR_INVALID_REFERENCE"));
+        role = putJsonOk(adminToken, "/api/v1/iam/roles/" + roleId,
+                body("name", "生命周期测试角色（已更新）", "description", "已更新",
+                        "enabled", true, "permissionIds", Set.of(iamReadPermission), "expectedVersion", 0));
+        assertThat(role.path("version").asLong()).isEqualTo(1);
+        putJsonRequest(adminToken, "/api/v1/iam/roles/" + roleId,
+                body("name", "过期角色", "description", "过期",
+                        "enabled", true, "permissionIds", Set.of(iamReadPermission), "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("OPTIMISTIC_LOCK_CONFLICT"));
+
+        postJsonRequest(adminToken, "/api/v1/iam/users",
+                body("username", "no-role-" + suffix.toLowerCase(), "password", initialPassword,
+                        "displayName", "无角色账号", "enabled", true,
+                        "roleIds", Set.of(), "projectIds", Set.of(PRIMARY_PROJECT)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("ROLE_REQUIRED"));
+        postJsonRequest(adminToken, "/api/v1/iam/users",
+                body("username", "foreign-role-" + suffix.toLowerCase(), "password", initialPassword,
+                        "displayName", "跨企业角色账号", "employeeId", employeeId, "enabled", true,
+                        "roleIds", Set.of(foreignRoleId), "projectIds", Set.of(PRIMARY_PROJECT)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("IAM_INVALID_REFERENCE"));
+        JsonNode user = postJsonOk(adminToken, "/api/v1/iam/users",
+                body("username", username, "password", initialPassword,
+                        "displayName", "生命周期测试账号", "employeeId", employeeId, "enabled", true,
+                        "roleIds", Set.of(roleId), "projectIds", Set.of(PRIMARY_PROJECT)));
+        String userId = user.path("id").asText();
+        assertThat(user.path("passwordChangeRequired").asBoolean()).isTrue();
+
+        postJsonRequest(adminToken, "/api/v1/iam/users",
+                body("username", username, "password", initialPassword,
+                        "displayName", "重复账号", "employeeId", employeeId, "enabled", true,
+                        "roleIds", Set.of(roleId), "projectIds", Set.of(PRIMARY_PROJECT)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_DUPLICATE_OR_INVALID_REFERENCE"));
+        user = putJsonOk(adminToken, "/api/v1/iam/users/" + userId,
+                body("displayName", "生命周期测试账号（已更新）", "employeeId", employeeId,
+                        "enabled", true, "passwordChangeRequired", false,
+                        "roleIds", Set.of(roleId), "projectIds", Set.of(PRIMARY_PROJECT), "expectedVersion", 0));
+        assertThat(user.path("version").asLong()).isEqualTo(1);
+        putJsonRequest(adminToken, "/api/v1/iam/users/" + userId,
+                body("displayName", "过期账号", "employeeId", employeeId,
+                        "enabled", true, "passwordChangeRequired", false,
+                        "roleIds", Set.of(roleId), "projectIds", Set.of(PRIMARY_PROJECT), "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("OPTIMISTIC_LOCK_CONFLICT"));
+
+        user = putJsonOk(adminToken, "/api/v1/iam/users/" + userId + "/password",
+                body("password", resetPassword, "requireChange", false, "expectedVersion", 1));
+        assertThat(user.path("version").asLong()).isEqualTo(2);
+        String lifecycleToken = login(username, resetPassword);
+        getJsonRequest(lifecycleToken, "/api/v1/iam/enterprises")
+                .andExpect(status().isOk());
+
+        JsonNode users = getJsonOk(adminToken, "/api/v1/iam/users");
+        JsonNode currentAdmin = findByText(users, "username", ADMIN_USERNAME);
+        putJsonRequest(adminToken, "/api/v1/iam/users/" + currentAdmin.path("id").asText(),
+                body("displayName", currentAdmin.path("displayName").asText(),
+                        "employeeId", nullableText(currentAdmin.path("employeeId")), "enabled", false,
+                        "passwordChangeRequired", currentAdmin.path("passwordChangeRequired").asBoolean(),
+                        "roleIds", currentAdmin.path("roleIds"), "projectIds", currentAdmin.path("projectIds"),
+                        "expectedVersion", currentAdmin.path("version").asLong()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("SELF_DISABLE_FORBIDDEN"));
+
+        JsonNode roles = getJsonOk(adminToken, "/api/v1/iam/roles");
+        JsonNode platformAdminRole = findByText(roles, "code", "PLATFORM_ADMIN");
+        putJsonRequest(adminToken, "/api/v1/iam/roles/" + platformAdminRole.path("id").asText(),
+                body("name", platformAdminRole.path("name").asText(),
+                        "description", nullableText(platformAdminRole.path("description")), "enabled", false,
+                        "permissionIds", platformAdminRole.path("permissionIds"),
+                        "expectedVersion", platformAdminRole.path("version").asLong()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PLATFORM_ADMIN_PROTECTED"));
+
+        putJsonRequest(adminToken, "/api/v1/iam/roles/" + roleId,
+                body("name", "仍在使用的角色", "description", "不能停用",
+                        "enabled", false, "permissionIds", Set.of(iamReadPermission), "expectedVersion", 1))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_RESOURCE_IN_USE"));
+        putJsonRequest(adminToken, "/api/v1/iam/employees/" + employeeId,
+                body("organizationId", rootOrganizationId, "positionId", positionId,
+                        "displayName", "仍有账号的人员", "mobileMasked", "139****2026",
+                        "employmentStatus", "LEFT", "hireDate", "2026-08-01",
+                        "leaveDate", "2026-08-24", "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_RESOURCE_IN_USE"));
+        putJsonRequest(adminToken, "/api/v1/iam/positions/" + positionId,
+                body("organizationId", rootOrganizationId, "name", "仍有人员的岗位",
+                        "description", "不能停用", "status", "INACTIVE", "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_RESOURCE_IN_USE"));
+        putJsonRequest(adminToken, "/api/v1/iam/organizations/" + rootOrganizationId,
+                body("name", "仍有下级资源的组织", "organizationType", "COMPANY", "sortOrder", 10,
+                        "status", "INACTIVE", "expectedVersion", 0))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_RESOURCE_IN_USE"));
+
+        user = putJsonOk(adminToken, "/api/v1/iam/users/" + userId,
+                body("displayName", "生命周期测试账号（停用）", "employeeId", employeeId,
+                        "enabled", false, "passwordChangeRequired", false,
+                        "roleIds", Set.of(roleId), "projectIds", Set.of(PRIMARY_PROJECT), "expectedVersion", 2));
+        assertThat(user.path("enabled").asBoolean()).isFalse();
+        getJsonRequest(lifecycleToken, "/api/v1/iam/enterprises")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+        postJsonRequest(null, "/api/v1/auth/login", body("username", username, "password", resetPassword))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+
+        employee = putJsonOk(adminToken, "/api/v1/iam/employees/" + employeeId,
+                body("organizationId", rootOrganizationId, "positionId", positionId,
+                        "displayName", "生命周期测试人员（离职）", "mobileMasked", "139****2026",
+                        "employmentStatus", "LEFT", "hireDate", "2026-08-01",
+                        "leaveDate", "2026-08-24", "expectedVersion", 0));
+        assertThat(employee.path("employmentStatus").asText()).isEqualTo("LEFT");
+        assertThat(employee.path("version").asLong()).isEqualTo(1);
+        role = putJsonOk(adminToken, "/api/v1/iam/roles/" + roleId,
+                body("name", "生命周期测试角色（停用）", "description", "已停用",
+                        "enabled", false, "permissionIds", Set.of(iamReadPermission), "expectedVersion", 1));
+        assertThat(role.path("enabled").asBoolean()).isFalse();
+        position = putJsonOk(adminToken, "/api/v1/iam/positions/" + positionId,
+                body("organizationId", rootOrganizationId, "name", "生命周期测试岗位（停用）",
+                        "description", "已停用", "status", "INACTIVE", "expectedVersion", 0));
+        assertThat(position.path("status").asText()).isEqualTo("INACTIVE");
+        childOrganization = putJsonOk(adminToken, "/api/v1/iam/organizations/" + childOrganizationId,
+                body("parentId", rootOrganizationId, "name", "生命周期测试部门（停用）",
+                        "organizationType", "DEPARTMENT", "sortOrder", 20,
+                        "status", "INACTIVE", "expectedVersion", 0));
+        assertThat(childOrganization.path("status").asText()).isEqualTo("INACTIVE");
+        rootOrganization = putJsonOk(adminToken, "/api/v1/iam/organizations/" + rootOrganizationId,
+                body("name", "生命周期测试总部（停用）", "organizationType", "COMPANY", "sortOrder", 10,
+                        "status", "INACTIVE", "expectedVersion", 0));
+        assertThat(rootOrganization.path("status").asText()).isEqualTo("INACTIVE");
+        putJsonRequest(adminToken, "/api/v1/iam/enterprises/" + enterpriseId,
+                body("name", "仍有启用角色的企业", "status", "INACTIVE", "expectedVersion", 1))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("IAM_RESOURCE_IN_USE"));
+        foreignRole = putJsonOk(adminToken, "/api/v1/iam/roles/" + foreignRoleId,
+                body("name", "跨企业测试角色（停用）", "description", "已停用",
+                        "enabled", false, "permissionIds", Set.of(iamReadPermission), "expectedVersion", 0));
+        assertThat(foreignRole.path("enabled").asBoolean()).isFalse();
+        enterprise = putJsonOk(adminToken, "/api/v1/iam/enterprises/" + enterpriseId,
+                body("name", "生命周期测试企业（停用）", "status", "INACTIVE", "expectedVersion", 1));
+        assertThat(enterprise.path("status").asText()).isEqualTo("INACTIVE");
+
+        Long audited = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_event
+                 WHERE resource_id IN (:enterpriseId, :organizationId, :positionId, :employeeId, :roleId, :userId)
+                """, body("enterpriseId", enterpriseId, "organizationId", rootOrganizationId,
+                        "positionId", positionId, "employeeId", employeeId, "roleId", roleId, "userId", userId),
+                Long.class);
+        assertThat(audited).isGreaterThanOrEqualTo(12);
+    }
+
     private String login(String username, String password) throws Exception {
         String response = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -197,5 +480,58 @@ class IamProjectIsolationIntegrationTest {
     private String userId(String username) {
         return jdbc.queryForObject("SELECT id FROM sys_user WHERE username=:username",
                 Map.of("username", username), String.class);
+    }
+
+    private ResultActions getJsonRequest(String token, String path) throws Exception {
+        return mockMvc.perform(get(path).header("Authorization", bearer(token)));
+    }
+
+    private JsonNode getJsonOk(String token, String path) throws Exception {
+        String response = getJsonRequest(token, path).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response);
+    }
+
+    private ResultActions postJsonRequest(String token, String path, Object request) throws Exception {
+        var builder = post(path).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request));
+        if (token != null) builder.header("Authorization", bearer(token));
+        return mockMvc.perform(builder);
+    }
+
+    private JsonNode postJsonOk(String token, String path, Object request) throws Exception {
+        String response = postJsonRequest(token, path, request).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response);
+    }
+
+    private ResultActions putJsonRequest(String token, String path, Object request) throws Exception {
+        return mockMvc.perform(put(path).header("Authorization", bearer(token))
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)));
+    }
+
+    private JsonNode putJsonOk(String token, String path, Object request) throws Exception {
+        String response = putJsonRequest(token, path, request).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(response);
+    }
+
+    private JsonNode findByText(JsonNode array, String field, String expected) {
+        for (JsonNode item : array) {
+            if (expected.equals(item.path(field).asText())) return item;
+        }
+        throw new AssertionError("Missing item with " + field + "=" + expected);
+    }
+
+    private String nullableText(JsonNode value) {
+        return value == null || value.isNull() || value.isMissingNode() ? null : value.asText();
+    }
+
+    private Map<String, Object> body(Object... values) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (int index = 0; index < values.length; index += 2) {
+            result.put((String) values[index], values[index + 1]);
+        }
+        return result;
     }
 }

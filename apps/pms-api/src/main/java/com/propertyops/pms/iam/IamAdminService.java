@@ -72,6 +72,16 @@ public class IamAdminService {
     @Transactional
     public EnterpriseView updateEnterprise(String id, UpdateEnterpriseRequest request) {
         requireWrite();
+        EnterpriseView current = enterprise(id);
+        if ("ACTIVE".equals(current.status()) && "INACTIVE".equals(request.status())) {
+            requireNoReferences("""
+                    SELECT (SELECT COUNT(*) FROM community WHERE enterprise_id=:id AND status='ACTIVE')
+                         + (SELECT COUNT(*) FROM organization_unit WHERE enterprise_id=:id AND status='ACTIVE')
+                         + (SELECT COUNT(*) FROM org_position WHERE enterprise_id=:id AND status='ACTIVE')
+                         + (SELECT COUNT(*) FROM employee WHERE enterprise_id=:id AND employment_status='ACTIVE')
+                         + (SELECT COUNT(*) FROM sys_role WHERE enterprise_id=:id AND enabled=TRUE)
+                    """, Map.of("id", id), "企业仍有启用的项目、组织、岗位、人员或角色，不能停用");
+        }
         int changed = jdbc.update("""
                 UPDATE enterprise SET name=:name, status=:status, version=version+1, updated_at=:now
                  WHERE id=:id AND version=:version
@@ -138,6 +148,13 @@ public class IamAdminService {
             throw new BusinessException("ORGANIZATION_CYCLE", "组织不能把自身设为上级", HttpStatus.CONFLICT);
         }
         validateOrganizationReferences(current.enterpriseId(), request.parentId(), request.communityId(), id);
+        if ("ACTIVE".equals(current.status()) && "INACTIVE".equals(request.status())) {
+            requireNoReferences("""
+                    SELECT (SELECT COUNT(*) FROM organization_unit WHERE parent_id=:id AND status='ACTIVE')
+                         + (SELECT COUNT(*) FROM org_position WHERE organization_id=:id AND status='ACTIVE')
+                         + (SELECT COUNT(*) FROM employee WHERE organization_id=:id AND employment_status='ACTIVE')
+                    """, Map.of("id", id), "组织仍有启用的下级组织、岗位或人员，不能停用");
+        }
         var params = new MapSqlParameterSource()
                 .addValue("id", id).addValue("parentId", blankToNull(request.parentId()))
                 .addValue("communityId", blankToNull(request.communityId())).addValue("name", request.name())
@@ -202,6 +219,11 @@ public class IamAdminService {
         requireWrite();
         PositionView current = position(id);
         requireOrganizationEnterprise(request.organizationId(), current.enterpriseId());
+        if ("ACTIVE".equals(current.status()) && "INACTIVE".equals(request.status())) {
+            requireNoReferences("""
+                    SELECT COUNT(*) FROM employee WHERE position_id=:id AND employment_status='ACTIVE'
+                    """, Map.of("id", id), "岗位仍有在职人员，不能停用");
+        }
         var params = new MapSqlParameterSource()
                 .addValue("id", id).addValue("organizationId", request.organizationId())
                 .addValue("name", request.name()).addValue("description", blankToNull(request.description()))
@@ -272,6 +294,11 @@ public class IamAdminService {
         if ("LEFT".equals(request.employmentStatus()) && request.leaveDate() == null) {
             throw new BusinessException("LEAVE_DATE_REQUIRED", "离职员工必须填写离职日期", HttpStatus.UNPROCESSABLE_ENTITY);
         }
+        if ("ACTIVE".equals(current.employmentStatus()) && !"ACTIVE".equals(request.employmentStatus())) {
+            requireNoReferences("""
+                    SELECT COUNT(*) FROM sys_user WHERE employee_id=:id AND enabled=TRUE
+                    """, Map.of("id", id), "人员仍绑定启用账号，请先停用账号");
+        }
         var params = new MapSqlParameterSource()
                 .addValue("id", id).addValue("organizationId", request.organizationId())
                 .addValue("positionId", blankToNull(request.positionId())).addValue("displayName", request.displayName())
@@ -337,11 +364,19 @@ public class IamAdminService {
     public RoleView updateRole(String id, UpdateRoleRequest request) {
         requireWrite();
         validatePermissionIds(request.permissionIds());
+        RoleView current = role(id);
         if (PLATFORM_ADMIN_ROLE_ID.equals(id)) {
             if (!request.enabled() || !permissionCodes(request.permissionIds()).containsAll(Set.of("iam:read", "iam:write"))) {
                 throw new BusinessException("PLATFORM_ADMIN_PROTECTED", "平台管理员角色必须保持启用并保留 IAM 权限",
                         HttpStatus.CONFLICT);
             }
+        }
+        if (current.enabled() && !request.enabled()) {
+            requireNoReferences("""
+                    SELECT COUNT(*) FROM sys_user_role ur
+                      JOIN sys_user u ON u.id=ur.user_id
+                     WHERE ur.role_id=:id AND u.enabled=TRUE
+                    """, Map.of("id", id), "角色仍分配给启用账号，不能停用");
         }
         var params = new MapSqlParameterSource()
                 .addValue("id", id).addValue("name", request.name())
@@ -377,7 +412,7 @@ public class IamAdminService {
     @Transactional
     public UserView createUser(CreateUserRequest request) {
         requireWrite();
-        validateAccess(request.employeeId(), request.roleIds(), request.projectIds());
+        validateAccess(request.employeeId(), request.roleIds(), request.projectIds(), request.enabled());
         passwordPolicy.validate(request.username(), request.password());
         String id = UUID.randomUUID().toString();
         var params = new MapSqlParameterSource()
@@ -405,7 +440,7 @@ public class IamAdminService {
     @Transactional
     public UserView updateUser(String id, UpdateUserRequest request) {
         requireWrite();
-        validateAccess(request.employeeId(), request.roleIds(), request.projectIds());
+        validateAccess(request.employeeId(), request.roleIds(), request.projectIds(), request.enabled());
         if (id.equals(security.requirePrincipal().userId()) && !request.enabled()) {
             throw new BusinessException("SELF_DISABLE_FORBIDDEN", "不能停用当前登录账号", HttpStatus.CONFLICT);
         }
@@ -607,13 +642,48 @@ public class IamAdminService {
         }
     }
 
-    private void validateAccess(String employeeId, Set<String> roleIds, Set<String> projectIds) {
-        if (hasText(employeeId)) requireCount("SELECT COUNT(*) FROM employee WHERE id=:id", employeeId, "员工不存在");
+    private void validateAccess(String employeeId, Set<String> roleIds, Set<String> projectIds, boolean accountEnabled) {
+        String employeeEnterpriseId = null;
+        if (hasText(employeeId)) {
+            List<String> employeeEnterprises = jdbc.queryForList("""
+                    SELECT enterprise_id FROM employee WHERE id=:id
+                    """, Map.of("id", employeeId), String.class);
+            if (employeeEnterprises.size() != 1) invalidReference("员工不存在");
+            employeeEnterpriseId = employeeEnterprises.get(0);
+            if (accountEnabled) {
+                long active = jdbc.queryForObject("""
+                        SELECT COUNT(*) FROM employee WHERE id=:id AND employment_status='ACTIVE'
+                        """, Map.of("id", employeeId), Long.class);
+                if (active != 1) invalidReference("启用账号只能关联在职人员");
+            }
+        }
         if (roleIds.isEmpty()) {
             throw new BusinessException("ROLE_REQUIRED", "账号至少需要一个角色", HttpStatus.UNPROCESSABLE_ENTITY);
         }
         validateIds("sys_role", roleIds, "存在无效角色");
         validateIds("community", projectIds, "存在无效项目范围");
+        if (accountEnabled) {
+            validateActiveIds("sys_role", "enabled=TRUE", roleIds, "启用账号不能分配停用角色");
+            validateActiveIds("community", "status='ACTIVE'", projectIds, "启用账号不能分配停用项目");
+        }
+        if (employeeEnterpriseId != null) {
+            var roleParams = new MapSqlParameterSource("ids", roleIds)
+                    .addValue("enterpriseId", employeeEnterpriseId);
+            long foreignRoles = jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM sys_role
+                     WHERE id IN (:ids) AND enterprise_id IS NOT NULL AND enterprise_id<>:enterpriseId
+                    """, roleParams, Long.class);
+            if (foreignRoles > 0) invalidReference("角色与关联人员不属于同一企业");
+            if (!projectIds.isEmpty()) {
+                var projectParams = new MapSqlParameterSource("ids", projectIds)
+                        .addValue("enterpriseId", employeeEnterpriseId);
+                long foreignProjects = jdbc.queryForObject("""
+                        SELECT COUNT(*) FROM community
+                         WHERE id IN (:ids) AND enterprise_id<>:enterpriseId
+                        """, projectParams, Long.class);
+                if (foreignProjects > 0) invalidReference("项目范围与关联人员不属于同一企业");
+            }
+        }
     }
 
     private void validatePermissionIds(Set<String> permissionIds) {
@@ -624,6 +694,14 @@ public class IamAdminService {
         if (ids.isEmpty()) return;
         var params = new MapSqlParameterSource("ids", ids);
         long count = jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE id IN (:ids)", params, Long.class);
+        if (count != ids.size()) invalidReference(message);
+    }
+
+    private void validateActiveIds(String table, String condition, Set<String> ids, String message) {
+        if (ids.isEmpty()) return;
+        var params = new MapSqlParameterSource("ids", ids);
+        long count = jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE id IN (:ids) AND " + condition,
+                params, Long.class);
         if (count != ids.size()) invalidReference(message);
     }
 
@@ -668,6 +746,13 @@ public class IamAdminService {
     private void requireCount(String sql, String id, String message) {
         Long count = jdbc.queryForObject(sql, Map.of("id", id), Long.class);
         if (count == null || count != 1) invalidReference(message);
+    }
+
+    private void requireNoReferences(String sql, Map<String, ?> parameters, String message) {
+        Long count = jdbc.queryForObject(sql, parameters, Long.class);
+        if (count != null && count > 0) {
+            throw new BusinessException("IAM_RESOURCE_IN_USE", message, HttpStatus.CONFLICT);
+        }
     }
 
     private void requireRead() {
