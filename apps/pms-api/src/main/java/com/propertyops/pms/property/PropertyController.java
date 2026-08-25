@@ -50,9 +50,10 @@ public class PropertyController {
     PageResponse<PropertyModels.CustomerListItem> customers(@RequestParam String communityId,
                                                              @RequestParam(required = false) String keyword,
                                                              @RequestParam(required = false) String customerType,
+                                                             @RequestParam(required = false) String status,
                                                              @RequestParam(defaultValue = "1") int page,
                                                              @RequestParam(defaultValue = "20") int size) {
-        return service.customers(communityId, keyword, customerType, page, size);
+        return service.customers(communityId, keyword, customerType, status, page, size);
     }
 
     @GetMapping("/customers/{id}")

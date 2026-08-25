@@ -2083,6 +2083,14 @@
             }
           },
           {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "required": false,
@@ -4235,6 +4243,12 @@
           "effectiveDate": {
             "type": "string",
             "format": "date"
+          },
+          "assetId": {
+            "type": "string"
+          },
+          "assetName": {
+            "type": "string"
           },
           "customerId": {
             "type": "string"

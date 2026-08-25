@@ -1417,6 +1417,8 @@ export interface components {
             relationType?: string;
             /** Format: date */
             effectiveDate?: string;
+            assetId?: string;
+            assetName?: string;
             customerId?: string;
             customerName?: string;
             reason?: string;
@@ -2944,6 +2946,7 @@ export interface operations {
                 communityId: string;
                 keyword?: string;
                 customerType?: string;
+                status?: string;
                 page?: number;
                 size?: number;
             };

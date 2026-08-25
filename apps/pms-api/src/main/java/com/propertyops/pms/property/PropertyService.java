@@ -160,7 +160,7 @@ public class PropertyService {
     }
 
     public PageResponse<PropertyModels.CustomerListItem> customers(String communityId, String keyword,
-                                                                    String customerType, int page, int size) {
+                                                                    String customerType, String status, int page, int size) {
         requireRead(communityId);
         int safePage = Math.max(1, page);
         int safeSize = Math.min(200, Math.max(1, size));
@@ -176,6 +176,12 @@ public class PropertyService {
             if (!Set.of("PERSON", "ORGANIZATION").contains(type)) throw invalid("客户类型无效");
             predicates.add("c.customer_type=:customerType");
             params.addValue("customerType", type);
+        }
+        if (hasText(status)) {
+            String normalizedStatus = status.trim().toUpperCase();
+            if (!Set.of("ACTIVE", "INACTIVE").contains(normalizedStatus)) throw invalid("客户状态无效");
+            predicates.add("c.status=:status");
+            params.addValue("status", normalizedStatus);
         }
         String where = " WHERE " + String.join(" AND ", predicates);
         Long total = jdbc.queryForObject("SELECT COUNT(*) FROM customer c" + where, params, Long.class);
@@ -581,15 +587,17 @@ public class PropertyService {
 
     private List<PropertyModels.PropertyEventItem> events(String predicate, String id, String communityId) {
         return jdbc.query("""
-                SELECT e.*, c.display_name customer_name
+                SELECT e.*, a.display_name asset_name, c.display_name customer_name
                 FROM property_relation_event e
+                JOIN asset a ON a.id=e.asset_id
                 LEFT JOIN customer c ON c.id=e.customer_id
                 WHERE e.community_id=:communityId AND
                 """ + predicate + " ORDER BY e.effective_date DESC, e.created_at DESC",
                 Map.of("communityId", communityId, "id", id),
                 (rs, row) -> new PropertyModels.PropertyEventItem(
                         rs.getString("id"), rs.getString("event_type"), rs.getString("relation_type"),
-                        date(rs, "effective_date"), rs.getString("customer_id"), rs.getString("customer_name"),
+                        date(rs, "effective_date"), rs.getString("asset_id"), rs.getString("asset_name"),
+                        rs.getString("customer_id"), rs.getString("customer_name"),
                         rs.getString("reason"), rs.getString("previous_relation_id"), rs.getString("new_relation_id"),
                         rs.getObject("created_at", LocalDateTime.class)));
     }

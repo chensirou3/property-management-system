@@ -63,6 +63,22 @@ export const pageSchemas: Record<string, PageSchema> = {
     ],
     defaults: { enterprise_id: '31000000-0000-0000-0000-000000000001', status: 'ACTIVE', managed_area: '0' },
   }),
+  '/archives/grids': base('grids', 'property', [
+    { prop: 'code', label: '网格编码', width: 140, sortable: true, sortKey: 'code' },
+    { prop: 'name', label: '网格名称', minWidth: 210, sortable: true, sortKey: 'name' },
+    { prop: 'parent_id', label: '上级网格 ID', minWidth: 220 },
+    { prop: 'manager_user_id', label: '网格员 ID', minWidth: 220 },
+    { prop: 'sort_order', label: '顺序', width: 90, sortable: true, sortKey: 'sortOrder' }, state(), updated,
+  ], {
+    writePermission: 'property:write',
+    form: [
+      { prop: 'code', label: '网格编码', required: true }, { prop: 'name', label: '网格名称', required: true },
+      { prop: 'parent_id', label: '上级网格 ID' }, { prop: 'manager_user_id', label: '网格员 ID' },
+      { prop: 'sort_order', label: '显示顺序', type: 'number' },
+      { prop: 'status', label: '状态', type: 'select', required: true, options: statusOptions.slice(0, 2) },
+    ],
+    defaults: { sort_order: 0, status: 'ACTIVE' },
+  }),
   '/archives/buildings': base('buildings', 'property', [
     { prop: 'code', label: '楼栋编码', width: 130, sortable: true, sortKey: 'code' },
     { prop: 'name', label: '楼栋名称', minWidth: 200, sortable: true, sortKey: 'name' },
@@ -72,6 +88,7 @@ export const pageSchemas: Record<string, PageSchema> = {
     writePermission: 'property:write',
     form: [
       { prop: 'code', label: '楼栋编码', required: true }, { prop: 'name', label: '楼栋名称', required: true },
+      { prop: 'grid_id', label: '所属网格 ID' },
       { prop: 'building_type', label: '楼栋类型', type: 'select', required: true, options: [
         { label: '住宅', value: 'RESIDENTIAL' }, { label: '商业', value: 'COMMERCIAL' },
       ] },
@@ -82,7 +99,16 @@ export const pageSchemas: Record<string, PageSchema> = {
   '/archives/units': base('units', 'property', [
     { prop: 'code', label: '单元编码', width: 140, sortable: true, sortKey: 'code' },
     { prop: 'name', label: '单元名称', minWidth: 220, sortable: true, sortKey: 'name' }, state(), updated,
-  ], { description: '单位模型已保留；合成扩展包提供 4 个边界样本。' }),
+  ], {
+    writePermission: 'property:write',
+    form: [
+      { prop: 'building_id', label: '所属楼栋 ID', required: true },
+      { prop: 'code', label: '单元编码', required: true }, { prop: 'name', label: '单元名称', required: true },
+      { prop: 'status', label: '状态', type: 'select', required: true, options: statusOptions.slice(0, 2) },
+    ],
+    defaults: { status: 'ACTIVE' },
+    description: '单元写入会校验楼栋与当前项目一致；仍被有效房产引用时不能停用。',
+  }),
   '/archives/rooms': base('assets', 'property', [
     { prop: 'code', label: '房屋编码', width: 140, sortable: true, sortKey: 'code' },
     { prop: 'display_name', label: '房屋名称', minWidth: 220, sortable: true, sortKey: 'displayName' },

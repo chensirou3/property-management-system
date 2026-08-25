@@ -183,6 +183,34 @@ class IamProjectIsolationIntegrationTest {
                 .andExpect(jsonPath("$.grids.length()").value(1))
                 .andExpect(jsonPath("$.assets.length()").value(2));
 
+        JsonNode grid = postJsonOk(adminToken, "/api/v1/data/grids?communityId=" + PRIMARY_PROJECT,
+                body("code", "E2E-GRID-" + suffix, "name", "档案生命周期网格 " + suffix,
+                        "sort_order", 10, "status", "ACTIVE"));
+        mockMvc.perform(delete("/api/v1/data/grids/{id}", grid.path("id").asText())
+                        .header("Authorization", bearer(adminToken)).param("communityId", PRIMARY_PROJECT)
+                        .param("version", "0"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        JsonNode unit = postJsonOk(adminToken, "/api/v1/data/units?communityId=" + PRIMARY_PROJECT,
+                body("building_id", "31000000-0000-0000-0000-000000000001",
+                        "code", "E2E-U-" + suffix, "name", "档案生命周期单元 " + suffix, "status", "ACTIVE"));
+        mockMvc.perform(delete("/api/v1/data/units/{id}", unit.path("id").asText())
+                        .header("Authorization", bearer(adminToken)).param("communityId", PRIMARY_PROJECT)
+                        .param("version", "0"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        JsonNode temporaryAsset = postJsonOk(adminToken, "/api/v1/data/assets?communityId=" + PRIMARY_PROJECT,
+                body("building_id", "31000000-0000-0000-0000-000000000001", "asset_type", "ROOM",
+                        "code", "E2E-R-" + suffix, "display_name", "档案生命周期房屋 " + suffix,
+                        "floor_no", "1", "building_area", 80, "usable_area", 70,
+                        "occupancy_status", "VACANT", "operation_status", "NORMAL", "enabled", true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM room_detail WHERE asset_id=:id",
+                Map.of("id", temporaryAsset.path("id").asText()), Long.class)).isEqualTo(1);
+        mockMvc.perform(delete("/api/v1/data/assets/{id}", temporaryAsset.path("id").asText())
+                        .header("Authorization", bearer(adminToken)).param("communityId", PRIMARY_PROJECT)
+                        .param("version", "0"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.enabled").value(false));
+
         JsonNode room = getJsonOk(adminToken,
                 "/api/v1/property/assets/" + roomId + "?communityId=" + PRIMARY_PROJECT);
         assertThat(room.path("asset").path("code").asText()).isEqualTo("R0001");

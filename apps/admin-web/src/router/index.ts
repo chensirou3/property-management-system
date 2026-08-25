@@ -16,10 +16,15 @@ const CashierView = () => import('../views/CashierView.vue')
 const MeterWorkbenchView = () => import('../views/MeterWorkbenchView.vue')
 const IamManagementView = () => import('../views/IamManagementView.vue')
 const CapabilityWorkspaceView = () => import('../views/CapabilityWorkspaceView.vue')
+const AssetWorkspaceView = () => import('../views/AssetWorkspaceView.vue')
+const CustomerRelationshipView = () => import('../views/CustomerRelationshipView.vue')
 
 const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
-const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths, ...iamPaths.map((item) => item.path)])
+const assetWorkspacePaths = ['/archives/rooms', '/archives/parking-spaces']
+const customerWorkspacePaths = ['/archives/customers', '/archives/customer-assets']
+const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths,
+  ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths])
 
 function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
   const page = pageFor(path)
@@ -74,6 +79,18 @@ const router = createRouter({
           name: `iam-${item.path.split('/').at(-1)}`,
           component: IamManagementView,
           meta: pageMeta(item.path, item.title, item.permission || 'iam:read'),
+        })),
+        ...assetWorkspacePaths.map((path) => ({
+          path: path.slice(1),
+          name: `asset-workspace-${path.split('/').at(-1)}`,
+          component: AssetWorkspaceView,
+          meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'property:read'),
+        })),
+        ...customerWorkspacePaths.map((path) => ({
+          path: path.slice(1),
+          name: `customer-workspace-${path.split('/').at(-1)}`,
+          component: CustomerRelationshipView,
+          meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'property:read'),
         })),
         ...genericRoutes,
         ...capabilityRoutes,

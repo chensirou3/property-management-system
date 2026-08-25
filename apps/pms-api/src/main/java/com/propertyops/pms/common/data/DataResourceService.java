@@ -102,6 +102,7 @@ public class DataResourceService {
         String columns = String.join(", ", values.keySet());
         String bindings = values.keySet().stream().map(key -> ":" + key).collect(Collectors.joining(", "));
         jdbc.update("INSERT INTO " + definition.tableName() + " (" + columns + ") VALUES (" + bindings + ")", values);
+        createAssetTypeDetail(resourceName, id, values);
         String effectiveCommunity = definition.communityResource() ? id : communityId;
         audit.success(effectiveCommunity, resourceName + ":create", resourceName, id, Map.of("fields", values.keySet()));
         return get(resourceName, id, effectiveCommunity);
@@ -147,8 +148,11 @@ public class DataResourceService {
         Object archivedValue = "enabled".equals(definition.archiveColumn()) ? Boolean.FALSE : "INACTIVE";
         Map<String, Object> params = Map.of("id", id, "version", version, "archived", archivedValue,
                 "updatedAt", LocalDateTime.now(ZoneOffset.UTC), "communityId", effectiveCommunity);
-        int changed = jdbc.update("UPDATE " + definition.tableName() + " SET " + definition.archiveColumn()
-                + " = :archived, updated_at = :updatedAt, version = version + 1 WHERE id = :id AND version = :version"
+        String archiveAssignment = "assets".equals(resourceName)
+                ? "enabled = FALSE, operation_status = 'INACTIVE'"
+                : definition.archiveColumn() + " = :archived";
+        int changed = jdbc.update("UPDATE " + definition.tableName() + " SET " + archiveAssignment
+                + ", updated_at = :updatedAt, version = version + 1 WHERE id = :id AND version = :version"
                 + (definition.communityResource() ? "" : " AND community_id = :communityId"), params);
         if (changed == 0) throw conflict();
         audit.success(effectiveCommunity, resourceName + ":archive", resourceName, id, Map.of("version", version));
@@ -204,6 +208,20 @@ public class DataResourceService {
         if ("customers".equals(resourceName)
                 && (values.get("customer_no") == null || String.valueOf(values.get("customer_no")).isBlank())) {
             values.put("customer_no", "CUS-" + id.replace("-", ""));
+        }
+    }
+
+    private void createAssetTypeDetail(String resourceName, String id, Map<String, Object> values) {
+        if (!"assets".equals(resourceName)) return;
+        String type = String.valueOf(values.get("asset_type"));
+        if ("ROOM".equals(type)) {
+            jdbc.update("INSERT INTO room_detail (asset_id, room_type, delivery_date) VALUES (:id, 'RESIDENTIAL', NULL)",
+                    Map.of("id", id));
+        } else if ("PARKING".equals(type)) {
+            jdbc.update("""
+                    INSERT INTO parking_space_detail (asset_id, parking_type, ownership_type, related_room_asset_id)
+                    VALUES (:id, 'STANDARD', 'OWNED', NULL)
+                    """, Map.of("id", id));
         }
     }
 

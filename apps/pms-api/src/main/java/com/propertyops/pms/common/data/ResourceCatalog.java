@@ -41,7 +41,7 @@ public class ResourceCatalog {
                 cols("grid_id", "building_id", "unit_id", "source_id", "asset_type", "code", "display_name", "floor_no",
                         "building_area", "usable_area", "occupancy_status", "operation_status", "enabled", "valid_from", "valid_to"),
                 cols("grid_id", "building_id", "unit_id", "code", "display_name", "floor_no", "building_area", "usable_area",
-                        "occupancy_status", "operation_status", "enabled", "valid_from", "valid_to"), "operation_status", false));
+                        "occupancy_status", "operation_status", "enabled", "valid_from", "valid_to"), "enabled", false));
         add(direct("customers", "customer", "t.community_id", "property", search("t.display_name", "t.mobile_masked", "t.source_id"),
                 "t.status", "t.customer_type",
                 sorts("displayName", "t.display_name", "customerType", "t.customer_type", "updatedAt", "t.updated_at"),

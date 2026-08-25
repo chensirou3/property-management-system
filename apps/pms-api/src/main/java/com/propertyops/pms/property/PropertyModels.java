@@ -45,7 +45,7 @@ public final class PropertyModels {
                               String parkingAssetId, String parkingName, LocalDate startDate, LocalDate endDate) {}
     public record MeterItem(String id, String meterNo, String meterType, String meterClass, String status) {}
     public record PropertyEventItem(String id, String eventType, String relationType, LocalDate effectiveDate,
-                                    String customerId, String customerName, String reason,
+                                    String assetId, String assetName, String customerId, String customerName, String reason,
                                     String previousRelationId, String newRelationId, LocalDateTime createdAt) {}
     public record AssetProfile(AssetDetail asset, Map<String, Object> typeDetail, List<RelationItem> relations,
                                List<VehicleItem> vehicles, List<MeterItem> meters,
