@@ -16,7 +16,9 @@ import {
 } from '@element-plus/icons-vue'
 import { navigation } from '../config/navigation'
 import { schemaFor } from '../config/pageSchemas'
+import TaskDrawer from '../components/shared/TaskDrawer.vue'
 import { useAuthStore } from '../stores/auth'
+import { useTaskStore } from '../stores/tasks'
 
 interface WorkspaceTab {
   path: string
@@ -29,6 +31,7 @@ const viewRefreshKey = ref(0)
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const taskStore = useTaskStore()
 const currentTitle = computed(() => String(route.meta.title || '物业管理平台'))
 const visibleNavigation = computed(() => navigation.map((group) => ({
   ...group,
@@ -144,7 +147,9 @@ function logout() {
       </el-select>
       <div class="topbar-tools">
         <button type="button" aria-label="使用帮助"><el-icon><QuestionFilled /></el-icon></button>
-        <button type="button" aria-label="通知"><el-icon><Bell /></el-icon></button>
+        <el-badge :value="taskStore.activeCount" :hidden="taskStore.activeCount === 0" class="task-center-badge">
+          <button type="button" aria-label="任务中心" @click="taskStore.openDrawer"><el-icon><Bell /></el-icon></button>
+        </el-badge>
       </div>
       <el-dropdown>
         <button class="user-button" type="button">
@@ -237,5 +242,6 @@ function logout() {
         </router-view>
       </main>
     </section>
+    <TaskDrawer />
   </div>
 </template>

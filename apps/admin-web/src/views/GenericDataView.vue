@@ -1,20 +1,27 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, Edit, Plus, Refresh, Search, Setting, Upload } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
+import { Download, Edit, Plus, Printer, Search, Upload } from '@element-plus/icons-vue'
 import { http } from '../api/http'
+import BatchActionBar from '../components/shared/BatchActionBar.vue'
+import DataGrid, { type DataGridColumn } from '../components/shared/DataGrid.vue'
+import QueryPanel from '../components/shared/QueryPanel.vue'
+import { pageFor } from '../config/pageCatalog'
 import { schemaFor, type FormField } from '../config/pageSchemas'
 import { useAuthStore } from '../stores/auth'
+import { useTaskStore } from '../stores/tasks'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const taskStore = useTaskStore()
 const keyword = ref(String(route.query.keyword || ''))
 const status = ref(String(route.query.status || ''))
 const page = ref(Number(route.query.page || 1))
 const pageSize = ref(Number(route.query.size || 20))
 const rows = ref<Record<string, unknown>[]>([])
+const selectedRows = ref<Record<string, unknown>[]>([])
 const total = ref(0)
 const loading = ref(false)
 const errorMessage = ref('')
@@ -22,35 +29,21 @@ const drawerVisible = ref(false)
 const submitting = ref(false)
 const editing = ref<Record<string, unknown> | null>(null)
 const form = reactive<Record<string, unknown>>({})
+const gridRef = ref<InstanceType<typeof DataGrid>>()
 let controller: AbortController | null = null
 
 const title = computed(() => String(route.meta.title || '数据管理'))
 const schema = computed(() => schemaFor(route.path))
-const visibleColumns = ref<string[]>([])
+const catalogPage = computed(() => pageFor(route.path))
 const canWrite = computed(() => Boolean(schema.value?.form && auth.hasPermission(schema.value.writePermission)))
+const canImport = computed(() => Boolean(catalogPage.value?.permissions.import && (auth.hasPermission(catalogPage.value.permissions.import) || canWrite.value)))
+const canExport = computed(() => Boolean(auth.hasPermission(catalogPage.value?.permissions.export) || auth.hasPermission(schema.value?.readPermission)))
+const canPrint = computed(() => Boolean(catalogPage.value?.permissions.print && (auth.hasPermission(catalogPage.value.permissions.print) || auth.hasPermission(schema.value?.readPermission))))
 const currentCommunityId = computed(() => schema.value?.resource === 'communities' ? undefined : auth.currentProjectId)
-
-function resetColumns() {
-  visibleColumns.value = schema.value?.columns.map((column) => column.prop) || []
-}
-
-function display(value: unknown) {
-  if (value === null || value === undefined || value === '') return '—'
-  if (typeof value === 'boolean') return value ? '是' : '否'
-  return String(value)
-}
-
-function statusType(value: unknown) {
-  const code = String(value || '')
-  if (['ACTIVE', 'NORMAL', 'PAID', 'SUCCESS', 'COMPLETED'].includes(code)) return 'success'
-  if (['INACTIVE', 'FAILED', 'CANCELLED'].includes(code)) return 'danger'
-  if (['PARTIAL', 'PROCESSING', 'PENDING'].includes(code)) return 'warning'
-  return 'info'
-}
-
-function isStatus(prop: string) {
-  return ['status', 'operation_status', 'result_status', 'enabled'].includes(prop)
-}
+const gridColumns = computed<DataGridColumn[]>(() => schema.value?.columns.map((column) => ({
+  ...column,
+  type: catalogPage.value?.columns.find((candidate) => candidate.key === column.prop)?.type,
+})) || [])
 
 async function load() {
   if (!schema.value) return
@@ -106,7 +99,10 @@ function saveFilter() {
 
 function restoreFilter() {
   const saved = localStorage.getItem(`pms-filter:${route.path}`)
-  if (!saved) return
+  if (!saved) {
+    ElMessage.info('当前页面没有已保存的筛选条件')
+    return
+  }
   try {
     const value = JSON.parse(saved)
     keyword.value = value.keyword || ''
@@ -115,6 +111,7 @@ function restoreFilter() {
     applyQuery()
   } catch {
     localStorage.removeItem(`pms-filter:${route.path}`)
+    ElMessage.warning('已清除损坏的本地筛选条件')
   }
 }
 
@@ -173,7 +170,9 @@ async function submit() {
     drawerVisible.value = false
     await load()
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.message || '保存失败')
+    if (error.response?.status === 409) ElMessage.error(error.response?.data?.message || '数据已被其他操作修改，请刷新后重试')
+    else if (error.response?.status === 422) ElMessage.error(error.response?.data?.message || '提交内容未通过业务校验')
+    else ElMessage.error(error.response?.data?.message || '保存失败')
   } finally {
     submitting.value = false
   }
@@ -191,15 +190,52 @@ async function archive(row: Record<string, unknown>) {
   }
 }
 
-function taskNotice(kind: 'import' | 'export') {
-  ElMessage.info(`${kind === 'import' ? '导入' : '导出'}将通过异步任务执行；当前页面保留任务入口。`)
+function fileStem() {
+  return `${title.value}-${new Date().toISOString().slice(0, 10)}`.replace(/[\\/:*?"<>|]/g, '-')
+}
+
+function taskColumns() {
+  return schema.value?.columns.map((column) => ({ key: column.prop, label: column.label })) || []
+}
+
+function createExport(sourceRows = rows.value) {
+  taskStore.createExportTask({
+    title: `${title.value}数据导出`, sourcePath: route.path, projectId: auth.currentProjectId,
+    fileName: `${fileStem()}.csv`, columns: taskColumns(), rows: sourceRows.map((row) => ({ ...row })),
+  })
+  taskStore.openDrawer()
+  ElMessage.success('导出任务已进入任务中心')
+}
+
+function createPrint(sourceRows = rows.value) {
+  taskStore.createPrintTask({
+    title: `${title.value}打印文件`, sourcePath: route.path, projectId: auth.currentProjectId,
+    fileName: `${fileStem()}-打印.html`, columns: taskColumns(), rows: sourceRows.map((row) => ({ ...row })),
+  })
+  taskStore.openDrawer()
+  ElMessage.success('打印任务已进入任务中心')
+}
+
+function handleImport(uploadFile: UploadFile) {
+  if (!uploadFile.raw) return
+  taskStore.createImportValidationTask({
+    title: `${title.value}导入校验`, sourcePath: route.path, projectId: auth.currentProjectId,
+    file: uploadFile.raw, expectedHeaders: taskColumns().map((column) => column.label),
+  })
+  taskStore.openDrawer()
+  ElMessage.success('导入文件已进入异步校验；通过前不会写入业务数据')
+}
+
+function clearSelection() {
+  selectedRows.value = []
+  gridRef.value?.clearSelection()
 }
 
 watch([() => route.path, () => auth.currentProjectId], () => {
   keyword.value = String(route.query.keyword || '')
   status.value = String(route.query.status || '')
   page.value = 1
-  resetColumns()
+  selectedRows.value = []
   void load()
 }, { immediate: true })
 watch([page, pageSize], () => void load())
@@ -209,72 +245,44 @@ onBeforeUnmount(() => controller?.abort())
 <template>
   <section class="data-page">
     <el-alert v-if="schema?.description" type="warning" :closable="false" show-icon class="page-note" :title="schema.description" />
-    <el-card shadow="never" class="filter-card">
-      <el-form :inline="true" label-position="left" @submit.prevent="applyQuery">
-        <el-form-item label="关键字">
-          <el-input v-model="keyword" clearable :placeholder="`搜索${title}`" @keyup.enter="applyQuery">
-            <template #prefix><el-icon><Search /></el-icon></template>
-          </el-input>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="status" clearable placeholder="全部状态" style="width: 170px">
-            <el-option label="启用/正常" value="ACTIVE" /><el-option label="停用" value="INACTIVE" />
-            <el-option label="未缴" value="UNPAID" /><el-option label="部分缴费" value="PARTIAL" /><el-option label="已缴" value="PAID" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="applyQuery">查询</el-button>
-          <el-button :icon="Refresh" @click="reset">重置</el-button>
-          <el-button text @click="saveFilter">保存筛选</el-button>
-          <el-button text @click="restoreFilter">恢复筛选</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
 
-    <el-card shadow="never" class="table-card">
-      <div class="table-toolbar">
-        <div>
-          <el-button v-if="canWrite" type="primary" :icon="Plus" @click="openCreate">新增{{ title }}</el-button>
-          <el-button :icon="Upload" @click="taskNotice('import')">导入任务</el-button>
-          <el-button :icon="Download" @click="taskNotice('export')">导出任务</el-button>
-        </div>
-        <div class="toolbar-right">
-          <span class="record-summary">共 <strong>{{ total }}</strong> 条合成记录</span>
-          <el-popover placement="bottom-end" :width="220" trigger="click">
-            <template #reference><el-button circle :icon="Setting" aria-label="列设置" /></template>
-            <el-checkbox-group v-model="visibleColumns" class="column-settings">
-              <el-checkbox v-for="column in schema?.columns" :key="column.prop" :value="column.prop">{{ column.label }}</el-checkbox>
-            </el-checkbox-group>
-          </el-popover>
-        </div>
-      </div>
-      <el-alert v-if="errorMessage" type="error" show-icon :closable="false" :title="errorMessage">
-        <template #default><el-button link type="primary" @click="load">重新加载</el-button></template>
-      </el-alert>
-      <el-table v-loading="loading" :data="rows" stripe row-key="id" height="calc(100vh - 410px)" empty-text="暂无符合条件的数据" @sort-change="onSort">
-        <el-table-column type="selection" width="46" fixed="left" />
-        <el-table-column type="index" label="序号" width="70" />
-        <el-table-column v-for="column in schema?.columns.filter((item) => visibleColumns.includes(item.prop))" :key="column.prop"
-          :prop="column.prop" :label="column.label" :width="column.width" :min-width="column.minWidth"
-          :sortable="column.sortable ? 'custom' : false" show-overflow-tooltip>
-          <template #default="scope">
-            <el-tag v-if="isStatus(column.prop)" :type="statusType(scope.row[column.prop])" effect="light">{{ display(scope.row[column.prop]) }}</el-tag>
-            <span v-else>{{ display(scope.row[column.prop]) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="scope">
-            <el-button link type="primary" @click="openEdit(scope.row)">查看</el-button>
-            <el-button v-if="canWrite" link type="primary" :icon="Edit" @click="openEdit(scope.row)">编辑</el-button>
-            <el-button v-if="canWrite" link type="danger" @click="archive(scope.row)">停用</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="pagination-row">
-        <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper" :total="total" />
-      </div>
-    </el-card>
+    <QueryPanel :loading="loading" @query="applyQuery" @reset="reset" @save="saveFilter" @restore="restoreFilter">
+      <el-form-item label="关键字">
+        <el-input v-model="keyword" clearable :placeholder="`搜索${title}`" @keyup.enter="applyQuery">
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="status" clearable placeholder="全部状态" style="width: 170px">
+          <el-option label="启用/正常" value="ACTIVE" /><el-option label="停用" value="INACTIVE" />
+          <el-option label="未缴" value="UNPAID" /><el-option label="部分缴费" value="PARTIAL" /><el-option label="已缴" value="PAID" />
+        </el-select>
+      </el-form-item>
+    </QueryPanel>
+
+    <BatchActionBar :selected-count="selectedRows.length" :total="total" @clear="clearSelection">
+      <el-button v-if="canExport" size="small" :icon="Download" @click="createExport(selectedRows)">导出所选</el-button>
+      <el-button v-if="canPrint" size="small" :icon="Printer" @click="createPrint(selectedRows)">打印所选</el-button>
+    </BatchActionBar>
+
+    <DataGrid ref="gridRef" v-model:page="page" v-model:page-size="pageSize" :rows="rows" :columns="gridColumns"
+      :loading="loading" :error-message="errorMessage" :total="total" :storage-key="route.path"
+      @selection-change="selectedRows = $event" @sort-change="onSort" @reload="load">
+      <template #toolbar>
+        <el-button v-if="canWrite" type="primary" :icon="Plus" @click="openCreate">新增{{ title }}</el-button>
+        <el-upload v-if="canImport" action="#" accept=".csv,text/csv" :auto-upload="false" :show-file-list="false" :on-change="handleImport">
+          <el-button :icon="Upload">导入 CSV</el-button>
+        </el-upload>
+        <el-button v-if="canExport" :icon="Download" @click="createExport()">导出当前页</el-button>
+        <el-button v-if="canPrint" :icon="Printer" @click="createPrint()">打印当前页</el-button>
+      </template>
+      <template #summary><span class="record-summary">共 <strong>{{ total }}</strong> 条合成记录</span></template>
+      <template #operations="{ row }">
+        <el-button link type="primary" @click="openEdit(row)">查看</el-button>
+        <el-button v-if="canWrite" link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
+        <el-button v-if="canWrite" link type="danger" @click="archive(row)">停用</el-button>
+      </template>
+    </DataGrid>
 
     <el-drawer v-model="drawerVisible" :title="`${editing ? '编辑' : '新增'}${title}`" size="520px">
       <el-alert type="info" :closable="false" show-icon title="本页面仅处理合成数据；修改使用乐观锁并记录审计。" />
