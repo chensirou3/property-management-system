@@ -1,6 +1,6 @@
 package com.propertyops.pms.finance;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

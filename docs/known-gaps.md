@@ -20,5 +20,5 @@
 - 面积比例公摊和 `billableUsage × unitPrice` 是演示假设规则，不能直接作为生产收费依据。
 - 当前没有真实历史迁移、真实住户、真实票据模板或真实第三方密钥。
 - Docker Compose 已完成 API/Web 镜像重建，API、Web、MySQL、Redis 均可启动，API 健康检查通过。
-- API 当前仍在 Spring Boot 2.7.18 短期兼容基线上；已接受 ADR-007，必须在 G1 退出前迁移到受支持的 3.5.x 线。
+- API 已按 ADR-007 迁移到 Spring Boot 3.5.16，并完成 Jakarta、Spring Security 6、springdoc 2.9、Flyway/MySQL、OpenAPI 和端到端兼容验证。
 - 企业、组织、岗位、人员、角色和账号的完整失败/冲突/停用生命周期 E2E，以及 3 个目标视口固定视觉基线仍待完成。

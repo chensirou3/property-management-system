@@ -16,11 +16,12 @@ spring:
     enabled: true
     locations: classpath:db/migration
     validate-on-migrate: true
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-    timeout: 2s
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
   jackson:
     default-property-inclusion: non_null
     time-zone: UTC

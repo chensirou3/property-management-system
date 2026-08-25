@@ -5,7 +5,7 @@
 | ID | 交付物 | 计划证据 | 状态 |
 |---|---|---|---|
 | R01 | Vue 3 + TypeScript + Element Plus 管理端 | `apps/admin-web/package.json`、按需构建、浏览器截图 | 已验证 |
-| R02 | Java 17 模块化单体 API | `apps/pms-api/pom.xml`、47 个主源码、Maven 测试；Boot 3.5 迁移见 ADR-007 | 实施中 |
+| R02 | Java 17 模块化单体 API | `apps/pms-api/pom.xml`、47 个主源码、Maven 测试；Boot 3.5.16 迁移和证据见 ADR-007 | 已验证 |
 | R03 | MySQL Flyway 迁移 | V1—V9、全新库迁移 9/9、55 张表 | 已验证 |
 | R04 | Redis、数据库和本地启动配置 | Compose 健康检查、API `UP`、运行手册 | 已验证 |
 | R05 | 登录、RBAC、项目权限、菜单、布局、查询表格 | IAM、安全上下文、路由守卫、双项目隔离、首次改密、限流审计、会话撤销和只读按钮 E2E；完整生命周期待补 | 实施中 |

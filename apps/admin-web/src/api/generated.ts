@@ -1111,7 +1111,7 @@ export interface components {
         };
         PageResponseMapStringObject: {
             items?: {
-                [key: string]: Record<string, never>;
+                [key: string]: unknown;
             }[];
             /** Format: int32 */
             page?: number;
@@ -1332,7 +1332,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -1354,7 +1354,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    [key: string]: Record<string, never>;
+                    [key: string]: unknown;
                 };
             };
         };
@@ -1366,7 +1366,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -1394,7 +1394,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -2293,7 +2293,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    [key: string]: Record<string, never>;
+                    [key: string]: unknown;
                 };
             };
         };
@@ -2305,7 +2305,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -2369,7 +2369,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -2433,7 +2433,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };
@@ -2498,7 +2498,7 @@ export interface operations {
                 };
                 content: {
                     "*/*": {
-                        [key: string]: Record<string, never>;
+                        [key: string]: unknown;
                     };
                 };
             };

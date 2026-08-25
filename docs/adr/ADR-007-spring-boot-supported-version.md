@@ -1,18 +1,18 @@
 # ADR-007：迁移到受支持的 Spring Boot 3.5 线
 
-- 状态：已接受，实施待 G1 最后一批完成
+- 状态：已实施并验证
 - 日期：2026-08-24
 - 决策范围：`apps/pms-api`
 
 ## 背景
 
-当前 API 使用 Java 17 与 Spring Boot 2.7.18。Spring 官方当前把 3.5 和 3.4 列为主动维护版本，并建议迁移到最新受支持版本；3.5 当前文档版本为 3.5.16，最低仍为 Java 17。参考：
+决策形成时 API 使用 Java 17 与 Spring Boot 2.7.18。Spring 官方把 3.5 和 3.4 列为主动维护版本，并建议迁移到最新受支持版本；实施时 3.5 当前文档版本为 3.5.16，最低仍为 Java 17。参考：
 
 - [Spring Boot Supported Versions](https://github.com/spring-projects/spring-boot/wiki/Supported-Versions)
 - [Spring Boot 3.5 System Requirements](https://docs.spring.io/spring-boot/3.5/system-requirements.html)
 - [Spring Boot 3.0 Migration Guide](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide)
 
-工程当前有 16 个主源码/测试文件使用 `javax.servlet` 或 `javax.validation`，安全配置仍使用 Spring Security 5 的 `authorizeRequests`/`antMatchers`，OpenAPI 使用 springdoc 1.7。直接跨到 Spring Boot 4.1 会同时引入 Spring Framework 7、Servlet 6.1 与 Tomcat 11，超出 G1 身份权限收尾所需的最小变更。
+迁移前工程有 16 个主源码/测试文件使用 `javax.servlet` 或 `javax.validation`，安全配置使用 Spring Security 5 的 `authorizeRequests`/`antMatchers`，OpenAPI 使用 springdoc 1.7。直接跨到 Spring Boot 4.1 会同时引入 Spring Framework 7、Servlet 6.1 与 Tomcat 11，超出 G1 身份权限收尾所需的最小变更。
 
 ## 决策
 
@@ -21,6 +21,14 @@
 3. 一次性完成 `javax.*` 到 `jakarta.*`、Spring Security 6 `requestMatchers`/`authorizeHttpRequests`、springdoc 2.x starter、Flyway/MySQL 驱动兼容调整；不维护 Boot 2/3 双分支兼容层。
 4. 将框架升级独立成可回滚提交，不与数据库业务迁移或领域重构混合。
 5. Spring Boot 4.x 暂不采用；G9 发布门禁重新评估受支持版本和安全公告。
+
+## 实施结果
+
+- 已落地 Spring Boot 3.5.16、Spring Security 6、Jakarta API 与 springdoc 2.9.0 starter，Java 仍为 17；
+- `javax.*` 源码导入清零，Redis 配置迁移到 Boot 3 属性命名；
+- 宿主机 Maven 19/19 测试通过，真实 MySQL V1—V9 空库迁移和 IAM/安全集成测试通过；
+- Docker API 镜像重新构建并健康启动，运行库 9 个 Flyway 迁移校验通过；
+- `/v3/api-docs` 返回 200，前端类型生成、Vitest、生产构建、Playwright 4/4 和 `npm audit` 0 漏洞全部通过。
 
 ## 验收门槛
 

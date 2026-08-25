@@ -11,7 +11,7 @@
 ## 技术基线
 
 - Web：Vue 3、TypeScript、Element Plus、Vite；
-- API：Java 17、Spring Boot 2.7；
+- API：Java 17、Spring Boot 3.5；
 - 数据：MySQL 8、Flyway、Redis；
 - 本地运行：Docker Compose；
 - 外部支付、发票和 IoT：默认模拟适配器。

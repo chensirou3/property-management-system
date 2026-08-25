@@ -26,4 +26,4 @@
 
 ## ADR-007：Spring Boot 受支持版本
 
-API 将在 G1 退出前从 Spring Boot 2.7.18 迁移到受支持的 3.5.x 线，保持 Java 17，并以独立提交完成 Jakarta、Spring Security 6、springdoc 与 Flyway 兼容迁移。详细决策、验收和回滚见 [`adr/ADR-007-spring-boot-supported-version.md`](adr/ADR-007-spring-boot-supported-version.md)。
+API 已从 Spring Boot 2.7.18 迁移到 Spring Boot 3.5.16，保持 Java 17，并完成 Jakarta、Spring Security 6、springdoc 2.9 与 Flyway/MySQL 兼容迁移。详细决策、验收和回滚见 [`adr/ADR-007-spring-boot-supported-version.md`](adr/ADR-007-spring-boot-supported-version.md)。
