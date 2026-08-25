@@ -62,13 +62,13 @@ button, input, textarea, select { font: inherit; }
 .main-region { min-height: 100vh; margin-left: 160px; padding-top: 42px; width: calc(100% - 160px); transition: margin-left .2s ease, width .2s ease; }
 .sidebar.collapsed + .main-region { margin-left: 54px; width: calc(100% - 54px); }
 .workspace-tabs { position: sticky; top: 42px; z-index: 14; height: 38px; padding: 0 8px; display: flex; align-items: flex-end; gap: 2px; background: #fff; border-bottom: 1px solid #dfe3eb; box-shadow: 0 1px 3px rgba(31,47,78,.04); }
-.workspace-tab { position: relative; height: 33px; max-width: 170px; padding: 0 10px; display: flex; align-items: center; gap: 6px; border: 1px solid transparent; border-bottom: 0; border-radius: 3px 3px 0 0; color: #66728a; background: transparent; cursor: pointer; font-size: 12px; }
+.workspace-tab { position: relative; min-width: 0; height: 33px; max-width: 170px; padding: 0 10px; display: flex; flex: 0 1 150px; align-items: center; gap: 6px; border: 1px solid transparent; border-bottom: 0; border-radius: 3px 3px 0 0; color: #66728a; background: transparent; cursor: pointer; font-size: 12px; }
 .workspace-tab > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-tab:hover { color: #0474f4; background: #f2f7fd; }
 .workspace-tab.active { color: #0474f4; background: #f3f4f7; border-color: #dfe3eb; box-shadow: inset 0 2px #0474f4; }
 .tab-close { margin-left: 2px; border-radius: 50%; }
 .tab-close:hover { color: white; background: #8590a5; }
-.workspace-tab-actions { margin-left: auto; align-self: stretch; display: flex; align-items: center; border-left: 1px solid #edf0f4; }
+.workspace-tab-actions { flex: 0 0 68px; margin-left: auto; align-self: stretch; display: flex; align-items: center; border-left: 1px solid #edf0f4; }
 .workspace-tab-actions button { width: 34px; height: 37px; display: grid; place-items: center; border: 0; color: #768299; background: white; cursor: pointer; }
 .workspace-tab-actions button:hover { color: #0474f4; background: #f2f7fd; }
 .page-heading { min-height: 72px; padding: 13px 20px 12px; display: flex; align-items: flex-end; justify-content: space-between; background: #f3f4f7; border-bottom: 1px solid var(--line); }

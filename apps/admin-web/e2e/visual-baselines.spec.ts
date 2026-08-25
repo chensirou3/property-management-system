@@ -33,7 +33,7 @@ for (const viewport of targetViewports) {
       await expect(page.locator('.stat-card').filter({ hasText: '房屋资产' })).toContainText('359')
       await expect(page.locator('.topbar')).toBeVisible()
       await expect(page.locator('.sidebar')).toBeVisible()
-      await expect(page.locator('.workspace-tabs')).toContainText('项目看板')
+      await expect(page.locator('.workspace-tabs')).toContainText('看板')
       await assertShellGeometry(page, viewport.width, viewport.height)
       await expect(page).toHaveScreenshot(`dashboard-${viewport.name}.png`, {
         animations: 'disabled',

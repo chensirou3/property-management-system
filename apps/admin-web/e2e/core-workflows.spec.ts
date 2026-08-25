@@ -12,10 +12,10 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('dashboard and core archive data are backed by the API', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: '项目看板' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '看板', exact: true })).toBeVisible()
   await expect(page.locator('.topbar')).toContainText('我的应用')
   await expect(page.locator('.sidebar')).toBeVisible()
-  await expect(page.locator('.workspace-tabs')).toContainText('项目看板')
+  await expect(page.locator('.workspace-tabs')).toContainText('看板')
   await expect(page.locator('.stat-card').filter({ hasText: '房屋资产' })).toContainText('359')
   await page.goto('/archives/rooms')
   await expect(page.getByRole('heading', { name: '房产信息' })).toBeVisible()

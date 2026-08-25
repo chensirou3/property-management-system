@@ -10,6 +10,8 @@
     "test": "vitest run && npm run pages:acceptance:check && npm run api:check",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:catalog-smoke": "playwright test e2e/page-catalog.smoke.spec.ts",
+    "test:catalog-visual": "playwright test e2e/page-catalog.visual.spec.ts",
     "test:visual": "playwright test e2e/visual-baselines.spec.ts",
     "pages:acceptance": "node scripts/generate-page-acceptance-cards.mjs",
     "pages:acceptance:check": "node scripts/generate-page-acceptance-cards.mjs --check",
