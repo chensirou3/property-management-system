@@ -87,7 +87,7 @@ pwsh -File scripts/backup-mysql.ps1
 pwsh -File scripts/restore-drill.ps1
 ```
 
-备份文件和 SHA-256 元数据进入忽略目录 `.artifacts/backups`。恢复脚本只创建经过正则约束的 `pms3_restore_drill_*` 临时库，核对 Flyway v19、88 张表、22 个启用报表、5 个 fail-closed 策略、关键表计数和 Outbox 校验值，最后删除该临时库。`-KeepRestoredDatabase` 只用于受控人工检查。
+备份文件和 SHA-256 元数据进入忽略目录 `.artifacts/backups`。恢复脚本只创建经过正则约束的 `pms3_restore_drill_*` 临时库，核对 Flyway V20、90 张表、22 个启用报表、5 个 fail-closed 策略、4 个已发布看板配置、3 条脱敏访客种子、生产访客连接 0、关键表计数和 Outbox 校验值，最后删除该临时库。`-KeepRestoredDatabase` 只用于受控人工检查。
 
 Flyway 采用 forward-only 策略。迁移失败时先停止写入并保留失败现场；应用镜像回滚只有在 schema 向后兼容时才允许。涉及破坏性 schema 变化时，必须用升级前备份恢复到新的数据库实例并切换流量，不能直接修改 `flyway_schema_history`。
 
@@ -97,7 +97,7 @@ Flyway 采用 forward-only 策略。迁移失败时先停止写入并保留失�
 pwsh -File scripts/empty-stack-drill.ps1
 ```
 
-脚本生成一次性强密码、使用独立 Compose project/端口/卷，从空库构建 API 和 Web，验证 v19/88/22/5/0、API readiness 和登录页，然后仅对校验过的精确 project 执行 `down -v`。它不会读取或输出本地 `.env` 的秘密。
+脚本生成一次性强密码、使用独立 Compose project/端口/卷，从空库构建 API 和 Web，验证 `V20/90/22/5/0/4/3/0`、API readiness 和登录页，然后仅对校验过的精确 project 执行 `down -v`。它不会读取或输出本地 `.env` 的秘密。
 
 ## 9. 供应链门禁
 
@@ -121,7 +121,7 @@ pwsh -File scripts/scan-container-images.ps1
 
 G9 候选实现固定 Netty 4.1.136.Final 和 Flyway 11.20.3，使用 MySQL 8.4 加固镜像、`nginxinc/nginx-unprivileged:1.29-alpine` Web 运行层，并在 API/Web Alpine 运行层执行安全更新。MySQL 镜像移除了本工程不使用的 MySQL Shell Python 运行时和仅 root 入口需要的 gosu，最终以 `999:999` 运行；API 为 `app`，Web 为 `101:101`。
 
-2026-08-25 最终证据：API/Web CycloneDX 分别包含 96/300 个组件；npm 生产依赖 0 漏洞；Semgrep 扫描 176 个目标、实际执行 365 条规则、0 发现；Secret 扫描覆盖 395 个仓库文件并与 5 个本地秘密值比对、0 发现；固定摘要的 Trivy 扫描 API/Web/MySQL/Redis 四个最终镜像，Critical=0、High=0。完整数值与摘要见 `G9集成安全部署阶段验收-2026-08-25.md`。
+2026-08-25 G10 最终证据：API/Web CycloneDX 分别包含 96/300 个组件，SHA-256 分别为 `7dc9298225ad18f008aa8e35e88d9f69f1aa91cbe6ba0fcb80a6cb49edc404be` / `d419dd04b3baa9225e98ae2d8351af9fe3bdf07ae6df3c50947c90a1a2cb9692`；npm 生产依赖 0 漏洞；Semgrep 扫描 186 个目标、实际执行 365 条规则、0 发现；Secret 扫描覆盖 410 个仓库文件并与 5 个本地秘密值比对、0 发现；固定摘要的 Trivy 扫描 API/Web/MySQL/Redis 四个最终镜像，Critical=0、High=0。完整数值、边界与摘要见 `acceptance-report.md`。
 
 ## 10. 生产前外部门禁
 
