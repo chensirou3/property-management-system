@@ -1,0 +1,3352 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "paths": {
+    "/api/v1/iam/users/{id}": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/users/{id}/password": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/roles/{id}": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/positions/{id}": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "updatePosition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePositionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/organizations/{id}": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "updateOrganization",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/enterprises/{id}": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "updateEnterprise",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEnterpriseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/employees/{id}": {
+      "put": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "updateEmployee",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEmployeeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data/{resource}/{id}": {
+      "get": {
+        "tags": [
+          "data-resource-controller"
+        ],
+        "operationId": "get",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "data-resource-controller"
+        ],
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "data-resource-controller"
+        ],
+        "operationId": "archive",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "put": {
+        "tags": [
+          "auth-controller"
+        ],
+        "operationId": "changePassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivable-jobs": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "generate",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceivableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivable-jobs:preview": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceivableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prepayment-accounts": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "createPrepayment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prepayment-accounts/{id}:top-up": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "topUp",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountAmountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prepayment-accounts/{id}:apply": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "apply",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepaymentApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payment-transactions/{id}:reverse": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "reverse",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReversalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payment-orders": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "createOrder",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payment-orders/{id}:confirm-simulated": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meters/{id}:replace": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "replace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplacementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-share-rules:preview": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "sharePreview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-share-rules:apply": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "applyShare",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-readings:input": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "input",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadingsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-readings:import-simulated": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "importSimulated",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "batchId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-reading-batches": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "createBatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-reading-batches/{id}:generate-charges": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "generateCharges",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-reading-batches/{id}:approve": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "approve",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invoices:simulate": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "simulateInvoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/users": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "users",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "createUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/roles": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "roles",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "createRole",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/positions": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "positions",
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PositionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "createPosition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePositionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/organizations": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "organizations",
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "createOrganization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrganizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/enterprises": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "enterprises",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnterpriseView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "createEnterprise",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnterpriseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnterpriseView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/employees": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "employees",
+        "parameters": [
+          {
+            "name": "enterpriseId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EmployeeView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "createEmployee",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEmployeeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fee-standards": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "createStandard",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStandard"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fee-allocations:batch-cancel": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "batchCancel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fee-allocations:batch-assign": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "batchAssign",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAssign"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deposits": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "collectDeposit",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepositCollect"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deposits/{id}:refund": {
+      "post": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "refundDeposit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountAmountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data/{resource}": {
+      "get": {
+        "tags": [
+          "data-resource-controller"
+        ],
+        "operationId": "list",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "data-resource-controller"
+        ],
+        "operationId": "create",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions:revoke": {
+      "post": {
+        "tags": [
+          "auth-controller"
+        ],
+        "operationId": "revokeAllSessions",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth-controller"
+        ],
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/platform/runtime": {
+      "get": {
+        "tags": [
+          "platform-controller"
+        ],
+        "operationId": "runtime",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/projects": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "projects",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/iam/permissions": {
+      "get": {
+        "tags": [
+          "iam-admin-controller"
+        ],
+        "operationId": "permissions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PermissionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard-controller"
+        ],
+        "operationId": "dashboard",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cashier/context": {
+      "get": {
+        "tags": [
+          "finance-controller"
+        ],
+        "operationId": "context",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth-controller"
+        ],
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/adapters/status": {
+      "get": {
+        "tags": [
+          "adapter-controller"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "passwordChangeRequired": {
+            "type": "boolean"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "projectIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "displayName",
+          "enabled",
+          "expectedVersion",
+          "passwordChangeRequired",
+          "projectIds",
+          "roleIds"
+        ]
+      },
+      "UserView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "passwordChangeRequired": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "projectIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 12
+          },
+          "requireChange": {
+            "type": "boolean"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "password",
+          "requireChange"
+        ]
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "enabled",
+          "expectedVersion",
+          "name",
+          "permissionIds"
+        ]
+      },
+      "RoleView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "enterpriseId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdatePositionRequest": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "ACTIVE|INACTIVE"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "name",
+          "organizationId",
+          "status"
+        ]
+      },
+      "PositionView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "enterpriseId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateOrganizationRequest": {
+        "type": "object",
+        "properties": {
+          "parentId": {
+            "type": "string"
+          },
+          "communityId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "organizationType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "COMPANY|PROJECT|DEPARTMENT"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "ACTIVE|INACTIVE"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "name",
+          "organizationType",
+          "sortOrder",
+          "status"
+        ]
+      },
+      "OrganizationView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "enterpriseId": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "communityId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "organizationType": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateEnterpriseRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "ACTIVE|INACTIVE"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "name",
+          "status"
+        ]
+      },
+      "EnterpriseView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateEmployeeRequest": {
+        "type": "object",
+        "properties": {
+          "organizationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "mobileMasked": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 0
+          },
+          "employmentStatus": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "ACTIVE|INACTIVE|LEFT"
+          },
+          "hireDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "leaveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "displayName",
+          "employmentStatus",
+          "expectedVersion",
+          "organizationId"
+        ]
+      },
+      "EmployeeView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "enterpriseId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          },
+          "positionId": {
+            "type": "string"
+          },
+          "employeeNo": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "mobileMasked": {
+            "type": "string"
+          },
+          "employmentStatus": {
+            "type": "string"
+          },
+          "hireDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "leaveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 8
+          },
+          "newPassword": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 12
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "LoginResult": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        }
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "projectIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "passwordChangeRequired": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReceivableRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "billingPeriod": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])"
+          },
+          "assetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "assetIds",
+          "billingPeriod",
+          "communityId"
+        ]
+      },
+      "AccountRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "communityId",
+          "customerId"
+        ]
+      },
+      "AccountAmountRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "amount",
+          "communityId"
+        ]
+      },
+      "BillPayment": {
+        "type": "object",
+        "properties": {
+          "billId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "amount",
+          "billId"
+        ]
+      },
+      "PrepaymentApply": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillPayment"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "bills",
+          "communityId"
+        ]
+      },
+      "ReversalRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "communityId",
+          "reason"
+        ]
+      },
+      "PaymentOrderRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "paymentMethod": {
+            "type": "string",
+            "minLength": 1
+          },
+          "bills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillPayment"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "bills",
+          "communityId",
+          "paymentMethod"
+        ]
+      },
+      "ReplacementRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newMeterNo": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "oldFinalReading": {
+            "type": "number",
+            "minimum": 0
+          },
+          "newInitialReading": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "communityId",
+          "newInitialReading",
+          "newMeterNo",
+          "oldFinalReading",
+          "reason"
+        ]
+      },
+      "ShareRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ruleId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "batchId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "totalUsage": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "batchId",
+          "communityId",
+          "ruleId",
+          "totalUsage"
+        ]
+      },
+      "ReadingInput": {
+        "type": "object",
+        "properties": {
+          "meterId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "previousReading": {
+            "type": "number",
+            "minimum": 0
+          },
+          "currentReading": {
+            "type": "number",
+            "minimum": 0
+          },
+          "correction": {
+            "type": "number"
+          },
+          "allocatedShare": {
+            "type": "number",
+            "minimum": 0
+          },
+          "readingAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "currentReading",
+          "meterId"
+        ]
+      },
+      "ReadingsInput": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "batchId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "readings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReadingInput"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "batchId",
+          "communityId",
+          "readings"
+        ]
+      },
+      "CreateBatch": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "batchNo": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "readingPeriod": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])"
+          },
+          "sourceType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "MANUAL|IOT_SIMULATOR"
+          }
+        },
+        "required": [
+          "batchNo",
+          "communityId",
+          "readingPeriod",
+          "sourceType"
+        ]
+      },
+      "ChargeRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feeStandardId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "communityId",
+          "feeStandardId"
+        ]
+      },
+      "InvoiceRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "receiptId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "communityId",
+          "receiptId",
+          "title"
+        ]
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9_.-]+"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 12
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "projectIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "displayName",
+          "enabled",
+          "password",
+          "projectIds",
+          "roleIds",
+          "username"
+        ]
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "enterpriseId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9:_-]+"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "permissionIds"
+        ]
+      },
+      "CreatePositionRequest": {
+        "type": "object",
+        "properties": {
+          "enterpriseId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9_-]+"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "code",
+          "enterpriseId",
+          "name",
+          "organizationId"
+        ]
+      },
+      "CreateOrganizationRequest": {
+        "type": "object",
+        "properties": {
+          "enterpriseId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "communityId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9_-]+"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "organizationType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "COMPANY|PROJECT|DEPARTMENT"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "code",
+          "enterpriseId",
+          "name",
+          "organizationType",
+          "sortOrder"
+        ]
+      },
+      "CreateEnterpriseRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9_-]+"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "CreateEmployeeRequest": {
+        "type": "object",
+        "properties": {
+          "enterpriseId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "organizationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "positionId": {
+            "type": "string"
+          },
+          "employeeNo": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0,
+            "pattern": "[A-Za-z0-9_-]+"
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "mobileMasked": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 0
+          },
+          "hireDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "displayName",
+          "employeeNo",
+          "enterpriseId",
+          "organizationId"
+        ]
+      },
+      "CreateStandard": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feeDefinitionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "assetType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "ROOM|PARKING"
+          },
+          "billingCycle": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "formulaCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "formulaExpression": {
+            "type": "string",
+            "minLength": 1
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "assetType",
+          "billingCycle",
+          "code",
+          "communityId",
+          "effectiveFrom",
+          "feeDefinitionId",
+          "formulaCode",
+          "formulaExpression",
+          "name",
+          "unitPrice"
+        ]
+      },
+      "BatchCancel": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allocationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "allocationIds",
+          "communityId"
+        ]
+      },
+      "BatchAssign": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feeStandardId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "coefficient": {
+            "type": "number",
+            "minimum": 0
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "assetIds",
+          "coefficient",
+          "communityId",
+          "effectiveFrom",
+          "feeStandardId"
+        ]
+      },
+      "DepositCollect": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assetId": {
+            "type": "string"
+          },
+          "depositType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "amount",
+          "communityId",
+          "customerId",
+          "depositType"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 8
+          }
+        },
+        "required": [
+          "password",
+          "username"
+        ]
+      },
+      "ProjectView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "enterpriseId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "PermissionView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "resourceType": {
+            "type": "string"
+          }
+        }
+      },
+      "PageResponseMapStringObject": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  }
+}

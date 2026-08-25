@@ -7,13 +7,15 @@
     "dev": "vite --host 0.0.0.0 --port 5174",
     "typecheck": "vue-tsc --noEmit",
     "build": "npm run typecheck && vite build",
-    "test": "vitest run && npm run pages:acceptance:check",
+    "test": "vitest run && npm run pages:acceptance:check && npm run api:check",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:visual": "playwright test e2e/visual-baselines.spec.ts",
     "pages:acceptance": "node scripts/generate-page-acceptance-cards.mjs",
     "pages:acceptance:check": "node scripts/generate-page-acceptance-cards.mjs --check",
-    "api:generate": "openapi-typescript http://localhost:8088/v3/api-docs -o src/api/generated.ts",
+    "api:generate": "node scripts/sync-openapi-contract.mjs --sync",
+    "api:check": "node scripts/sync-openapi-contract.mjs --check",
+    "api:check:live": "node scripts/sync-openapi-contract.mjs --check-live",
     "preview": "vite preview --host 0.0.0.0 --port 4174"
   },
   "devDependencies": {

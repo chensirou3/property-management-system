@@ -66,6 +66,21 @@ class IamProjectIsolationIntegrationTest {
     @Autowired NamedParameterJdbcTemplate jdbc;
 
     @Test
+    void openApiContractMatchesCommittedSnapshot() throws Exception {
+        String actual = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        try (var expectedStream = getClass().getResourceAsStream("/openapi-contract.json")) {
+            assertThat(expectedStream).as("committed OpenAPI contract snapshot").isNotNull();
+            JsonNode actualContract = objectMapper.readTree(actual);
+            JsonNode expectedContract = objectMapper.readTree(expectedStream);
+            ((com.fasterxml.jackson.databind.node.ObjectNode) actualContract).remove("servers");
+            ((com.fasterxml.jackson.databind.node.ObjectNode) expectedContract).remove("servers");
+            assertThat(actualContract).isEqualTo(expectedContract);
+        }
+    }
+
+    @Test
     void ordinaryAccountSeesOnlyGrantedProjectAndCannotUseIamAdministration() throws Exception {
         String adminToken = login(ADMIN_USERNAME, ADMIN_PASSWORD);
 
