@@ -109,7 +109,19 @@ pwsh -File scripts/empty-stack-drill.ps1
 - Semgrep SAST、Git 跟踪文件秘密字面量扫描；
 - API、Web、MySQL 和 Redis 镜像的 Critical/High CVE 扫描。
 
-内部发布门禁为可修复 Critical/High = 0、已跟踪凭据字面量 = 0。任何例外都必须有 CVE、不可达证据、到期时间和责任人；G9 验收不接受用“模拟环境”跳过扫描。
+内部发布门禁为可修复 Critical/High = 0、Git 已跟踪及未忽略未跟踪文件中的凭据字面量 = 0。任何例外都必须有 CVE、不可达证据、到期时间和责任人；G9 验收不接受用“模拟环境”跳过扫描。
+
+复验命令：
+
+```powershell
+pwsh -File scripts/generate-sbom.ps1
+pwsh -File scripts/scan-tracked-secrets.ps1
+pwsh -File scripts/scan-container-images.ps1
+```
+
+G9 候选实现固定 Netty 4.1.136.Final 和 Flyway 11.20.3，使用 MySQL 8.4 加固镜像、`nginxinc/nginx-unprivileged:1.29-alpine` Web 运行层，并在 API/Web Alpine 运行层执行安全更新。MySQL 镜像移除了本工程不使用的 MySQL Shell Python 运行时和仅 root 入口需要的 gosu，最终以 `999:999` 运行；API 为 `app`，Web 为 `101:101`。
+
+2026-08-25 最终证据：API/Web CycloneDX 分别包含 96/300 个组件；npm 生产依赖 0 漏洞；Semgrep 扫描 176 个目标、实际执行 365 条规则、0 发现；Secret 扫描覆盖 395 个仓库文件并与 5 个本地秘密值比对、0 发现；固定摘要的 Trivy 扫描 API/Web/MySQL/Redis 四个最终镜像，Critical=0、High=0。完整数值与摘要见 `G9集成安全部署阶段验收-2026-08-25.md`。
 
 ## 10. 生产前外部门禁
 

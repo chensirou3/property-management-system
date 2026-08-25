@@ -213,3 +213,22 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 报表编码固定为：`TRANSACTION_SUMMARY`、`TRANSACTION_DETAILS`、`RECEIPT_BATCH_PRINT`、`PAYMENTS`、`ARREARS`、`BILL_NOTIFICATIONS`、`BILLS`、`COLLECTION_RATE`、`ARREARS_CLEARANCE_RATE`、`COMPREHENSIVE_QUERY`、`COLLECTION_CLEARANCE_SUMMARY`、`CHARGE_DETAILS`、`DISCOUNT_DETAILS`、`PREPAYMENTS`、`OWNERSHIP_TRANSFERS`、`REMINDERS`、`FEE_STATUS`、`INVOICE_STATISTICS`、`DEPOSITS`、`DAILY_SETTLEMENT_DETAILS`、`ADJUSTMENTS`、`BANK_TRUST`。
 
 客户端不得把 `queryChecksum` 当成授权凭据；它只证明本次筛选、口径版本和结果摘要。当前通知、银行信托和发票统计中的外部结果为明确模拟/内部台账模式，不能据此宣称真实投递、托收或税控查询成功。
+
+## 外部集成治理
+
+工作台读取要求 `integration:read` 并重验 `communityId`；连接测试、模拟 Outbox、排空和死信重放要求 `integration:write`，其中制造故障/排空/重放仅允许 `PLATFORM_ADMIN`。服务端只接受预定义适配器编码和模拟负载，不接受浏览器提供任意端点或密钥。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/integrations/workbench` | 返回项目内五项策略、连接测试、回调、投递尝试、模拟 Outbox、死信及聚合；端点脱敏，不返回秘密 |
+| POST | `/integrations/adapters/{adapterCode}:test` | 执行预定义连接检测并保存耗时、结果、追踪号和详情 SHA-256；Java110 返回 DISABLED |
+| POST | `/integrations/callbacks/{adapterCode}` | 公共回调入口；要求时间戳、回调编号和 HMAC-SHA256，执行时间窗、恒定时间验签及 Inbox 幂等/冲突处理 |
+| POST | `/integrations/outbox-events:simulate` | 平台管理员为指定项目创建 `INTEGRATION_SIMULATOR` 事件；服务端覆盖负载项目并强制 `simulated=true` |
+| POST | `/integrations/outbox-events/{id}:simulate-delivery` | 只投递项目内模拟事件；按策略追加尝试、重试或死信，业务 Outbox 返回 404 |
+| POST | `/integrations/outbox-events:drain-simulated` | 只排空指定项目的 `INTEGRATION_SIMULATOR` 待处理事件，不消费支付/应收等业务事件 |
+| POST | `/integrations/dead-letters/{id}:replay` | 重放项目内模拟死信；保留原尝试和死信，成功后状态为 RESOLVED |
+| GET | `/adapters/status` | 返回五个适配器的运行模式、启用/生产就绪状态和能力摘要 |
+
+回调规范串为 `timestamp + "\n" + adapterCode + "\n" + callbackId + "\n" + rawJsonPayload`，签名以小写十六进制传递。默认时间窗为 ±300 秒，最大请求体 1 MB；同一 `(adapter_code, callback_id)` 与同一负载安全重放，不同负载返回 `409 CALLBACK_REPLAY_CONFLICT`。当前只允许四个 `SIMULATOR` 和一个 `DISABLED`，所有 `productionReady=false`；任何未实现的 production 模式在启动时拒绝运行。
+
+内部可观测接口为 `/actuator/health/liveness`、`/actuator/health/readiness` 和 `/actuator/prometheus`。生产入口必须按 `deployment-security.md` 隔离 actuator/OpenAPI，并在 TLS 反向代理继续限制登录和回调速率。

@@ -8,7 +8,7 @@
 - 金额为 `DECIMAL(18,2)`，用量、单价、系数和面积保留更高小数位。
 - JSON 快照用于保存公式、收据、适配器和计算上下文，避免未来规则变化改写历史。
 
-## 表分组（空库迁移后共 84 张业务/基础设施表）
+## 表分组（空库迁移后共 88 张业务/基础设施表）
 
 | 分组 | 核心表 | 作用 |
 |---|---|---|
@@ -24,6 +24,7 @@
 | 财务治理 | `bill_adjustment`、`discount_policy`、`daily_settlement`、`financial_event` | 调账审批、折扣策略、日结锁定和统一不可变事件链 |
 | 仪表 | `meter`、`meter_reading_batch`、`meter_reading`、`meter_share_rule`、`meter_share_rule_version`、`meter_share_result`、`meter_replacement`、`iot_reading_inbox`、`meter_charge_reconciliation`、`meter_event` | 表具、连续读数、版本化公摊、IoT 入站、换表凭证、计量对账和事件链 |
 | 报表与通知 | `report_definition`、`report_export_job`、`report_export_event`、`receipt_print_job`、`receipt_print_item`、`notification_batch`、`notification_message` | 固定报表口径、异步制品/事件、打印快照/次数和模拟通知证据 |
+| 外部集成治理 | `integration_adapter_policy`、`integration_callback_inbox`、`integration_delivery_attempt`、`integration_dead_letter` | 适配器 fail-closed 策略、签名回调幂等、连接/入站/出站尝试和死信重放证据 |
 | 迁移治理 | `migration_batch`、`migration_raw_record`、`migration_quarantine_record`、`migration_canonical_record`、`migration_staging_record`、`migration_object_map`、`migration_reconciliation`、`migration_change_log`、`migration_batch_event` | 五层证据、源目标映射、审批执行、对账、状态轨迹与逆序回滚 |
 | 支撑 | `audit_log`、`outbox_event`、`system_dictionary`、导入/迁移任务表 | 审计、事件外盒、字典和作业状态 |
 
@@ -63,6 +64,10 @@
 32. 报表导出任务的 `(community_id, request_key)` 唯一并保存请求 SHA-256；成功任务必须同时具备制品、MIME、行数、64 位制品校验和和完整状态事件。
 33. 打印任务的 `item_count` 必须等于 `receipt_print_item` 数量；每个明细冻结收据快照和 SHA-256，成功任务数与 `receipt.print_count` 一致。
 34. 通知批次渠道仅允许 `SMS_SIMULATOR`、`WECHAT_SIMULATOR`、`EMAIL_SIMULATOR` 且 `simulated=true`；成功/失败计数必须等于消息明细，正文快照和模拟引用不可为空。
+35. `integration_adapter_policy.mode` 只允许 `SIMULATOR`/`DISABLED`；当前四个启用模拟器和一个禁用适配器的 `production_ready` 必须为 false，未实现生产模式在启动时 fail-closed。
+36. 回调 `(adapter_code, callback_id)` 唯一并保存项目、负载 SHA-256 和追踪号；同负载只增加重放次数，不同负载必须冲突，验签失败不得进入 Inbox。
+37. 每次连接、入站和出站尝试按适配器、引用和尝试序号唯一并保存详情 SHA-256；重试耗尽后死信唯一，重放保留原尝试/死信并追加恢复证据。
+38. 集成治理模拟投递只允许项目内 `aggregate_type=INTEGRATION_SIMULATOR` 且负载 `simulated=true` 的 Outbox；业务支付/应收事件不得由模拟单投递或排空接口消费。
 
 ## 合成项目基线
 
@@ -82,5 +87,6 @@
 | 房屋费用分配 / 车位费用分配 | 549 / 194 |
 | 仪表费用分配 | 30 |
 | 演示账单 | 20 |
+| 集成适配器策略 | 5（4 个 SIMULATOR + 1 个 DISABLED，生产就绪 0） |
 
-全新数据库验收结果：16 个 Flyway 迁移成功、77 张表、65 个权限、2 个有效项目；主项目为 359 套有效房屋、250 个有效车位、403 个有效客户和 403 条有效客户资产关系，隔离项目具备最小完整档案链。G4 的 32 条合格 + 1 条错误样本可重复完成隔离、审批、31 条生产写入 + 1 条项目映射、9 项对账和 41 条变更逆序回滚。G5/G7 合成种子为 23 个费用定义、17 个标准、773 条分配，其中 30 条为仪表计量分配。G6 增加 2 个收据号段和 1 个合成折扣策略；七项财务对账差异为 0。G7 增加 1 个公摊规则版本和计量读数/IoT/换表/计费证据，COUNT/USAGE/AMOUNT 三项对账差异为 0。客户资产孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。开发运行库允许保留已停用、已回滚、已冲正或由生命周期追加的 E2E 历史证据，因此阶段对账以空库种子、有效状态和不可变账本守恒值为准。
+全新数据库验收结果：19 个 Flyway 迁移成功、88 张表、65 个权限、22 个 ACTIVE 报表、5 个 fail-closed 适配器策略和 2 个有效项目；主项目为 359 套有效房屋、250 个有效车位、403 个有效客户和 403 条有效客户资产关系，隔离项目具备最小完整档案链。G4 的 32 条合格 + 1 条错误样本可重复完成隔离、审批、31 条生产写入 + 1 条项目映射、9 项对账和 41 条变更逆序回滚。G5/G7 合成种子为 23 个费用定义、17 个标准、773 条分配，其中 30 条为仪表计量分配。G6 增加 2 个收据号段和 1 个合成折扣策略；七项财务对账差异为 0。G7 增加 1 个公摊规则版本和计量读数/IoT/换表/计费证据，COUNT/USAGE/AMOUNT 三项对账差异为 0。G8 固定 22 个报表定义；G9 固定四个模拟器和一个禁用适配器，生产就绪为 0。客户资产孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。开发运行库允许保留已停用、已回滚、已冲正或由生命周期追加的 E2E 历史证据，因此阶段对账以空库种子、有效状态和不可变账本守恒值为准。
