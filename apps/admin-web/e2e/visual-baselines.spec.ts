@@ -2,6 +2,15 @@ import { expect, test } from '@playwright/test'
 
 const username = process.env.PMS_E2E_USERNAME || 'admin'
 const password = process.env.PMS_E2E_PASSWORD
+const dashboardVisualFixture = {
+  communityId: '30000000-0000-0000-0000-000000000001',
+  counts: { rooms: 359, customers: 403, parking_spaces: 250, meters: 31,
+    fee_definitions: 23, fee_standards: 17, allocations: 743 },
+  finance: { receivable: 2468.84, received: 241.26, outstanding: 2227.58,
+    bill_count: 360, collection_rate: 9.77 },
+  quality: { orphan_customer_relations: 0, orphan_allocations: 0, synthetic: true },
+  adapters: { payment: 'simulator', invoice: 'simulator', iot: 'simulator', java110: 'disabled' },
+}
 
 const targetViewports = [
   { name: '1366x768', width: 1366, height: 768 },
@@ -15,6 +24,14 @@ for (const viewport of targetViewports) {
 
     test(`login and authenticated shell remain stable at ${viewport.name}`, async ({ page }) => {
       if (!password) throw new Error('PMS_E2E_PASSWORD is required; do not commit a local password')
+
+      await page.route('**/api/v1/dashboard*', async (route) => {
+        if (route.request().method() === 'GET') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dashboardVisualFixture) })
+        } else {
+          await route.continue()
+        }
+      })
 
       await page.goto('/login')
       await expect(page.getByRole('heading', { name: '项目、资产、收费一体化管理' })).toBeVisible()

@@ -255,6 +255,7 @@ public class ReceivableService {
                     AND (fsv.effective_to IS NULL OR fsv.effective_to>=:chargeDate)
                 WHERE fa.community_id=:communityId AND fa.status='ACTIVE'
                   AND fs.status='ACTIVE' AND fd.enabled=TRUE
+                  AND fs.calculation_basis<>'METER_USAGE'
                   AND fa.effective_from<=:chargeDate
                   AND (fa.effective_to IS NULL OR fa.effective_to>=:chargeDate)
                 """ + assetPredicate + " ORDER BY a.code, fd.code, fa.id, fsv.version_no", params);

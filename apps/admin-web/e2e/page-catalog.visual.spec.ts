@@ -32,6 +32,47 @@ const cashierVisualFixtures = new Map<string, unknown>([
   ['/api/v1/cashier/shifts:current', { open: false }],
   ['/api/v1/cashier/context', { bills: visualBills, customers: [{ id: 'visual-customer-1', display_name: '视觉客户 0001' }, { id: 'visual-customer-2', display_name: '视觉客户 0002' }], assets: [{ id: 'visual-asset-1', code: 'R0801', display_name: '8-01' }, { id: 'visual-asset-2', code: 'R0802', display_name: '8-02' }] }],
 ])
+const meterVisualWorkbench = {
+  summary: { meterCount: 32, activeMeterCount: 31, batchCount: 6, pendingReviewCount: 1,
+    iotEvidenceCount: 2, reconciliationMismatchCount: 0 },
+  meters: [
+    { id: 'visual-meter-master', meterNo: 'VIS-MASTER-001', meterType: 'WATER', meterClass: 'MASTER',
+      status: 'ACTIVE', rangeValue: 999999, multiplier: 1, lossRate: 0, correction: 0,
+      assetId: null, assetName: null, parentMeterNo: null, lastReading: 860, lastReadingPeriod: '2026-07' },
+    { id: 'visual-meter-1', meterNo: 'VIS-SUB-001', meterType: 'WATER', meterClass: 'SUB',
+      status: 'ACTIVE', rangeValue: 99999, multiplier: 1, lossRate: 0.02, correction: 0,
+      assetId: 'visual-asset-1', assetName: '1号楼 1单元 101', parentMeterNo: 'VIS-MASTER-001',
+      lastReading: 125.5, lastReadingPeriod: '2026-07' },
+    { id: 'visual-meter-2', meterNo: 'VIS-SUB-002', meterType: 'WATER', meterClass: 'SUB',
+      status: 'ACTIVE', rangeValue: 99999, multiplier: 1.5, lossRate: 0.02, correction: 0,
+      assetId: 'visual-asset-2', assetName: '1号楼 1单元 102', parentMeterNo: 'VIS-MASTER-001',
+      lastReading: 98, lastReadingPeriod: '2026-07' },
+  ],
+  batches: [
+    { id: 'visual-meter-batch', batchNo: 'VIS-MR-202608', readingPeriod: '2026-08', sourceType: 'MIXED',
+      totalCount: 2, normalCount: 1, anomalyCount: 1, reviewedCount: 0, status: 'DRAFT', dataChecksum: '审核后生成' },
+    { id: 'visual-meter-approved', batchNo: 'VIS-MR-202607', readingPeriod: '2026-07', sourceType: 'MANUAL',
+      totalCount: 2, normalCount: 2, anomalyCount: 0, reviewedCount: 0, status: 'APPROVED',
+      dataChecksum: '8f58ed768cd8f46c5b932bd23930195ce4800374571f404ca9d20d254659c07d' },
+  ],
+  shareRules: [{ id: 'visual-share-rule', name: '按建筑面积公摊（合成假设）', status: 'ACTIVE',
+    activeVersionId: 'visual-share-version', activeVersionNo: 1, assumptionRule: true }],
+  feeStandards: [{ id: 'visual-meter-standard', code: 'FEE-METER-WATER', name: '水费（合成示范）',
+    status: 'ACTIVE', versionNo: 1, unitPrice: 3.5, roundingMode: 'HALF_UP' }],
+}
+const meterVisualBatchDetail = {
+  batch: meterVisualWorkbench.batches[0],
+  readings: [
+    { id: 'visual-reading-1', meterNo: 'VIS-SUB-001', assetName: '1号楼 1单元 101',
+      previousReading: 125.5, currentReading: 138.5, adjustedUsage: 13.26, allocatedShare: 0,
+      billableUsage: 13.26, validationStatus: 'NORMAL', anomalyCode: null, version: 0 },
+    { id: 'visual-reading-2', meterNo: 'VIS-SUB-002', assetName: '1号楼 1单元 102',
+      previousReading: 97, currentReading: 110, adjustedUsage: 19.89, allocatedShare: 0,
+      billableUsage: 19.89, validationStatus: 'REVIEW_REQUIRED', anomalyCode: 'PREVIOUS_MISMATCH', version: 0 },
+  ],
+  iotEvidence: [{ id: 'visual-iot-1', adapterCode: 'IOT_SIMULATOR', simulated: true, status: 'APPLIED' }],
+  reconciliation: [],
+}
 const targetViewports = [
   { name: '1366x768', width: 1366, height: 768 },
   { name: '1440x900', width: 1440, height: 900 },
@@ -45,6 +86,20 @@ for (const viewport of targetViewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
     await installFixtureRoutes(page, '**/api/v1/finance/**', financialVisualFixtures)
     await installFixtureRoutes(page, '**/api/v1/cashier/**', cashierVisualFixtures)
+    await page.route('**/api/v1/meter-workbench*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(meterVisualWorkbench) })
+      } else {
+        await route.continue()
+      }
+    })
+    await page.route('**/api/v1/meter-reading-batches/visual-meter-batch*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(meterVisualBatchDetail) })
+      } else {
+        await route.continue()
+      }
+    })
     await page.route('**/api/v1/migrations/batches*', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], page: 1, size: 20, total: 0 }) })

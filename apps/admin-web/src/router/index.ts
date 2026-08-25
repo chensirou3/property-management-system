@@ -23,7 +23,7 @@ const FeeConfigurationView = () => import('../views/FeeConfigurationView.vue')
 const TemporaryReceivableView = () => import('../views/TemporaryReceivableView.vue')
 const FinancialOperationsView = () => import('../views/FinancialOperationsView.vue')
 
-const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
+const meterWorkflowPaths = ['/archives/meters', '/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
 const assetWorkspacePaths = ['/archives/rooms', '/archives/parking-spaces']
 const customerWorkspacePaths = ['/archives/customers', '/archives/customer-assets']

@@ -33,7 +33,7 @@ test('receivable, cashier and meter workflow pages load real data', async ({ pag
   await expect(page.getByRole('row', { name: /SYN-BILL-202607-0001/ })).toBeVisible()
 
   await page.goto('/metering/batches')
-  await expect(page.getByRole('heading', { name: '新建抄表批次' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '批次建档与状态统计' })).toBeVisible()
   const batchNo = `E2E-METER-${Date.now()}`
   await page.getByRole('textbox', { name: '批次号' }).fill(batchNo)
   await page.getByRole('button', { name: '创建批次' }).click()

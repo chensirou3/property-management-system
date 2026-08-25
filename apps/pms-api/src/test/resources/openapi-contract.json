@@ -1501,6 +1501,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1668,12 +1676,90 @@
         }
       }
     },
+    "/api/v1/meter-readings/{id}:review": {
+      "post": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "review",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/meter-reading-batches": {
+      "get": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "batches_1",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "meter-controller"
         ],
         "operationId": "createBatch",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3919,6 +4005,142 @@
         }
       }
     },
+    "/api/v1/meters": {
+      "get": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "meters",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-workbench": {
+      "get": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "workbench",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-reading-batches/{id}": {
+      "get": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "batchDetail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meter-reading-batches/{id}/reconciliation": {
+      "get": {
+        "tags": [
+          "meter-controller"
+        ],
+        "operationId": "reconciliation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/iam/projects": {
       "get": {
         "tags": [
@@ -4073,7 +4295,7 @@
         "tags": [
           "financial-governance-controller"
         ],
-        "operationId": "reconciliation",
+        "operationId": "reconciliation_1",
         "parameters": [
           {
             "name": "communityId",
@@ -6145,6 +6367,28 @@
           "readings"
         ]
       },
+      "ReviewRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "communityId",
+          "reason"
+        ]
+      },
       "CreateBatch": {
         "type": "object",
         "properties": {
@@ -6165,7 +6409,7 @@
           "sourceType": {
             "type": "string",
             "minLength": 1,
-            "pattern": "MANUAL|IOT_SIMULATOR"
+            "pattern": "MANUAL|IOT_SIMULATOR|MIXED"
           }
         },
         "required": [

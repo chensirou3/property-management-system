@@ -128,6 +128,7 @@ class FeeReceivableIntegrationTest {
 
         JsonNode augustPreview = postOk(token, "/api/v1/receivables:preview",
                 body("communityId", PROJECT, "billingPeriod", "2026-08", "assetIds", List.of(assetId)), null);
+        assertThat(hasLineForStandard(augustPreview, "71000000-0000-0000-0000-000000000019")).isFalse();
         JsonNode augustLine = lineForStandard(augustPreview, standardId);
         BigDecimal expectedAugust = area.multiply(new BigDecimal("0.015")).multiply(new BigDecimal("1.333333"))
                 .setScale(2, RoundingMode.HALF_EVEN);
