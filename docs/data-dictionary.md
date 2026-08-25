@@ -8,7 +8,7 @@
 - 金额为 `DECIMAL(18,2)`，用量、单价、系数和面积保留更高小数位。
 - JSON 快照用于保存公式、收据、适配器和计算上下文，避免未来规则变化改写历史。
 
-## 表分组（空库迁移后共 56 张业务/基础设施表）
+## 表分组（空库迁移后共 65 张业务/基础设施表）
 
 | 分组 | 核心表 | 作用 |
 |---|---|---|
@@ -22,6 +22,7 @@
 | 预收押金 | `prepayment_account`、`prepayment_transaction`、`deposit`、`deposit_transaction` | 余额账户与完整变动流水 |
 | 票据 | `receipt`、`invoice_request` | 收据快照和模拟发票结果 |
 | 仪表 | `meter`、`meter_reading_batch`、`meter_reading`、`meter_share_rule`、`meter_share_result`、`meter_replacement` | 表具、抄表、公摊和换表 |
+| 迁移治理 | `migration_batch`、`migration_raw_record`、`migration_quarantine_record`、`migration_canonical_record`、`migration_staging_record`、`migration_object_map`、`migration_reconciliation`、`migration_change_log`、`migration_batch_event` | 五层证据、源目标映射、审批执行、对账、状态轨迹与逆序回滚 |
 | 支撑 | `audit_log`、`outbox_event`、`system_dictionary`、导入/迁移任务表 | 审计、事件外盒、字典和作业状态 |
 
 ## 关键不变量
@@ -39,6 +40,8 @@
 11. 同一客户、资产、关系类型最多存在一条有效关系；同一车辆、车位最多存在一条有效关系，生成列与唯一键从数据库层阻止重复。
 12. 产权变更会结束资产上全部有效 `OWNER`/`CO_OWNER`，创建新的 `OWNER`，并在 `property_relation_event` 保存请求键、操作者、原因和前后关系快照。
 13. 有下级、有效关系、车辆、仪表或其他业务引用的档案不能直接停用；停用是状态变更，历史行不物理删除。
+14. 迁移 Raw 记录在服务边界不可变；错误记录只进入 Quarantine，只有已审批的有效 Staging 记录可以写入 Production。
+15. `(community_id, source_sha256, mapping_version)` 唯一保证同一来源安全重放；生产新增对象逐条记录 `migration_change_log`，回滚只按逆依赖删除本批创建对象并保留全部迁移证据。
 
 ## 合成项目基线
 
@@ -58,4 +61,4 @@
 | 房屋费用分配 / 车位费用分配 | 549 / 194 |
 | 演示账单 | 20 |
 
-全新数据库验收结果：11 个 Flyway 迁移成功、56 张表、65 个权限、2 个有效项目；主项目为 359 套有效房屋、250 个有效车位、403 个有效客户和 403 条有效客户资产关系，隔离项目具备最小完整档案链。客户资产孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。开发运行库允许保留已停用的 E2E 历史行，因此阶段对账以有效状态计数，并另行核对历史行均不再被有效关系引用。
+全新数据库验收结果：12 个 Flyway 迁移成功、65 张表、65 个权限、2 个有效项目；主项目为 359 套有效房屋、250 个有效车位、403 个有效客户和 403 条有效客户资产关系，隔离项目具备最小完整档案链。G4 的 32 条合格 + 1 条错误样本可重复完成隔离、审批、31 条生产写入 + 1 条项目映射、9 项对账和 41 条变更逆序回滚。客户资产孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。开发运行库允许保留已停用或已回滚的 E2E 历史证据，因此阶段对账以有效状态计数，并另行核对历史行均不再被有效关系引用。

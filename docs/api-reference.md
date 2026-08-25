@@ -85,7 +85,25 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 | GET | `/property/imports/template` | 下载 GRID/BUILDING/UNIT/ASSET/CUSTOMER/RELATION 的 UTF-8 CSV 模板 |
 | POST | `/property/imports:validate` | 最多 500 行的无写入预校验，逐行返回错误、警告和汇总 |
 
-关系写入需要 `Idempotency-Key`；同一项目和请求键重放返回原结果。数据库生成列禁止重复有效关系，乐观锁防止静默覆盖；类型化响应不会返回手机、证件原文。导入预校验只检查模板、必填项、项目引用、重复编码、面积、日期和关系重叠，不会实际写库；批量落库、断点续跑和对账属于 G4 迁移中心。
+关系写入需要 `Idempotency-Key`；同一项目和请求键重放返回原结果。数据库生成列禁止重复有效关系，乐观锁防止静默覆盖；类型化响应不会返回手机、证件原文。档案导入预校验只检查模板、必填项、项目引用、重复编码、面积、日期和关系重叠，不会实际写库；需批量写入时使用下述 G4 迁移中心。
+
+## 数据迁移中心
+
+读取要求 `migration:read`，创建和校验要求 `migration:import`，审批、执行、对账和回滚要求 `migration:write`；审批与回滚还要求 `PLATFORM_ADMIN`。所有批次均绑定 `communityId` 并在服务端重验项目范围。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/migrations/batches` | 按项目、状态和关键字分页查询批次 |
+| GET | `/migrations/batches/{id}` | 查看五层计数、隔离错误、对象映射、对账和状态轨迹；写权限用户可见回滚凭证 |
+| POST | `/migrations/batches` | 提交最多 500 条 JSON 来源行并写入不可变 Raw 层；同一 SHA-256 + 映射版本安全重放 |
+| POST | `/migrations/batches/{id}:validate` | 重建 Quarantine、Canonical、Staging；错误行不写生产表 |
+| POST | `/migrations/batches/{id}:approve` | 平台管理员审批；部分失败批次必须显式 `confirmPartial=true` |
+| POST | `/migrations/batches/{id}:execute` | 按 PROJECT→BUILDING→ASSET→CUSTOMER→RELATION 依赖顺序原子写入并记录反向变更 |
+| POST | `/migrations/batches/{id}:reconcile` | 对账项目/楼栋/房屋/客户/关系数量、建筑/可用面积、孤儿和重复有效关系 |
+| POST | `/migrations/batches/{id}:rollback` | 校验回滚凭证后逆序删除本批新增生产对象，保留所有迁移和审计证据 |
+| GET | `/migrations/template` | 下载首批字段 CSV 示例，不包含凭据或真实个人数据 |
+
+首批白名单资源为 `PROJECT`、`BUILDING`、`ASSET`（仅 ROOM）、`CUSTOMER`、`RELATION`。来源 `sourceId` 只进入受控映射表，不作为公开 API 主键。批次命令使用 `expectedVersion` 防止并发覆盖；已完成执行和已回滚命令重复提交会返回 `replayed=true`。
 
 ## 费用
 
