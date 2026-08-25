@@ -118,11 +118,11 @@ public class ReceivableJobProcessor {
         jdbc.update("""
                 INSERT INTO bill
                     (id, community_id, receivable_job_id, asset_id, customer_id, bill_no, bill_type,
-                     billing_period, charge_date, configuration_checksum, status,
+                     billing_period, charge_date, configuration_checksum, status, original_amount,
                      total_amount, paid_amount, outstanding_amount, due_date,
                      version, created_at, updated_at)
                 VALUES (:id, :communityId, :jobId, :assetId, :customerId, :billNo, :billType,
-                        :period, :chargeDate, :checksum, 'UNPAID',
+                        :period, :chargeDate, :checksum, 'UNPAID', :total,
                         :total, 0, :total, :dueDate, 0, :now, :now)
                 """, new MapSqlParameterSource("id", billId).addValue("communityId", communityId)
                 .addValue("jobId", jobId).addValue("assetId", assetId).addValue("customerId", customerId)

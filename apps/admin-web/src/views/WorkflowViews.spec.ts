@@ -27,6 +27,7 @@ const globalOptions = (pinia: ReturnType<typeof createPinia>) => ({
     'el-table': { template: '<div><slot /></div>' },
     'el-table-column': true,
     'el-input': true,
+    'el-input-number': true,
     'el-date-picker': true,
     'el-button': { template: '<button><slot /></button>' },
     'el-tag': { template: '<span><slot /></span>' },
@@ -36,6 +37,7 @@ const globalOptions = (pinia: ReturnType<typeof createPinia>) => ({
     'el-result': true,
     'el-descriptions': true,
     'el-descriptions-item': true,
+    'el-statistic': { props: ['title'], template: '<div>{{ title }}</div>' },
     'el-dialog': { template: '<section><slot /><slot name="footer" /></section>' },
     'el-drawer': { template: '<section><slot name="header" /><slot /></section>' },
     'el-tabs': { template: '<div><slot /></div>' },
@@ -69,8 +71,11 @@ describe('dedicated workflow pages', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('待收账单')
-    expect(wrapper.text()).toContain('本地支付与开票模拟器')
+    expect(wrapper.text()).toContain('本地可替换模拟适配器')
     expect(get).toHaveBeenCalledWith('/cashier/context', expect.objectContaining({
+      params: expect.objectContaining({ communityId: 'project-1' }),
+    }))
+    expect(get).toHaveBeenCalledWith('/cashier/shifts:current', expect.objectContaining({
       params: expect.objectContaining({ communityId: 'project-1' }),
     }))
   })

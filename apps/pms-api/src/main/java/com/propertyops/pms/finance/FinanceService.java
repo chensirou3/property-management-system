@@ -1,11 +1,19 @@
 package com.propertyops.pms.finance;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -82,35 +90,52 @@ public class FinanceService {
     public PaymentOrderResult createPaymentOrder(PaymentOrderRequest request, String idempotencyKey) {
         security.requirePermission("cashier:write");
         security.requireProject(request.communityId());
-        requireKey(idempotencyKey);
+        String key = requireKey(idempotencyKey);
+        List<BillPayment> intents = normalizedPayments(request.bills());
+        String channel = normalizePaymentChannel(request.paymentMethod());
+        Map<String, Object> requestSnapshot = new LinkedHashMap<>();
+        requestSnapshot.put("communityId", request.communityId());
+        requestSnapshot.put("paymentChannel", channel);
+        requestSnapshot.put("bills", intents);
+        String requestJson = json(requestSnapshot);
+        String requestHash = sha256(requestJson);
         List<Map<String, Object>> previous = jdbc.queryForList("""
-                SELECT id, order_no, status, requested_amount FROM payment_order
+                SELECT id, order_no, status, requested_amount, payment_channel, cashier_shift_id, request_hash
+                FROM payment_order
                 WHERE community_id=:communityId AND idempotency_key=:key
-                """, Map.of("communityId", request.communityId(), "key", idempotencyKey));
-        if (!previous.isEmpty()) return orderResult(previous.get(0), true);
-        if (request.bills() == null || request.bills().isEmpty()) throw invalid("至少选择一张账单");
+                """, Map.of("communityId", request.communityId(), "key", key));
+        if (!previous.isEmpty()) {
+            requireSameRequest(previous.get(0).get("request_hash"), requestHash);
+            return orderResult(previous.get(0), true);
+        }
         BigDecimal total = BigDecimal.ZERO;
         List<LockedBill> bills = new ArrayList<>();
-        for (BillPayment intent : request.bills()) {
-            LedgerMath.positive(intent.amount());
+        for (BillPayment intent : intents) {
             LockedBill bill = lockBill(request.communityId(), intent.billId());
+            if (bill.locked()) throw invalid("账单已锁定，不能收款");
             if (intent.amount().compareTo(bill.outstanding()) > 0) throw invalid("账单支付金额超过待收余额");
             bills.add(bill);
             total = total.add(intent.amount());
         }
+        String shiftId = currentOpenShift(request.communityId());
+        if ("CASH".equals(channel) && shiftId == null) throw invalid("现金收款前必须先开启收银交班");
         String orderId = UUID.randomUUID().toString();
         String orderNo = "PAY-" + orderId;
         LocalDateTime now = now();
         jdbc.update("""
                 INSERT INTO payment_order
-                    (id, community_id, order_no, idempotency_key, payment_method, status,
+                    (id, community_id, order_no, idempotency_key, request_hash, request_json,
+                     payment_method, payment_channel, cashier_shift_id, status,
                      requested_amount, requested_by, version, created_at, updated_at)
-                VALUES (:id, :communityId, :orderNo, :key, :method, 'PENDING',
+                VALUES (:id, :communityId, :orderNo, :key, :requestHash, :requestJson,
+                        :method, :channel, :shiftId, 'PENDING',
                         :amount, :userId, 0, :now, :now)
-                """, Map.of("id", orderId, "communityId", request.communityId(), "orderNo", orderNo,
-                "key", idempotencyKey, "method", request.paymentMethod(), "amount", total,
-                "userId", security.requirePrincipal().userId(), "now", now));
-        for (BillPayment intent : request.bills()) {
+                """, new MapSqlParameterSource("id", orderId).addValue("communityId", request.communityId())
+                .addValue("orderNo", orderNo).addValue("key", key).addValue("requestHash", requestHash)
+                .addValue("requestJson", requestJson).addValue("method", request.paymentMethod())
+                .addValue("channel", channel).addValue("shiftId", shiftId).addValue("amount", total)
+                .addValue("userId", security.requirePrincipal().userId()).addValue("now", now));
+        for (BillPayment intent : intents) {
             jdbc.update("""
                     INSERT INTO payment_order_intent (id, payment_order_id, bill_id, requested_amount, created_at)
                     VALUES (:id, :orderId, :billId, :amount, :now)
@@ -118,8 +143,10 @@ public class FinanceService {
                     "billId", intent.billId(), "amount", intent.amount(), "now", now));
         }
         audit.success(request.communityId(), "payment-order:create", "payment-order", orderId,
-                Map.of("amount", total, "billCount", bills.size(), "method", request.paymentMethod()));
-        return new PaymentOrderResult(orderId, orderNo, "PENDING", total, null, null, false);
+                Map.of("amount", total, "billCount", bills.size(), "channel", channel));
+        financialEvent(request.communityId(), "PAYMENT_ORDER", orderId, "CREATED", "payment-order:" + key,
+                Map.of("amount", total, "billCount", bills.size(), "channel", channel));
+        return new PaymentOrderResult(orderId, orderNo, "PENDING", total, null, null, false, channel, shiftId);
     }
 
     @Transactional
@@ -140,14 +167,26 @@ public class FinanceService {
         String transactionId = UUID.randomUUID().toString();
         String transactionNo = "TXN-" + transactionId;
         LocalDateTime now = now();
+        String channel = String.valueOf(order.get("payment_channel"));
+        String shiftId = nullableString(order.get("cashier_shift_id"));
+        String transactionSnapshot = json(Map.of(
+                "orderNo", order.get("order_no"), "channel", channel,
+                "amount", requested, "adapter", paymentAdapter.code(),
+                "simulated", adapterResult.simulated()));
         jdbc.update("""
                 INSERT INTO payment_transaction
-                    (id, payment_order_id, transaction_no, adapter_code, transaction_type, status,
-                     amount, external_reference, occurred_at, created_at)
-                VALUES (:id, :orderId, :transactionNo, :adapter, 'PAYMENT', 'SUCCESS',
-                        :amount, :reference, :now, :now)
-                """, Map.of("id", transactionId, "orderId", orderId, "transactionNo", transactionNo,
-                "adapter", paymentAdapter.code(), "amount", requested, "reference", adapterResult.externalReference(), "now", now));
+                    (id, community_id, payment_order_id, transaction_no, adapter_code, payment_channel,
+                     cashier_shift_id, transaction_type, status, amount, external_reference,
+                     request_key, snapshot_json, occurred_at, created_at)
+                VALUES (:id, :communityId, :orderId, :transactionNo, :adapter, :channel,
+                        :shiftId, 'PAYMENT', 'SUCCESS', :amount, :reference,
+                        :requestKey, :snapshot, :now, :now)
+                """, new MapSqlParameterSource("id", transactionId).addValue("communityId", communityId)
+                .addValue("orderId", orderId).addValue("transactionNo", transactionNo)
+                .addValue("adapter", paymentAdapter.code()).addValue("channel", channel)
+                .addValue("shiftId", shiftId).addValue("amount", requested)
+                .addValue("reference", adapterResult.externalReference()).addValue("requestKey", "confirm:" + orderId)
+                .addValue("snapshot", transactionSnapshot).addValue("now", now));
         for (Map<String, Object> intent : intents) {
             String billId = String.valueOf(intent.get("bill_id"));
             BigDecimal amount = decimal(intent.get("requested_amount"));
@@ -162,23 +201,17 @@ public class FinanceService {
         }
         jdbc.update("""
                 UPDATE payment_order SET status='CONFIRMED', confirmed_amount=:amount,
-                    version=version+1, updated_at=:now WHERE id=:id
+                    confirmed_at=:now, version=version+1, updated_at=:now WHERE id=:id
                 """, Map.of("amount", requested, "now", now, "id", orderId));
         String receiptId = UUID.randomUUID().toString();
-        String receiptNo = "RCT-" + receiptId;
-        jdbc.update("""
-                INSERT INTO receipt
-                    (id, community_id, payment_order_id, receipt_no, status, template_version,
-                     data_snapshot, issued_at, created_at)
-                VALUES (:id, :communityId, :orderId, :receiptNo, 'ISSUED', 'SYN-V1', :snapshot, :now, :now)
-                """, Map.of("id", receiptId, "communityId", communityId, "orderId", orderId, "receiptNo", receiptNo,
-                "snapshot", json(Map.of("orderNo", order.get("order_no"), "amount", requested,
-                        "paymentMethod", order.get("payment_method"), "simulated", adapterResult.simulated())), "now", now));
+        createReceipt(receiptId, communityId, orderId, requested, channel, now, null, null);
         outbox("PAYMENT_ORDER", orderId, "PaymentConfirmed", Map.of("transactionId", transactionId, "receiptId", receiptId));
         audit.success(communityId, "payment-order:confirm", "payment-order", orderId,
                 Map.of("transactionId", transactionId, "receiptId", receiptId, "simulated", true));
+        financialEvent(communityId, "PAYMENT_ORDER", orderId, "CONFIRMED", "confirm:" + orderId,
+                Map.of("transactionId", transactionId, "receiptId", receiptId, "amount", requested, "channel", channel));
         return new PaymentOrderResult(orderId, String.valueOf(order.get("order_no")), "CONFIRMED", requested,
-                transactionId, receiptId, false);
+                transactionId, receiptId, false, channel, shiftId);
     }
 
     @Transactional
@@ -205,14 +238,20 @@ public class FinanceService {
     public AccountTransactionResult topUp(String accountId, AccountAmountRequest request, String idempotencyKey) {
         security.requirePermission("cashier:write");
         security.requireProject(request.communityId());
-        requireKey(idempotencyKey);
+        String key = requireKey(idempotencyKey);
         LedgerMath.positive(request.amount());
+        String requestJson = json(Map.of("communityId", request.communityId(), "accountId", accountId,
+                "amount", request.amount(), "reason", request.reason() == null ? "" : request.reason()));
+        String requestHash = sha256(requestJson);
         List<Map<String, Object>> replay = jdbc.queryForList("""
-                SELECT id, balance_after FROM prepayment_transaction
+                SELECT id, balance_after, request_hash FROM prepayment_transaction
                 WHERE account_id=:accountId AND idempotency_key=:key
-                """, Map.of("accountId", accountId, "key", idempotencyKey));
-        if (!replay.isEmpty()) return new AccountTransactionResult(String.valueOf(replay.get(0).get("id")),
-                decimal(replay.get(0).get("balance_after")), true);
+                """, Map.of("accountId", accountId, "key", key));
+        if (!replay.isEmpty()) {
+            requireSameRequest(replay.get(0).get("request_hash"), requestHash);
+            return new AccountTransactionResult(accountId, String.valueOf(replay.get(0).get("id")),
+                    decimal(replay.get(0).get("balance_after")), true);
+        }
         Map<String, Object> account = lockPrepayment(accountId, request.communityId());
         BigDecimal balanceAfter = decimal(account.get("balance")).add(request.amount());
         String transactionId = UUID.randomUUID().toString();
@@ -220,58 +259,87 @@ public class FinanceService {
         jdbc.update("""
                 INSERT INTO prepayment_transaction
                     (id, account_id, transaction_type, amount, balance_after, reference_type,
-                     idempotency_key, occurred_at, created_at)
-                VALUES (:id, :accountId, 'TOP_UP', :amount, :balanceAfter, 'LOCAL', :key, :now, :now)
+                     idempotency_key, request_hash, request_json, reason, created_by, occurred_at, created_at)
+                VALUES (:id, :accountId, 'TOP_UP', :amount, :balanceAfter, 'LOCAL', :key,
+                        :requestHash, :requestJson, :reason, :userId, :now, :now)
                 """, Map.of("id", transactionId, "accountId", accountId, "amount", request.amount(),
-                "balanceAfter", balanceAfter, "key", idempotencyKey, "now", now));
+                "balanceAfter", balanceAfter, "key", key, "requestHash", requestHash,
+                "requestJson", requestJson, "reason", request.reason() == null ? "本地预收充值" : request.reason(),
+                "userId", security.requirePrincipal().userId(), "now", now));
         jdbc.update("""
                 UPDATE prepayment_account SET balance=:balance, version=version+1, updated_at=:now
                 WHERE id=:id AND version=:version
                 """, Map.of("balance", balanceAfter, "now", now, "id", accountId, "version", account.get("version")));
         audit.success(request.communityId(), "prepayment:top-up", "prepayment-account", accountId,
                 Map.of("amount", request.amount(), "balanceAfter", balanceAfter));
-        return new AccountTransactionResult(transactionId, balanceAfter, false);
+        financialEvent(request.communityId(), "PREPAYMENT", accountId, "TOPPED_UP", "prepayment-topup:" + key,
+                Map.of("transactionId", transactionId, "amount", request.amount(), "balanceAfter", balanceAfter));
+        return new AccountTransactionResult(accountId, transactionId, balanceAfter, false);
     }
 
     @Transactional
     public PaymentOrderResult applyPrepayment(String accountId, PrepaymentApply request, String idempotencyKey) {
         security.requirePermission("cashier:write");
         security.requireProject(request.communityId());
-        requireKey(idempotencyKey);
+        String key = requireKey(idempotencyKey);
+        List<BillPayment> intents = normalizedPayments(request.bills());
+        String requestJson = json(Map.of("communityId", request.communityId(), "accountId", accountId, "bills", intents));
+        String requestHash = sha256(requestJson);
         List<Map<String, Object>> replay = jdbc.queryForList("""
-                SELECT reference_id FROM prepayment_transaction
+                SELECT reference_id, request_hash FROM prepayment_transaction
                 WHERE account_id=:accountId AND idempotency_key=:key AND transaction_type='DEDUCT'
-                """, Map.of("accountId", accountId, "key", idempotencyKey));
+                """, Map.of("accountId", accountId, "key", key));
         if (!replay.isEmpty()) {
+            requireSameRequest(replay.get(0).get("request_hash"), requestHash);
             Map<String, Object> order = lockOrder(String.valueOf(replay.get(0).get("reference_id")), request.communityId());
             return confirmedResult(order, true);
         }
         Map<String, Object> account = lockPrepayment(accountId, request.communityId());
-        BigDecimal total = request.bills().stream().map(BillPayment::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = intents.stream().map(BillPayment::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
         LedgerMath.positive(total);
         if (total.compareTo(decimal(account.get("balance"))) > 0) throw invalid("预收余额不足");
+        List<LockedBill> lockedBills = new ArrayList<>();
+        for (BillPayment intent : intents) {
+            LockedBill bill = lockBill(request.communityId(), intent.billId());
+            if (bill.locked()) throw invalid("账单已锁定，不能使用预收款");
+            if (intent.amount().compareTo(bill.outstanding()) > 0) throw invalid("预收抵扣金额超过待收余额");
+            lockedBills.add(bill);
+        }
         String orderId = UUID.randomUUID().toString();
         String transactionId = UUID.randomUUID().toString();
         String receiptId = UUID.randomUUID().toString();
         LocalDateTime now = now();
+        String orderRequestKey = "PREPAY-" + sha256(key).substring(0, 32);
         jdbc.update("""
                 INSERT INTO payment_order
-                    (id, community_id, order_no, idempotency_key, payment_method, status, requested_amount,
-                     confirmed_amount, requested_by, version, created_at, updated_at)
-                VALUES (:id, :communityId, :orderNo, :key, 'PREPAYMENT', 'CONFIRMED', :amount,
-                        :amount, :userId, 0, :now, :now)
+                    (id, community_id, order_no, idempotency_key, request_hash, request_json,
+                     payment_method, payment_channel, status, requested_amount, confirmed_amount,
+                     confirmed_at, requested_by, version, created_at, updated_at)
+                VALUES (:id, :communityId, :orderNo, :key, :requestHash, :requestJson,
+                        'PREPAYMENT', 'PREPAYMENT', 'CONFIRMED', :amount, :amount,
+                        :now, :userId, 0, :now, :now)
                 """, Map.of("id", orderId, "communityId", request.communityId(), "orderNo", "PAY-" + orderId,
-                "key", "PREPAY-" + idempotencyKey, "amount", total, "userId", security.requirePrincipal().userId(), "now", now));
+                "key", orderRequestKey, "requestHash", requestHash, "requestJson", requestJson,
+                "amount", total, "userId", security.requirePrincipal().userId(), "now", now));
         jdbc.update("""
                 INSERT INTO payment_transaction
-                    (id, payment_order_id, transaction_no, adapter_code, transaction_type, status,
-                     amount, external_reference, occurred_at, created_at)
-                VALUES (:id, :orderId, :transactionNo, 'PREPAYMENT_ACCOUNT', 'PAYMENT', 'SUCCESS',
-                        :amount, :reference, :now, :now)
+                    (id, community_id, payment_order_id, transaction_no, adapter_code, payment_channel,
+                     transaction_type, status, amount, external_reference, request_key, snapshot_json,
+                     occurred_at, created_at)
+                VALUES (:id, :communityId, :orderId, :transactionNo, 'PREPAYMENT_ACCOUNT', 'PREPAYMENT',
+                        'PAYMENT', 'SUCCESS', :amount, :reference, :requestKey, :snapshot, :now, :now)
                 """, Map.of("id", transactionId, "orderId", orderId, "transactionNo", "TXN-" + transactionId,
-                "amount", total, "reference", accountId, "now", now));
-        for (BillPayment intent : request.bills()) {
-            LockedBill bill = lockBill(request.communityId(), intent.billId());
+                "communityId", request.communityId(), "amount", total, "reference", accountId,
+                "requestKey", "prepayment-payment:" + key,
+                "snapshot", json(Map.of("accountId", accountId, "bills", intents, "amount", total)), "now", now));
+        for (int index = 0; index < intents.size(); index++) {
+            BillPayment intent = intents.get(index);
+            LockedBill bill = lockedBills.get(index);
+            jdbc.update("""
+                    INSERT INTO payment_order_intent (id, payment_order_id, bill_id, requested_amount, created_at)
+                    VALUES (:id, :orderId, :billId, :amount, :now)
+                    """, Map.of("id", UUID.randomUUID().toString(), "orderId", orderId,
+                    "billId", intent.billId(), "amount", intent.amount(), "now", now));
             LedgerMath.BillBalance balance = LedgerMath.applyPayment(bill.total(), bill.paid(), bill.outstanding(), intent.amount());
             updateBill(bill.id(), bill.version(), balance);
             jdbc.update("""
@@ -284,62 +352,117 @@ public class FinanceService {
         jdbc.update("""
                 INSERT INTO prepayment_transaction
                     (id, account_id, transaction_type, amount, balance_after, reference_type, reference_id,
-                     idempotency_key, occurred_at, created_at)
+                     idempotency_key, request_hash, request_json, created_by, occurred_at, created_at)
                 VALUES (:id, :accountId, 'DEDUCT', :amount, :balanceAfter, 'PAYMENT_ORDER', :orderId,
-                        :key, :now, :now)
+                        :key, :requestHash, :requestJson, :userId, :now, :now)
                 """, Map.of("id", UUID.randomUUID().toString(), "accountId", accountId, "amount", total.negate(),
-                "balanceAfter", balanceAfter, "orderId", orderId, "key", idempotencyKey, "now", now));
-        jdbc.update("UPDATE prepayment_account SET balance=:balance, version=version+1, updated_at=:now WHERE id=:id",
-                Map.of("balance", balanceAfter, "now", now, "id", accountId));
-        createReceipt(receiptId, request.communityId(), orderId, total, "PREPAYMENT", now);
+                "balanceAfter", balanceAfter, "orderId", orderId, "key", key, "requestHash", requestHash,
+                "requestJson", requestJson, "userId", security.requirePrincipal().userId(), "now", now));
+        int accountChanged = jdbc.update("""
+                UPDATE prepayment_account SET balance=:balance, version=version+1, updated_at=:now
+                WHERE id=:id AND version=:version
+                """, Map.of("balance", balanceAfter, "now", now, "id", accountId, "version", account.get("version")));
+        if (accountChanged != 1) throw conflict("预收账户已被其他操作更新");
+        createReceipt(receiptId, request.communityId(), orderId, total, "PREPAYMENT", now, null, null);
+        outbox("PAYMENT_ORDER", orderId, "PrepaymentApplied", Map.of("transactionId", transactionId, "receiptId", receiptId));
         audit.success(request.communityId(), "prepayment:apply", "prepayment-account", accountId,
                 Map.of("amount", total, "orderId", orderId));
-        return new PaymentOrderResult(orderId, "PAY-" + orderId, "CONFIRMED", total, transactionId, receiptId, false);
+        financialEvent(request.communityId(), "PREPAYMENT", accountId, "APPLIED", "prepayment-apply:" + key,
+                Map.of("amount", total, "orderId", orderId, "transactionId", transactionId));
+        return new PaymentOrderResult(orderId, "PAY-" + orderId, "CONFIRMED", total,
+                transactionId, receiptId, false, "PREPAYMENT", null);
     }
 
     @Transactional
     public AccountTransactionResult collectDeposit(DepositCollect request, String idempotencyKey) {
-        security.requirePermission("cashier:write");
+        security.requirePermission("finance:deposit-write");
         security.requireProject(request.communityId());
-        requireKey(idempotencyKey);
+        String key = requireKey(idempotencyKey);
         LedgerMath.positive(request.amount());
-        List<Map<String, Object>> replay = jdbc.queryForList("""
-                SELECT dt.id, dt.balance_after FROM deposit_transaction dt WHERE dt.idempotency_key=:key
-                """, Map.of("key", idempotencyKey));
-        if (!replay.isEmpty()) return new AccountTransactionResult(String.valueOf(replay.get(0).get("id")),
-                decimal(replay.get(0).get("balance_after")), true);
         requireCustomer(request.communityId(), request.customerId());
-        String accountId = UUID.randomUUID().toString();
-        String transactionId = UUID.randomUUID().toString();
-        LocalDateTime now = now();
-        var accountParams = new MapSqlParameterSource("id", accountId).addValue("communityId", request.communityId())
+        requireAsset(request.communityId(), request.assetId());
+        String requestJson = json(Map.of(
+                "communityId", request.communityId(), "customerId", request.customerId(),
+                "assetId", request.assetId() == null ? "" : request.assetId(), "depositType", request.depositType(),
+                "amount", request.amount(), "reason", request.reason() == null ? "" : request.reason()));
+        String requestHash = sha256(requestJson);
+        MapSqlParameterSource identity = new MapSqlParameterSource("communityId", request.communityId())
                 .addValue("customerId", request.customerId()).addValue("assetId", request.assetId())
-                .addValue("type", request.depositType()).addValue("amount", request.amount()).addValue("now", now);
-        jdbc.update("""
-                INSERT INTO deposit_account
-                    (id, community_id, customer_id, asset_id, deposit_type, balance, status, version, created_at, updated_at)
-                VALUES (:id, :communityId, :customerId, :assetId, :type, :amount, 'ACTIVE', 0, :now, :now)
-                """, accountParams);
+                .addValue("type", request.depositType());
+        List<Map<String, Object>> accounts = jdbc.queryForList("""
+                SELECT * FROM deposit_account
+                WHERE community_id=:communityId AND customer_id=:customerId
+                  AND asset_id <=> :assetId AND deposit_type=:type FOR UPDATE
+                """, identity);
+        String accountId;
+        Map<String, Object> account;
+        LocalDateTime now = now();
+        if (accounts.isEmpty()) {
+            accountId = UUID.randomUUID().toString();
+            jdbc.update("""
+                    INSERT INTO deposit_account
+                        (id, community_id, customer_id, asset_id, deposit_type, balance, status,
+                         version, created_at, updated_at)
+                    VALUES (:id, :communityId, :customerId, :assetId, :type, 0, 'ACTIVE', 0, :now, :now)
+                    """, new MapSqlParameterSource("id", accountId).addValue("communityId", request.communityId())
+                    .addValue("customerId", request.customerId()).addValue("assetId", request.assetId())
+                    .addValue("type", request.depositType()).addValue("now", now));
+            account = jdbc.queryForMap("SELECT * FROM deposit_account WHERE id=:id FOR UPDATE", Map.of("id", accountId));
+        } else {
+            account = accounts.get(0);
+            accountId = String.valueOf(account.get("id"));
+        }
+        List<Map<String, Object>> replay = jdbc.queryForList("""
+                SELECT id, balance_after, request_hash FROM deposit_transaction
+                WHERE account_id=:accountId AND idempotency_key=:key
+                """, Map.of("accountId", accountId, "key", key));
+        if (!replay.isEmpty()) {
+            requireSameRequest(replay.get(0).get("request_hash"), requestHash);
+            return new AccountTransactionResult(accountId, String.valueOf(replay.get(0).get("id")),
+                    decimal(replay.get(0).get("balance_after")), true);
+        }
+        BigDecimal balanceAfter = decimal(account.get("balance")).add(request.amount());
+        String transactionId = UUID.randomUUID().toString();
         jdbc.update("""
                 INSERT INTO deposit_transaction
-                    (id, account_id, transaction_type, amount, balance_after, idempotency_key, occurred_at, created_at)
-                VALUES (:id, :accountId, 'COLLECT', :amount, :amount, :key, :now, :now)
+                    (id, account_id, transaction_type, amount, balance_after, idempotency_key,
+                     request_hash, request_json, reason, created_by, occurred_at, created_at)
+                VALUES (:id, :accountId, 'COLLECT', :amount, :balanceAfter, :key,
+                        :requestHash, :requestJson, :reason, :userId, :now, :now)
                 """, Map.of("id", transactionId, "accountId", accountId, "amount", request.amount(),
-                "key", idempotencyKey, "now", now));
-        audit.success(request.communityId(), "deposit:collect", "deposit-account", accountId, Map.of("amount", request.amount()));
-        return new AccountTransactionResult(transactionId, request.amount(), false);
+                "balanceAfter", balanceAfter, "key", key, "requestHash", requestHash, "requestJson", requestJson,
+                "reason", request.reason() == null ? "本地押金收取" : request.reason(),
+                "userId", security.requirePrincipal().userId(), "now", now));
+        int changed = jdbc.update("""
+                UPDATE deposit_account SET balance=:balance, status='ACTIVE', version=version+1, updated_at=:now
+                WHERE id=:id AND version=:version
+                """, Map.of("balance", balanceAfter, "now", now, "id", accountId, "version", account.get("version")));
+        if (changed != 1) throw conflict("押金账户已被其他操作更新");
+        audit.success(request.communityId(), "deposit:collect", "deposit-account", accountId,
+                Map.of("amount", request.amount(), "balanceAfter", balanceAfter));
+        financialEvent(request.communityId(), "DEPOSIT", accountId, "COLLECTED", "deposit-collect:" + key,
+                Map.of("transactionId", transactionId, "amount", request.amount(), "balanceAfter", balanceAfter));
+        return new AccountTransactionResult(accountId, transactionId, balanceAfter, false);
     }
 
     @Transactional
     public AccountTransactionResult refundDeposit(String accountId, AccountAmountRequest request, String idempotencyKey) {
-        security.requirePermission("cashier:write");
+        security.requirePermission("finance:deposit-write");
         security.requireProject(request.communityId());
-        requireKey(idempotencyKey);
+        String key = requireKey(idempotencyKey);
         LedgerMath.positive(request.amount());
-        List<Map<String, Object>> replay = jdbc.queryForList("SELECT id, balance_after FROM deposit_transaction WHERE idempotency_key=:key",
-                Map.of("key", idempotencyKey));
-        if (!replay.isEmpty()) return new AccountTransactionResult(String.valueOf(replay.get(0).get("id")),
-                decimal(replay.get(0).get("balance_after")), true);
+        String requestJson = json(Map.of("communityId", request.communityId(), "accountId", accountId,
+                "amount", request.amount(), "reason", request.reason() == null ? "" : request.reason()));
+        String requestHash = sha256(requestJson);
+        List<Map<String, Object>> replay = jdbc.queryForList("""
+                SELECT id, balance_after, request_hash FROM deposit_transaction
+                WHERE account_id=:accountId AND idempotency_key=:key
+                """, Map.of("accountId", accountId, "key", key));
+        if (!replay.isEmpty()) {
+            requireSameRequest(replay.get(0).get("request_hash"), requestHash);
+            return new AccountTransactionResult(accountId, String.valueOf(replay.get(0).get("id")),
+                    decimal(replay.get(0).get("balance_after")), true);
+        }
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT * FROM deposit_account WHERE id=:id AND community_id=:communityId FOR UPDATE
                 """, Map.of("id", accountId, "communityId", request.communityId()));
@@ -351,46 +474,67 @@ public class FinanceService {
         LocalDateTime now = now();
         jdbc.update("""
                 INSERT INTO deposit_transaction
-                    (id, account_id, transaction_type, amount, balance_after, idempotency_key, occurred_at, created_at)
-                VALUES (:id, :accountId, 'REFUND', :amount, :balanceAfter, :key, :now, :now)
+                    (id, account_id, transaction_type, amount, balance_after, idempotency_key,
+                     request_hash, request_json, reason, created_by, occurred_at, created_at)
+                VALUES (:id, :accountId, 'REFUND', :amount, :balanceAfter, :key,
+                        :requestHash, :requestJson, :reason, :userId, :now, :now)
                 """, Map.of("id", transactionId, "accountId", accountId, "amount", request.amount().negate(),
-                "balanceAfter", balanceAfter, "key", idempotencyKey, "now", now));
-        jdbc.update("""
-                UPDATE deposit_account SET balance=:balance, status=:status, version=version+1, updated_at=:now WHERE id=:id
-                """, Map.of("balance", balanceAfter, "status", balanceAfter.signum() == 0 ? "REFUNDED" : "ACTIVE", "now", now, "id", accountId));
+                "balanceAfter", balanceAfter, "key", key, "requestHash", requestHash, "requestJson", requestJson,
+                "reason", request.reason() == null ? "本地押金退还" : request.reason(),
+                "userId", security.requirePrincipal().userId(), "now", now));
+        int changed = jdbc.update("""
+                UPDATE deposit_account SET balance=:balance, status=:status, version=version+1, updated_at=:now
+                WHERE id=:id AND version=:version
+                """, Map.of("balance", balanceAfter, "status", balanceAfter.signum() == 0 ? "REFUNDED" : "ACTIVE",
+                "now", now, "id", accountId, "version", rows.get(0).get("version")));
+        if (changed != 1) throw conflict("押金账户已被其他操作更新");
         audit.success(request.communityId(), "deposit:refund", "deposit-account", accountId, Map.of("amount", request.amount()));
-        return new AccountTransactionResult(transactionId, balanceAfter, false);
+        financialEvent(request.communityId(), "DEPOSIT", accountId, "REFUNDED", "deposit-refund:" + key,
+                Map.of("transactionId", transactionId, "amount", request.amount(), "balanceAfter", balanceAfter));
+        return new AccountTransactionResult(accountId, transactionId, balanceAfter, false);
     }
 
     @Transactional
     public Map<String, Object> reverse(String transactionId, ReversalRequest request) {
-        security.requirePermission("cashier:write");
+        security.requirePermission("finance:reverse");
         security.requireProject(request.communityId());
         List<Map<String, Object>> existing = jdbc.queryForList("SELECT reversal_transaction_id FROM reversal WHERE original_transaction_id=:id",
                 Map.of("id", transactionId));
         if (!existing.isEmpty()) return Map.of("status", "REVERSED", "reversalTransactionId", existing.get(0).get("reversal_transaction_id"), "replayed", true);
         List<Map<String, Object>> txRows = jdbc.queryForList("""
-                SELECT pt.*, po.community_id, po.id order_id FROM payment_transaction pt
+                SELECT pt.*, po.community_id, po.id order_id, ds.status settlement_status
+                FROM payment_transaction pt
                 JOIN payment_order po ON po.id=pt.payment_order_id
+                LEFT JOIN daily_settlement ds ON ds.id=pt.settlement_id
                 WHERE pt.id=:id AND po.community_id=:communityId FOR UPDATE
                 """, Map.of("id", transactionId, "communityId", request.communityId()));
         if (txRows.isEmpty()) throw notFound("原交易不存在");
         Map<String, Object> tx = txRows.get(0);
         if (!"SUCCESS".equals(tx.get("status")) || !"PAYMENT".equals(tx.get("transaction_type"))) throw invalid("只有成功收款可以冲正");
+        if ("LOCKED".equals(tx.get("settlement_status"))) throw conflict("交易所属日结已锁定，不能直接冲正");
         String reverseId = UUID.randomUUID().toString();
         LocalDateTime now = now();
         List<Map<String, Object>> allocations = jdbc.queryForList("SELECT bill_id, allocated_amount FROM payment_allocation WHERE payment_transaction_id=:id",
                 Map.of("id", transactionId));
         BigDecimal reverseTotal = allocations.stream().map(row -> decimal(row.get("allocated_amount")))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (reverseTotal.signum() <= 0) throw invalid("原交易没有可冲正的账单分配");
+        String reverseSnapshot = json(Map.of("originalTransactionId", transactionId,
+                "amount", reverseTotal, "reason", request.reason()));
         jdbc.update("""
                 INSERT INTO payment_transaction
-                    (id, payment_order_id, transaction_no, adapter_code, transaction_type, status,
-                     amount, external_reference, occurred_at, created_at)
-                VALUES (:id, :orderId, :number, 'REVERSAL', 'REVERSAL', 'SUCCESS',
-                        :amount, :reference, :now, :now)
-                """, Map.of("id", reverseId, "orderId", tx.get("order_id"), "number", "REV-" + reverseId,
-                "amount", reverseTotal.negate(), "reference", transactionId, "now", now));
+                    (id, community_id, payment_order_id, transaction_no, adapter_code, payment_channel,
+                     cashier_shift_id, original_transaction_id, transaction_type, status, amount,
+                     external_reference, request_key, snapshot_json, occurred_at, created_at)
+                VALUES (:id, :communityId, :orderId, :number, 'REVERSAL', :channel,
+                        :shiftId, :original, 'REVERSAL', 'SUCCESS', :amount,
+                        :reference, :requestKey, :snapshot, :now, :now)
+                """, new MapSqlParameterSource("id", reverseId).addValue("orderId", tx.get("order_id"))
+                .addValue("number", "REV-" + reverseId).addValue("communityId", request.communityId())
+                .addValue("channel", tx.get("payment_channel")).addValue("shiftId", tx.get("cashier_shift_id"))
+                .addValue("original", transactionId).addValue("amount", reverseTotal.negate())
+                .addValue("reference", transactionId).addValue("requestKey", "reverse:" + transactionId)
+                .addValue("snapshot", reverseSnapshot).addValue("now", now));
         for (Map<String, Object> allocation : allocations) {
             BigDecimal amount = decimal(allocation.get("allocated_amount"));
             LockedBill bill = lockBill(request.communityId(), String.valueOf(allocation.get("bill_id")));
@@ -402,6 +546,10 @@ public class FinanceService {
                     """, Map.of("id", UUID.randomUUID().toString(), "reverseId", reverseId,
                     "billId", bill.id(), "amount", amount.negate(), "now", now));
         }
+        if ("PREPAYMENT_ACCOUNT".equals(tx.get("adapter_code"))) {
+            reversePrepaymentDeduction(request.communityId(), String.valueOf(tx.get("order_id")), transactionId,
+                    reverseTotal, request.reason(), now);
+        }
         jdbc.update("""
                 INSERT INTO reversal
                     (id, original_transaction_id, reversal_transaction_id, reason, approved_by, created_at)
@@ -410,19 +558,35 @@ public class FinanceService {
                 "reason", request.reason(), "userId", security.requirePrincipal().userId(), "now", now));
         jdbc.update("UPDATE payment_order SET status='REVERSED', version=version+1, updated_at=:now WHERE id=:id",
                 Map.of("now", now, "id", tx.get("order_id")));
+        jdbc.update("""
+                UPDATE receipt SET status='VOIDED', event_reason=:reason, voided_at=:now, voided_by=:userId
+                WHERE payment_order_id=:orderId AND status='ISSUED'
+                """, Map.of("reason", request.reason(), "now", now,
+                "userId", security.requirePrincipal().userId(), "orderId", tx.get("order_id")));
+        outbox("PAYMENT_ORDER", String.valueOf(tx.get("order_id")), "PaymentReversed",
+                Map.of("originalTransactionId", transactionId, "reversalTransactionId", reverseId));
         audit.success(request.communityId(), "payment:reverse", "payment-transaction", transactionId,
                 Map.of("reversalTransactionId", reverseId, "amount", reverseTotal));
+        financialEvent(request.communityId(), "PAYMENT_TRANSACTION", transactionId, "REVERSED",
+                "reverse:" + transactionId, Map.of("reversalTransactionId", reverseId,
+                        "amount", reverseTotal, "reason", request.reason()));
         return Map.of("status", "REVERSED", "reversalTransactionId", reverseId, "amount", reverseTotal, "replayed", false);
     }
 
     @Transactional
     public Map<String, Object> simulateInvoice(InvoiceRequest request) {
-        security.requirePermission("cashier:write");
+        security.requirePermission("invoice:write");
         security.requireProject(request.communityId());
         String requestNo = "INV-" + request.receiptId();
+        String requestJson = json(Map.of("communityId", request.communityId(), "receiptId", request.receiptId(),
+                "title", request.title(), "operationType", "ISSUE"));
+        String requestHash = sha256(requestJson);
         List<Map<String, Object>> previous = jdbc.queryForList("SELECT * FROM invoice_request WHERE request_no=:requestNo",
                 Map.of("requestNo", requestNo));
-        if (!previous.isEmpty()) return previous.get(0);
+        if (!previous.isEmpty()) {
+            requireSameRequest(previous.get(0).get("request_hash"), requestHash);
+            return previous.get(0);
+        }
         List<Map<String, Object>> receipts = jdbc.queryForList("""
                 SELECT r.id, po.confirmed_amount FROM receipt r JOIN payment_order po ON po.id=r.payment_order_id
                 WHERE r.id=:receiptId AND r.community_id=:communityId AND r.status='ISSUED'
@@ -432,19 +596,29 @@ public class FinanceService {
         InvoiceAdapter.InvoiceResult result = invoiceAdapter.issue(requestNo, amount, request.title());
         String id = UUID.randomUUID().toString();
         LocalDateTime now = now();
+        String snapshotJson = json(Map.of("receiptId", request.receiptId(), "title", request.title(),
+                "amount", amount, "adapter", invoiceAdapter.code(), "simulated", true));
         jdbc.update("""
                 INSERT INTO invoice_request
-                    (id, community_id, receipt_id, request_no, adapter_code, status, amount,
-                     title_snapshot, external_reference, requested_by, created_at, updated_at)
-                VALUES (:id, :communityId, :receiptId, :requestNo, :adapter, :status, :amount,
-                        :title, :reference, :userId, :now, :now)
+                    (id, community_id, receipt_id, request_no, operation_type, request_hash,
+                     adapter_code, status, amount, title_snapshot, snapshot_json, snapshot_checksum,
+                     external_reference, requested_by, created_at, updated_at)
+                VALUES (:id, :communityId, :receiptId, :requestNo, 'ISSUE', :requestHash,
+                        :adapter, :status, :amount, :title, :snapshot, :checksum,
+                        :reference, :userId, :now, :now)
                 """, new MapSqlParameterSource("id", id).addValue("communityId", request.communityId())
                 .addValue("receiptId", request.receiptId()).addValue("requestNo", requestNo)
+                .addValue("requestHash", requestHash)
                 .addValue("adapter", invoiceAdapter.code()).addValue("status", result.status())
                 .addValue("amount", amount).addValue("title", request.title())
+                .addValue("snapshot", snapshotJson).addValue("checksum", sha256(snapshotJson))
                 .addValue("reference", result.externalReference())
                 .addValue("userId", security.requirePrincipal().userId()).addValue("now", now));
+        jdbc.update("UPDATE invoice_request SET snapshot_checksum=SHA2(snapshot_json, 256) WHERE id=:id",
+                Map.of("id", id));
         audit.success(request.communityId(), "invoice:simulate", "invoice-request", id, Map.of("simulated", true, "amount", amount));
+        financialEvent(request.communityId(), "INVOICE", id, "ISSUED", "invoice:" + request.receiptId(),
+                Map.of("receiptId", request.receiptId(), "amount", amount, "simulated", true));
         return Map.of("id", id, "requestNo", requestNo, "status", result.status(), "amount", amount,
                 "adapter", invoiceAdapter.code(), "simulated", true);
     }
@@ -458,24 +632,27 @@ public class FinanceService {
         return new PaymentOrderResult(String.valueOf(order.get("id")), String.valueOf(order.get("order_no")),
                 String.valueOf(order.get("status")), decimal(order.get("requested_amount")),
                 transactions.isEmpty() ? null : String.valueOf(transactions.get(0).get("id")),
-                receipts.isEmpty() ? null : String.valueOf(receipts.get(0).get("id")), replayed);
+                receipts.isEmpty() ? null : String.valueOf(receipts.get(0).get("id")), replayed,
+                String.valueOf(order.get("payment_channel")), nullableString(order.get("cashier_shift_id")));
     }
 
     private PaymentOrderResult orderResult(Map<String, Object> order, boolean replayed) {
         if ("CONFIRMED".equals(order.get("status"))) return confirmedResult(order, replayed);
         return new PaymentOrderResult(String.valueOf(order.get("id")), String.valueOf(order.get("order_no")),
-                String.valueOf(order.get("status")), decimal(order.get("requested_amount")), null, null, replayed);
+                String.valueOf(order.get("status")), decimal(order.get("requested_amount")), null, null, replayed,
+                String.valueOf(order.get("payment_channel")), nullableString(order.get("cashier_shift_id")));
     }
 
     private LockedBill lockBill(String communityId, String billId) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
-                SELECT id, total_amount, paid_amount, outstanding_amount, version FROM bill
+                SELECT id, total_amount, paid_amount, outstanding_amount, locked, version FROM bill
                 WHERE id=:billId AND community_id=:communityId FOR UPDATE
                 """, Map.of("billId", billId, "communityId", communityId));
         if (rows.isEmpty()) throw notFound("账单不存在或无权访问");
         Map<String, Object> row = rows.get(0);
         return new LockedBill(String.valueOf(row.get("id")), decimal(row.get("total_amount")),
-                decimal(row.get("paid_amount")), decimal(row.get("outstanding_amount")), ((Number) row.get("version")).longValue());
+                decimal(row.get("paid_amount")), decimal(row.get("outstanding_amount")),
+                Boolean.TRUE.equals(row.get("locked")), ((Number) row.get("version")).longValue());
     }
 
     private Map<String, Object> lockOrder(String orderId, String communityId) {
@@ -504,20 +681,152 @@ public class FinanceService {
     }
 
     private void createReceipt(String receiptId, String communityId, String orderId, BigDecimal amount,
-                               String method, LocalDateTime now) {
+                               String method, LocalDateTime now, String originalReceiptId, String reason) {
+        ReceiptNumber number = nextReceiptNumber(communityId, now);
+        String snapshot = json(Map.of("amount", amount, "paymentMethod", method,
+                "simulated", true, "orderId", orderId));
         jdbc.update("""
                 INSERT INTO receipt
-                    (id, community_id, payment_order_id, receipt_no, status, template_version,
-                     data_snapshot, issued_at, created_at)
-                VALUES (:id, :communityId, :orderId, :number, 'ISSUED', 'SYN-V1', :snapshot, :now, :now)
-                """, Map.of("id", receiptId, "communityId", communityId, "orderId", orderId,
-                "number", "RCT-" + receiptId, "snapshot", json(Map.of("amount", amount, "paymentMethod", method)), "now", now));
+                    (id, community_id, payment_order_id, segment_id, sequence_no, receipt_no,
+                     status, template_version, data_snapshot, snapshot_checksum, original_receipt_id,
+                     event_reason, issued_at, created_at)
+                VALUES (:id, :communityId, :orderId, :segmentId, :sequenceNo, :number,
+                        'ISSUED', 'SYN-V2', :snapshot, :checksum, :originalReceiptId,
+                        :reason, :now, :now)
+                """, new MapSqlParameterSource("id", receiptId).addValue("communityId", communityId)
+                .addValue("orderId", orderId).addValue("segmentId", number.segmentId())
+                .addValue("sequenceNo", number.sequenceNo()).addValue("number", number.receiptNo())
+                .addValue("snapshot", snapshot).addValue("checksum", sha256(snapshot))
+                .addValue("originalReceiptId", originalReceiptId).addValue("reason", reason).addValue("now", now));
+    }
+
+    private ReceiptNumber nextReceiptNumber(String communityId, LocalDateTime now) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                SELECT id, number_prefix, next_no, end_no, version FROM receipt_number_segment
+                WHERE community_id=:communityId AND status='ACTIVE' AND next_no<=end_no
+                ORDER BY created_at, id LIMIT 1 FOR UPDATE
+                """, Map.of("communityId", communityId));
+        if (rows.isEmpty()) throw conflict("没有可用的收据号段");
+        Map<String, Object> row = rows.get(0);
+        long sequence = ((Number) row.get("next_no")).longValue();
+        long end = ((Number) row.get("end_no")).longValue();
+        int changed = jdbc.update("""
+                UPDATE receipt_number_segment
+                SET next_no=:nextNo, status=:status, version=version+1, updated_at=:now
+                WHERE id=:id AND version=:version
+                """, Map.of("nextNo", sequence + 1, "status", sequence == end ? "EXHAUSTED" : "ACTIVE",
+                "now", now, "id", row.get("id"), "version", row.get("version")));
+        if (changed != 1) throw conflict("收据号段已被其他收银操作更新");
+        return new ReceiptNumber(String.valueOf(row.get("id")), sequence,
+                String.valueOf(row.get("number_prefix")) + String.format("%06d", sequence));
+    }
+
+    private void reversePrepaymentDeduction(String communityId, String orderId, String paymentTransactionId,
+                                            BigDecimal amount, String reason, LocalDateTime now) {
+        List<Map<String, Object>> deductions = jdbc.queryForList("""
+                SELECT pt.*, pa.community_id, pa.version account_version, pa.balance account_balance
+                FROM prepayment_transaction pt
+                JOIN prepayment_account pa ON pa.id=pt.account_id
+                WHERE pt.reference_type='PAYMENT_ORDER' AND pt.reference_id=:orderId
+                  AND pt.transaction_type='DEDUCT' AND pa.community_id=:communityId
+                FOR UPDATE
+                """, Map.of("orderId", orderId, "communityId", communityId));
+        if (deductions.size() != 1) throw conflict("预收抵扣交易缺失，不能完成守恒冲正");
+        Map<String, Object> deduction = deductions.get(0);
+        String accountId = String.valueOf(deduction.get("account_id"));
+        String reversalKey = "reverse:" + paymentTransactionId;
+        BigDecimal balanceAfter = decimal(deduction.get("account_balance")).add(amount);
+        String requestJson = json(Map.of("originalPaymentTransactionId", paymentTransactionId,
+                "originalPrepaymentTransactionId", deduction.get("id"), "amount", amount, "reason", reason));
+        jdbc.update("""
+                INSERT INTO prepayment_transaction
+                    (id, account_id, transaction_type, amount, balance_after, reference_type, reference_id,
+                     idempotency_key, request_hash, request_json, original_transaction_id, reason,
+                     created_by, occurred_at, created_at)
+                VALUES (:id, :accountId, 'REVERSAL', :amount, :balanceAfter,
+                        'PAYMENT_TRANSACTION', :referenceId, :key, :requestHash, :requestJson,
+                        :original, :reason, :userId, :now, :now)
+                """, new MapSqlParameterSource("id", UUID.randomUUID().toString()).addValue("accountId", accountId)
+                .addValue("amount", amount).addValue("balanceAfter", balanceAfter)
+                .addValue("referenceId", paymentTransactionId).addValue("key", reversalKey)
+                .addValue("requestHash", sha256(requestJson)).addValue("requestJson", requestJson)
+                .addValue("original", deduction.get("id")).addValue("reason", reason)
+                .addValue("userId", security.requirePrincipal().userId()).addValue("now", now));
+        int changed = jdbc.update("""
+                UPDATE prepayment_account SET balance=:balance, version=version+1, updated_at=:now
+                WHERE id=:id AND version=:version
+                """, Map.of("balance", balanceAfter, "now", now, "id", accountId,
+                "version", deduction.get("account_version")));
+        if (changed != 1) throw conflict("预收账户已被其他冲正操作更新");
     }
 
     private void requireCustomer(String communityId, String customerId) {
         Long count = jdbc.queryForObject("SELECT COUNT(*) FROM customer WHERE id=:id AND community_id=:communityId AND status='ACTIVE'",
                 Map.of("id", customerId, "communityId", communityId), Long.class);
         if (count == null || count == 0) throw notFound("客户不存在或已停用");
+    }
+
+    private void requireAsset(String communityId, String assetId) {
+        if (assetId == null || assetId.isBlank()) return;
+        Long count = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM asset
+                WHERE id=:id AND community_id=:communityId AND enabled=TRUE
+                """, Map.of("id", assetId, "communityId", communityId), Long.class);
+        if (count == null || count == 0) throw notFound("押金关联资产不存在、已停用或不属于当前项目");
+    }
+
+    private String currentOpenShift(String communityId) {
+        List<String> shifts = jdbc.queryForList("""
+                SELECT id FROM cashier_shift
+                WHERE community_id=:communityId AND cashier_user_id=:userId AND status='OPEN'
+                ORDER BY opened_at DESC LIMIT 1
+                """, Map.of("communityId", communityId, "userId", security.requirePrincipal().userId()), String.class);
+        return shifts.isEmpty() ? null : shifts.get(0);
+    }
+
+    private List<BillPayment> normalizedPayments(List<BillPayment> payments) {
+        if (payments == null || payments.isEmpty()) throw invalid("至少选择一张账单");
+        if (payments.size() > 200) throw invalid("单次最多处理 200 张账单");
+        Set<String> billIds = new HashSet<>();
+        List<BillPayment> normalized = new ArrayList<>();
+        for (BillPayment payment : payments) {
+            LedgerMath.positive(payment.amount());
+            if (!billIds.add(payment.billId())) throw invalid("同一账单不能重复选择");
+            normalized.add(new BillPayment(payment.billId(), payment.amount()));
+        }
+        normalized.sort(Comparator.comparing(BillPayment::billId));
+        return List.copyOf(normalized);
+    }
+
+    private String normalizePaymentChannel(String value) {
+        String channel = value == null ? "" : value.trim().toUpperCase();
+        return switch (channel) {
+            case "CASH", "BANK_TRANSFER", "QR_SIMULATOR", "CASH_SIMULATOR", "SIMULATOR", "PREPAYMENT" -> channel;
+            default -> throw invalid("不支持的收款渠道");
+        };
+    }
+
+    private void requireSameRequest(Object storedHash, String requestHash) {
+        if (storedHash == null || !MessageDigest.isEqual(
+                String.valueOf(storedHash).getBytes(StandardCharsets.UTF_8),
+                requestHash.getBytes(StandardCharsets.UTF_8))) {
+            throw conflict("同一 Idempotency-Key 不能用于不同财务请求");
+        }
+    }
+
+    private void financialEvent(String communityId, String aggregateType, String aggregateId,
+                                String eventType, String requestKey, Object detail) {
+        jdbc.update("""
+                INSERT INTO financial_event
+                    (id, community_id, aggregate_type, aggregate_id, event_type,
+                     request_key, detail_json, actor_user_id, created_at)
+                VALUES (:id, :communityId, :aggregateType, :aggregateId, :eventType,
+                        :requestKey, :detail, :userId, :now)
+                """, new MapSqlParameterSource("id", UUID.randomUUID().toString())
+                .addValue("communityId", communityId).addValue("aggregateType", aggregateType)
+                .addValue("aggregateId", aggregateId).addValue("eventType", eventType)
+                .addValue("requestKey", requestKey).addValue("detail", json(detail))
+                .addValue("userId", security.requirePrincipal().userId()).addValue("now", now()));
     }
 
     private void outbox(String aggregateType, String aggregateId, String eventType, Object payload) {
@@ -546,8 +855,26 @@ public class FinanceService {
         }
     }
 
-    private void requireKey(String key) {
-        if (key == null || key.isBlank()) throw new BusinessException("IDEMPOTENCY_KEY_REQUIRED", "财务写操作必须提供 Idempotency-Key", HttpStatus.BAD_REQUEST);
+    private String sha256(String value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private String nullableString(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String requireKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new BusinessException("IDEMPOTENCY_KEY_REQUIRED", "财务写操作必须提供 Idempotency-Key", HttpStatus.BAD_REQUEST);
+        }
+        String normalized = key.trim();
+        if (normalized.length() > 80) throw invalid("财务 Idempotency-Key 最长为 80 个字符");
+        return normalized;
     }
 
     private BusinessException invalid(String message) {
@@ -558,22 +885,36 @@ public class FinanceService {
         return new BusinessException("FINANCIAL_RECORD_NOT_FOUND", message, HttpStatus.NOT_FOUND);
     }
 
-    private record LockedBill(String id, BigDecimal total, BigDecimal paid, BigDecimal outstanding, long version) {}
+    private BusinessException conflict(String message) {
+        return new BusinessException("FINANCIAL_CONFLICT", message, HttpStatus.CONFLICT);
+    }
+
+    private record LockedBill(String id, BigDecimal total, BigDecimal paid, BigDecimal outstanding,
+                              boolean locked, long version) {}
+    private record ReceiptNumber(String segmentId, long sequenceNo, String receiptNo) {}
 
     public record BillPayment(@NotBlank String billId,
                               @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal amount) {}
     public record PaymentOrderRequest(@NotBlank String communityId, @NotBlank String paymentMethod,
                                       @NotEmpty List<@Valid BillPayment> bills) {}
     public record PaymentOrderResult(String orderId, String orderNo, String status, BigDecimal amount,
-                                     String transactionId, String receiptId, boolean replayed) {}
+                                     String transactionId, String receiptId, boolean replayed,
+                                     String paymentChannel, String cashierShiftId) {}
     public record AccountRequest(@NotBlank String communityId, @NotBlank String customerId) {}
     public record AccountAmountRequest(@NotBlank String communityId,
-                                       @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal amount) {}
+                                       @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal amount,
+                                       @Size(max = 500) String reason) {
+        public AccountAmountRequest(String communityId, BigDecimal amount) {
+            this(communityId, amount, null);
+        }
+    }
     public record PrepaymentApply(@NotBlank String communityId, @NotEmpty List<@Valid BillPayment> bills) {}
-    public record AccountTransactionResult(String transactionId, BigDecimal balanceAfter, boolean replayed) {}
+    public record AccountTransactionResult(String accountId, String transactionId,
+                                           BigDecimal balanceAfter, boolean replayed) {}
     public record DepositCollect(@NotBlank String communityId, @NotBlank String customerId, String assetId,
                                  @NotBlank String depositType,
-                                 @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal amount) {}
+                                 @NotNull @DecimalMin(value = "0", inclusive = false) BigDecimal amount,
+                                 @Size(max = 500) String reason) {}
     public record ReversalRequest(@NotBlank String communityId, @NotBlank @Size(max = 500) String reason) {}
     public record InvoiceRequest(@NotBlank String communityId, @NotBlank String receiptId,
                                  @NotBlank @Size(max = 200) String title) {}

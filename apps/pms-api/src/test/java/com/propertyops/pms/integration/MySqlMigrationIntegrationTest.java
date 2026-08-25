@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(14);
-        assertThat(result.targetSchemaVersion).isEqualTo("14");
+        assertThat(result.migrationsExecuted).isEqualTo(15);
+        assertThat(result.targetSchemaVersion).isEqualTo("15");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -56,6 +56,9 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM meter", 32);
             assertCount(statement, "SELECT COUNT(*) FROM fee_definition", 23);
             assertCount(statement, "SELECT COUNT(*) FROM fee_definition WHERE temporary_allowed=TRUE", 1);
+            assertCount(statement, "SELECT COUNT(*) FROM receipt_number_segment", 2);
+            assertCount(statement, "SELECT COUNT(*) FROM discount_policy", 1);
+            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 73);
 
             var primaryProject = "30000000-0000-0000-0000-000000000001";
             var isolatedProject = "30000000-0000-0000-0000-000000000002";
@@ -156,6 +159,23 @@ class MySqlMigrationIntegrationTest {
                         'uk_vehicle_parking_active', 'fk_meter_asset_scope', 'ck_asset_area'
                       )
                     """, 8);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = DATABASE()
+                      AND table_name IN (
+                        'cashier_shift', 'receipt_number_segment', 'discount_policy',
+                        'bill_adjustment', 'financial_event'
+                      )
+                    """, 5);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_schema = DATABASE()
+                      AND constraint_name IN (
+                        'uk_cashier_open_shift', 'uk_successful_payment_order',
+                        'ck_payment_transaction_amount', 'uk_deposit_account_identity',
+                        'uk_receipt_segment_sequence', 'uk_bill_adjustment_request'
+                      )
+                    """, 6);
         }
     }
 

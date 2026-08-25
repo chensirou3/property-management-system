@@ -323,7 +323,8 @@ public class MeterService {
                     .addValue("snapshot", json(Map.of("batchId", batchId, "readingId", readingId,
                             "formula", "billableUsage * unitPrice", "assumptionRule", true))).addValue("now", now));
             jdbc.update("""
-                    UPDATE bill SET total_amount=total_amount+:amount,
+                    UPDATE bill SET original_amount=original_amount+:amount,
+                        total_amount=total_amount+:amount,
                         outstanding_amount=outstanding_amount+:amount,
                         status=CASE WHEN paid_amount=0 THEN 'UNPAID' ELSE 'PARTIAL' END,
                         version=version+1, updated_at=:now WHERE id=:id
@@ -353,10 +354,10 @@ public class MeterService {
         jdbc.update("""
                 INSERT INTO bill
                     (id, community_id, asset_id, customer_id, bill_no, bill_type,
-                     billing_period, charge_date, configuration_checksum, status,
+                     billing_period, charge_date, configuration_checksum, status, original_amount,
                      total_amount, paid_amount, outstanding_amount, due_date, version, created_at, updated_at)
                 VALUES (:id, :communityId, :assetId, :customerId, :billNo, 'PERIODIC',
-                        :period, :chargeDate, SHA2(CONCAT('meter|',:communityId,'|',:assetId,'|',:period),256), 'UNPAID',
+                        :period, :chargeDate, SHA2(CONCAT('meter|',:communityId,'|',:assetId,'|',:period),256), 'UNPAID', 0,
                         0, 0, 0, :dueDate, 0, :now, :now)
                 """, params);
         return id;

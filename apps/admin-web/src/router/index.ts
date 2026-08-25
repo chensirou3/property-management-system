@@ -21,6 +21,7 @@ const CustomerRelationshipView = () => import('../views/CustomerRelationshipView
 const MigrationCenterView = () => import('../views/MigrationCenterView.vue')
 const FeeConfigurationView = () => import('../views/FeeConfigurationView.vue')
 const TemporaryReceivableView = () => import('../views/TemporaryReceivableView.vue')
+const FinancialOperationsView = () => import('../views/FinancialOperationsView.vue')
 
 const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
@@ -28,8 +29,14 @@ const assetWorkspacePaths = ['/archives/rooms', '/archives/parking-spaces']
 const customerWorkspacePaths = ['/archives/customers', '/archives/customer-assets']
 const migrationWorkspacePath = '/system/migrations'
 const feeConfigurationPaths = ['/fees/definitions', '/fees/standards', '/fees/allocations']
+const financialOperationsPaths = [
+  '/finance/arrears', '/finance/bills', '/reports/daily-settlement-details', '/finance/adjustments',
+  '/finance/instruments', '/fees/discounts', '/finance/prepayment-batch-offsets',
+  '/reports/transaction-summary', '/reports/transaction-details', '/finance/payments',
+  '/reports/prepayments', '/finance/deposits', '/finance/invoice-replacements',
+]
 const specialPaths = new Set(['/dashboard', '/fees/receivables', '/fees/temporary-receivables', '/cashier', ...feeConfigurationPaths, ...meterWorkflowPaths,
-  ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths, migrationWorkspacePath])
+  ...financialOperationsPaths, ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths, migrationWorkspacePath])
 
 function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
   const page = pageFor(path)
@@ -78,6 +85,11 @@ const router = createRouter({
           meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'fee:read'),
         })),
         { path: 'cashier', name: 'cashier-workflow', component: CashierView, meta: pageMeta('/cashier', '收银台', 'cashier:read') },
+        ...financialOperationsPaths.map((path) => ({
+          path: path.slice(1), name: `financial-operations-${path.replaceAll('/', '-').slice(1)}`,
+          component: FinancialOperationsView,
+          meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'finance:read'),
+        })),
         ...meterWorkflowPaths.map((path) => ({
           path: path.slice(1),
           name: `workflow-${path.replaceAll('/', '-').slice(1)}`,
