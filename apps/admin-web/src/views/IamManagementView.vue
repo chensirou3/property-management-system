@@ -16,7 +16,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const keyword = ref('')
-const status = ref('')
+const status = ref('ACTIVE')
 const drawerVisible = ref(false)
 const editing = ref<Row | null>(null)
 const selectedOrganizationId = ref('')
@@ -66,10 +66,11 @@ const activeCount = computed(() => sourceRows.value.filter((row) =>
   (row.status ?? row.employmentStatus ?? (row.enabled ? 'ACTIVE' : 'INACTIVE')) === 'ACTIVE').length)
 
 const organizationTree = computed<TreeNode[]>(() => {
+  const visibleOrganizations = organizations.value.filter((item) => !status.value || item.status === status.value)
   const nodes = new Map<string, TreeNode>()
-  organizations.value.forEach((item) => nodes.set(item.id, { id: item.id, label: item.name, children: [] }))
+  visibleOrganizations.forEach((item) => nodes.set(item.id, { id: item.id, label: item.name, children: [] }))
   const roots: TreeNode[] = []
-  organizations.value.forEach((item) => {
+  visibleOrganizations.forEach((item) => {
     const node = nodes.get(item.id)!
     const parent = item.parentId ? nodes.get(item.parentId) : undefined
     if (parent) parent.children.push(node)
@@ -260,7 +261,9 @@ function resetFilters() {
 }
 
 watch(() => route.path, () => {
-  resetFilters()
+  keyword.value = ''
+  status.value = 'ACTIVE'
+  selectedOrganizationId.value = ''
   void loadAll()
 }, { immediate: true })
 </script>
@@ -269,7 +272,7 @@ watch(() => route.path, () => {
   <section class="iam-page">
     <div class="iam-summary-grid">
       <div class="iam-summary-card"><span>当前模块</span><strong>{{ currentMeta.title }}</strong></div>
-      <div class="iam-summary-card"><span>记录总数</span><strong>{{ sourceRows.length }}</strong></div>
+      <div class="iam-summary-card"><span>当前结果</span><strong>{{ filteredRows.length }}</strong></div>
       <div class="iam-summary-card"><span>启用/在职</span><strong>{{ activeCount }}</strong></div>
       <div class="iam-summary-card warning"><span>数据边界</span><strong>角色 + 项目范围</strong></div>
     </div>
@@ -308,7 +311,7 @@ watch(() => route.path, () => {
           <div>
             <el-button v-if="canWrite" type="primary" :icon="Plus" @click="openCreate">新增{{ currentMeta.singular }}</el-button>
           </div>
-          <span class="record-summary">显示 <strong>{{ filteredRows.length }}</strong> / {{ sourceRows.length }} 条</span>
+          <span class="record-summary">显示 <strong>{{ filteredRows.length }}</strong> 条</span>
         </div>
         <el-alert v-if="errorMessage" type="error" :closable="false" show-icon :title="errorMessage" />
 

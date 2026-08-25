@@ -31,6 +31,8 @@ for (const viewport of targetViewports) {
       await expect(page.locator('.page-heading h1')).toHaveText(catalogPage.title)
       await page.locator('.el-loading-mask').first().waitFor({ state: 'detached', timeout: 8_000 }).catch(() => undefined)
       await page.evaluate(() => document.fonts.ready)
+      await page.mouse.move(2, 2)
+      await page.waitForTimeout(100)
       await expect(page).toHaveScreenshot(`page-${String(catalogPage.pageNo).padStart(2, '0')}-${viewport.name}.png`, {
         animations: 'disabled',
         caret: 'hide',

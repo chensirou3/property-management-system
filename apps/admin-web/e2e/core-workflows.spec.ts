@@ -249,6 +249,10 @@ test('administrator completes the IAM relationship and status lifecycle across a
   async function expectVisibleRecord(path: string, title: string, needle: string, statusText?: string) {
     await page.goto(path)
     await expect(page.locator('.iam-summary-card').filter({ hasText: '当前模块' })).toContainText(title)
+    if (statusText === 'INACTIVE' || statusText === '停用' || statusText === 'LEFT') {
+      await page.locator('.filter-card .el-select').click()
+      await page.getByRole('option', { name: statusText === 'LEFT' ? '已离职' : '停用', exact: true }).click()
+    }
     await page.getByPlaceholder(`搜索${title}`).fill(needle)
     const row = page.getByRole('row').filter({ hasText: needle })
     await expect(row).toBeVisible()

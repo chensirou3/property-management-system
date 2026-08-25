@@ -26,6 +26,7 @@ test('property and customer workspaces complete an ownership lifecycle', async (
   const customerName = `E2E 产权客户 ${suffix}`
   let customer: Record<string, any> | undefined
   let originalOwnerId = ''
+  let originalOwnershipRelations: Record<string, any>[] = []
   let firstEffectiveDate = ''
   let transferred = false
 
@@ -49,8 +50,11 @@ test('property and customer workspaces complete an ownership lifecycle', async (
     }))
 
     const before = await expectOk(await page.request.get(`/api/v1/property/assets/${roomId}?communityId=${primaryProject}`, { headers }))
-    const originalOwner = before.relations.find((item: Record<string, any>) =>
+    originalOwnershipRelations = before.relations.filter((item: Record<string, any>) =>
       item.status === 'ACTIVE' && !item.endDate && ['OWNER', 'CO_OWNER'].includes(item.relationType))
+    const originalOwner = originalOwnershipRelations.find((item) => item.relationType === 'OWNER' && item.primaryRelation)
+      || originalOwnershipRelations.find((item) => item.relationType === 'OWNER')
+      || originalOwnershipRelations[0]
     expect(originalOwner).toBeTruthy()
     originalOwnerId = originalOwner.customerId
     firstEffectiveDate = addDays(originalOwner.startDate, 1)
@@ -116,6 +120,33 @@ test('property and customer workspaces complete an ownership lifecycle', async (
         },
       })
       expect(restore.ok(), await restore.text()).toBeTruthy()
+
+      for (const relation of originalOwnershipRelations) {
+        if (relation.customerId === originalOwnerId && relation.relationType === 'OWNER') continue
+        const restoreRelation = await page.request.post('/api/v1/property/relations', {
+          headers: { ...headers, 'Idempotency-Key': `e2e-property-restore-relation-${relation.id}-${suffix}` },
+          data: {
+            communityId: primaryProject,
+            customerId: relation.customerId,
+            assetId: roomId,
+            relationType: relation.relationType,
+            primaryRelation: relation.primaryRelation,
+            startDate: addDays(firstEffectiveDate, 1),
+            reason: 'E2E 清理并恢复原产权关系',
+          },
+        })
+        expect(restoreRelation.ok(), await restoreRelation.text()).toBeTruthy()
+      }
+
+      const restored = await expectOk(await page.request.get(`/api/v1/property/assets/${roomId}?communityId=${primaryProject}`, { headers }))
+      const restoredOwnership = restored.relations
+        .filter((item: Record<string, any>) => item.status === 'ACTIVE' && !item.endDate && ['OWNER', 'CO_OWNER'].includes(item.relationType))
+        .map((item: Record<string, any>) => `${item.customerId}:${item.relationType}`)
+        .sort()
+      const expectedOwnership = originalOwnershipRelations
+        .map((item) => `${item.customerId}:${item.relationType}`)
+        .sort()
+      expect(restoredOwnership).toEqual(expectedOwnership)
     }
     if (customer?.id) {
       const archive = await page.request.delete(`/api/v1/data/customers/${customer.id}`, {
