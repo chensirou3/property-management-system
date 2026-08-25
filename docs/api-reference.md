@@ -136,17 +136,40 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET | `/cashier/context` | 按客户、资产、账单号联合检索待收账单 |
-| POST | `/payment-orders` | 幂等创建支付意图，锁定账单余额 |
-| POST | `/payment-orders/{id}:confirm-simulated` | 通过本地模拟器确认，生成流水、分配和收据 |
+| GET/POST | `/cashier/shifts` | 查询或幂等开启收银班次 |
+| GET | `/cashier/shifts:current` | 当前登录人在项目内的开启班次和现金汇总 |
+| POST | `/cashier/shifts/{id}:close` | 以乐观版本、实盘金额和差异证据交班 |
+| POST | `/cashier/shifts/{id}:lock` | 锁定已关闭班次 |
+| GET | `/finance/bills` | 按状态、关键词和截止日分页查询账单时间切片 |
+| GET | `/finance/bills/{id}` | 账单、明细、调账和支付分摊证据 |
+| GET | `/finance/arrears` | 截止日欠费明细、逾期天数和总额 |
+| POST | `/payment-orders` | 以请求键和请求哈希幂等创建部分/合并支付意图 |
+| POST | `/payment-orders/{id}:confirm-simulated` | 并发安全确认，生成唯一成功流水、分摊和号段收据 |
 | POST | `/prepayment-accounts` | 获取或创建客户预收账户 |
 | POST | `/prepayment-accounts/{id}:top-up` | 幂等预收充值 |
 | POST | `/prepayment-accounts/{id}:apply` | 幂等抵扣账单 |
 | POST | `/deposits` | 幂等收取押金 |
 | POST | `/deposits/{id}:refund` | 幂等退还部分或全部押金 |
 | POST | `/payment-transactions/{id}:reverse` | 冲正成功流水，不删除原流水 |
-| POST | `/invoices:simulate` | 本地模拟开票 |
+| GET | `/finance/transactions` | 按日期、渠道和类型查询正反向交易链 |
+| GET | `/finance/balances` | 预收和押金账户、余额和流水数 |
+| GET/POST/PUT | `/finance/discount-policies[/{id}]` | 查询、创建和按版本更新折扣策略 |
+| GET/POST | `/finance/adjustments` | 查询或幂等申请账单调账 |
+| POST | `/finance/adjustments/{id}:approve` | 按版本审批并原子更新账单金额 |
+| POST | `/finance/adjustments/{id}:reject` | 按版本驳回并保留审批意见 |
+| GET/POST | `/finance/receipt-segments` | 查询或新增受控收据号段 |
+| GET | `/finance/receipts` | 查询原收据、状态和事件证据 |
+| POST | `/finance/receipts/{id}:replace` | 换开新收据并关联原收据 |
+| POST | `/finance/receipts/{id}:void` | 作废收据但不删除原快照 |
+| POST | `/invoices:simulate` | 本地模拟首次开票 |
+| GET | `/finance/invoices` | 查询首次、换开和红冲模拟发票链 |
+| POST | `/finance/invoices/{id}:operate` | `REPLACE` 换开或 `RED` 负数红冲 |
+| GET | `/finance/settlements:preview` | 按日试算交易数、收款、冲正、净额和渠道 |
+| GET/POST | `/finance/settlements` | 查询或幂等关闭日结并归集交易 |
+| POST | `/finance/settlements/{id}:lock` | 复核锁定日结及所属账单/交易 |
+| GET | `/finance/reconciliation` | 返回账单、支付、预收、押金、日结、收据和发票七项差异 |
 
-数据库约束保证 `账单总额 = 已付金额 + 未付金额`。成功财务记录没有物理删除接口。
+数据库与服务共同保证 `原应收 + 合法调整 = 账单总额 = 已付金额 + 未付金额`。成功财务记录没有物理删除接口；冲正、退还、换开、红冲和调账追加关联证据。当前支付和发票仍为显式本地模拟适配器。
 
 ## 仪表与计量
 

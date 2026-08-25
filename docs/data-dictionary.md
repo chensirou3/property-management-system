@@ -8,7 +8,7 @@
 - 金额为 `DECIMAL(18,2)`，用量、单价、系数和面积保留更高小数位。
 - JSON 快照用于保存公式、收据、适配器和计算上下文，避免未来规则变化改写历史。
 
-## 表分组（空库迁移后共 68 张业务/基础设施表）
+## 表分组（空库迁移后共 73 张业务/基础设施表）
 
 | 分组 | 核心表 | 作用 |
 |---|---|---|
@@ -18,9 +18,10 @@
 | 客户车辆 | `customer`、`customer_asset_relation`、`property_relation_event`、`vehicle`、`vehicle_parking_relation` | 客户、资产权属/租住、不可变关系事件、车辆和车位关系 |
 | 费用 | `fee_definition`、`fee_standard`、`fee_standard_version`、`fee_allocation`、`fee_configuration_event` | 会计/税务定义、版本化标准、资产/仪表分配和配置变更证据 |
 | 应收 | `receivable_generation_job`、`receivable_generation_item`、`receivable_generation_error`、`receivable_generation_reconciliation`、`bill`、`bill_item` | 周期/临时异步任务、逐行状态/错误/对账、账单和不可变计算快照 |
-| 收款 | `payment_order`、`payment_order_intent`、`payment_transaction`、`payment_allocation` | 支付意图、确认流水和账单分配 |
+| 收款 | `payment_order`、`payment_order_intent`、`payment_transaction`、`payment_allocation`、`cashier_shift` | 支付意图、确认流水、账单分配和收银交班 |
 | 预收押金 | `prepayment_account`、`prepayment_transaction`、`deposit`、`deposit_transaction` | 余额账户与完整变动流水 |
-| 票据 | `receipt`、`invoice_request` | 收据快照和模拟发票结果 |
+| 票据 | `receipt`、`receipt_number_segment`、`invoice_request` | 受控号段、收据快照、换开/作废证据和模拟发票结果 |
+| 财务治理 | `bill_adjustment`、`discount_policy`、`daily_settlement`、`financial_event` | 调账审批、折扣策略、日结锁定和统一不可变事件链 |
 | 仪表 | `meter`、`meter_reading_batch`、`meter_reading`、`meter_share_rule`、`meter_share_result`、`meter_replacement` | 表具、抄表、公摊和换表 |
 | 迁移治理 | `migration_batch`、`migration_raw_record`、`migration_quarantine_record`、`migration_canonical_record`、`migration_staging_record`、`migration_object_map`、`migration_reconciliation`、`migration_change_log`、`migration_batch_event` | 五层证据、源目标映射、审批执行、对账、状态轨迹与逆序回滚 |
 | 支撑 | `audit_log`、`outbox_event`、`system_dictionary`、导入/迁移任务表 | 审计、事件外盒、字典和作业状态 |
@@ -47,6 +48,11 @@
 18. 应收任务的 `(community_id, request_key)` 唯一，且保存请求 SHA-256；同键同请求重放，同键不同请求拒绝。
 19. 周期账单生成键为项目、资产和账期，数据库唯一约束禁止重复；临时应收不占用周期键。
 20. 每个应收任务保存逐行结果及 `ELIGIBLE_ITEM_COUNT`、`GENERATED_BILL_COUNT`、`TOTAL_AMOUNT` 三项对账；COMPLETED 任务必须全部 `MATCHED`、差异为 0。
+21. 账单金额使用 `original_amount + adjustment_amount = total_amount`，并继续满足 `total_amount = paid_amount + outstanding_amount`；已日结锁定账单不得直接改写或冲正。
+22. 支付订单、班次、日结、预收和押金幂等写同时保存请求键与请求 SHA-256；同键不同请求必须冲突，同键同请求只返回原结果。
+23. 同一支付订单最多一条成功 PAYMENT；确认并发由订单行锁和唯一成功键共同保护，收据只签发一次。
+24. 冲正、预收抵扣回退、押金退款、调账、收据换开/作废和发票换开/红冲均追加关联记录，不删除原成功事实。
+25. 收据和发票保存最终 JSON 快照 SHA-256；日结保存交易数、收款、冲正、净额和渠道快照，锁定后所属交易不可直接冲正。
 
 ## 合成项目基线
 
@@ -66,4 +72,4 @@
 | 房屋费用分配 / 车位费用分配 | 549 / 194 |
 | 演示账单 | 20 |
 
-全新数据库验收结果：14 个 Flyway 迁移成功、68 张表、65 个权限、2 个有效项目；主项目为 359 套有效房屋、250 个有效车位、403 个有效客户和 403 条有效客户资产关系，隔离项目具备最小完整档案链。G4 的 32 条合格 + 1 条错误样本可重复完成隔离、审批、31 条生产写入 + 1 条项目映射、9 项对账和 41 条变更逆序回滚。G5 持久运行库为 23 个费用定义、16 个标准、743 条分配，ACTIVE 版本/分配重叠、周期账单重复、无效账单校验值和完成任务对账差异均为 0。客户资产孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。开发运行库允许保留已停用或已回滚的 E2E 历史证据，因此阶段对账以有效状态计数，并另行核对历史行均不再被有效关系引用。
+全新数据库验收结果：15 个 Flyway 迁移成功、73 张表、65 个权限、2 个有效项目；主项目为 359 套有效房屋、250 个有效车位、403 个有效客户和 403 条有效客户资产关系，隔离项目具备最小完整档案链。G4 的 32 条合格 + 1 条错误样本可重复完成隔离、审批、31 条生产写入 + 1 条项目映射、9 项对账和 41 条变更逆序回滚。G5 持久运行库为 23 个费用定义、16 个标准、743 条分配。G6 增加 2 个收据号段和 1 个合成折扣策略；账单、支付、预收、押金、日结、收据和发票七项对账差异均为 0。客户资产孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。开发运行库允许保留已停用、已回滚或已冲正的 E2E 历史证据，因此阶段对账以有效状态和不可变账本守恒值为准。
