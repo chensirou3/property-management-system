@@ -3,6 +3,9 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
+  // Lifecycle specs share one persistent acceptance backend and must not observe
+  // another spec's in-flight migration or IAM mutation.
+  workers: 1,
   timeout: 30_000,
   expect: { timeout: 8_000 },
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],

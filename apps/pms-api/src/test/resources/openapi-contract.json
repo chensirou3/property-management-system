@@ -285,6 +285,54 @@
         }
       }
     },
+    "/api/v1/fees/definitions/{id}": {
+      "put": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "updateDefinition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/data/{resource}/{id}": {
       "get": {
         "tags": [
@@ -481,12 +529,42 @@
         }
       }
     },
-    "/api/v1/receivable-jobs": {
+    "/api/v1/temporary-receivables:preview": {
       "post": {
         "tags": [
           "fee-controller"
         ],
-        "operationId": "generate",
+        "operationId": "previewTemporary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemporaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/temporary-receivable-jobs": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "createTemporary",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -501,7 +579,83 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReceivableRequest"
+                "$ref": "#/components/schemas/TemporaryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivable-jobs": {
+      "get": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "jobs",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "createPeriodic",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodicRequest"
               }
             }
           },
@@ -526,12 +680,42 @@
         "tags": [
           "fee-controller"
         ],
-        "operationId": "preview",
+        "operationId": "previewPeriodic",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReceivableRequest"
+                "$ref": "#/components/schemas/PeriodicRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivables:preview": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "previewPeriodic_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeriodicRequest"
               }
             }
           },
@@ -1910,7 +2094,161 @@
         }
       }
     },
-    "/api/v1/fee-standards": {
+    "/api/v1/fees/standards/{id}:disable": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "disableStandard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/standards/{id}/versions": {
+      "get": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "versions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "createVersion",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStandardVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/standards": {
+      "get": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "standards",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "feeDefinitionId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "fee-controller"
@@ -1940,17 +2278,199 @@
         }
       }
     },
+    "/api/v1/fee-standards": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "createStandard_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStandard"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/definitions": {
+      "get": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "definitions",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "createDefinition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/allocations:preview": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "previewAllocations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/allocations:cancel": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "cancelAllocations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelAllocations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fee-allocations:batch-cancel": {
       "post": {
         "tags": [
           "fee-controller"
         ],
-        "operationId": "batchCancel",
+        "operationId": "cancelAllocations_1",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BatchCancel"
+                "$ref": "#/components/schemas/CancelAllocations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/allocations:assign": {
+      "post": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "assignAllocations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationRequest"
               }
             }
           },
@@ -1975,12 +2495,12 @@
         "tags": [
           "fee-controller"
         ],
-        "operationId": "batchAssign",
+        "operationId": "assignAllocations_1",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BatchAssign"
+                "$ref": "#/components/schemas/AllocationRequest"
               }
             }
           },
@@ -2262,6 +2782,44 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receivable-jobs/{id}": {
+      "get": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "job",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
                 }
               }
             }
@@ -2679,6 +3237,44 @@
                   "items": {
                     "$ref": "#/components/schemas/PermissionView"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fees/allocations": {
+      "get": {
+        "tags": [
+          "fee-controller"
+        ],
+        "operationId": "allocations",
+        "parameters": [
+          {
+            "name": "communityId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "feeStandardId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object"
                 }
               }
             }
@@ -3301,6 +3897,95 @@
           }
         }
       },
+      "UpdateDefinition": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "feeType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "PROPERTY|PARKING|METER|TEMPORARY"
+          },
+          "feeClass": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "PERIODIC|USAGE|TEMPORARY"
+          },
+          "unitCode": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 0
+          },
+          "decimalScale": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 2,
+            "minimum": 0
+          },
+          "lateFeeEnabled": {
+            "type": "boolean"
+          },
+          "temporaryAllowed": {
+            "type": "boolean"
+          },
+          "accountingSubjectCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "prepaymentSubjectCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "taxCategoryCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "taxRate": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0
+          },
+          "roundingMode": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "HALF_UP|HALF_EVEN|DOWN|UP"
+          },
+          "currencyCode": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "CNY"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "currencyCode",
+          "decimalScale",
+          "enabled",
+          "expectedVersion",
+          "feeClass",
+          "feeType",
+          "lateFeeEnabled",
+          "name",
+          "roundingMode",
+          "taxRate",
+          "temporaryAllowed",
+          "unitCode"
+        ]
+      },
       "ChangePasswordRequest": {
         "type": "object",
         "properties": {
@@ -3372,7 +4057,78 @@
           }
         }
       },
-      "ReceivableRequest": {
+      "TemporaryLine": {
+        "type": "object",
+        "properties": {
+          "feeDefinitionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "itemName": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "coefficient": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "coefficient",
+          "feeDefinitionId",
+          "itemName",
+          "quantity",
+          "unitPrice"
+        ]
+      },
+      "TemporaryRequest": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assetId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "chargeDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemporaryLine"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "assetId",
+          "chargeDate",
+          "communityId",
+          "dueDate",
+          "lines"
+        ]
+      },
+      "PeriodicRequest": {
         "type": "object",
         "properties": {
           "communityId": {
@@ -3389,8 +4145,7 @@
             "items": {
               "type": "string",
               "minLength": 1
-            },
-            "minItems": 1
+            }
           }
         },
         "required": [
@@ -4485,6 +5240,51 @@
           "organizationId"
         ]
       },
+      "CreateStandardVersion": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minimumAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "maximumAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "formulaCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "formulaExpression": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 0
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date"
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "communityId",
+          "effectiveFrom",
+          "formulaCode",
+          "unitPrice"
+        ]
+      },
       "CreateStandard": {
         "type": "object",
         "properties": {
@@ -4509,23 +5309,44 @@
           "assetType": {
             "type": "string",
             "minLength": 1,
-            "pattern": "ROOM|PARKING"
+            "pattern": "ROOM|PARKING|METER"
           },
           "billingCycle": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "MONTHLY|ONCE"
+          },
+          "calculationBasis": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "BUILDING_AREA|USABLE_AREA|FIXED|METER_USAGE"
+          },
+          "prorationRule": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "FULL_PERIOD"
           },
           "unitPrice": {
             "type": "number",
             "minimum": 0
           },
+          "minimumAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "maximumAmount": {
+            "type": "number",
+            "minimum": 0
+          },
           "formulaCode": {
             "type": "string",
-            "minLength": 1
+            "maxLength": 80,
+            "minLength": 0
           },
           "formulaExpression": {
             "type": "string",
-            "minLength": 1
+            "maxLength": 1000,
+            "minLength": 0
           },
           "effectiveFrom": {
             "type": "string",
@@ -4539,38 +5360,108 @@
         "required": [
           "assetType",
           "billingCycle",
+          "calculationBasis",
           "code",
           "communityId",
           "effectiveFrom",
           "feeDefinitionId",
           "formulaCode",
-          "formulaExpression",
           "name",
+          "prorationRule",
           "unitPrice"
         ]
       },
-      "BatchCancel": {
+      "CreateDefinition": {
         "type": "object",
         "properties": {
           "communityId": {
             "type": "string",
             "minLength": 1
           },
-          "allocationIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "minItems": 1
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 0
+          },
+          "feeType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "PROPERTY|PARKING|METER|TEMPORARY"
+          },
+          "feeClass": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "PERIODIC|USAGE|TEMPORARY"
+          },
+          "unitCode": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 0
+          },
+          "decimalScale": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 2,
+            "minimum": 0
+          },
+          "lateFeeEnabled": {
+            "type": "boolean"
+          },
+          "temporaryAllowed": {
+            "type": "boolean"
+          },
+          "accountingSubjectCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "prepaymentSubjectCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "taxCategoryCode": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 0
+          },
+          "taxRate": {
+            "type": "number",
+            "maximum": 1,
+            "minimum": 0
+          },
+          "roundingMode": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "HALF_UP|HALF_EVEN|DOWN|UP"
+          },
+          "currencyCode": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "CNY"
           }
         },
         "required": [
-          "allocationIds",
-          "communityId"
+          "code",
+          "communityId",
+          "currencyCode",
+          "decimalScale",
+          "feeClass",
+          "feeType",
+          "lateFeeEnabled",
+          "name",
+          "roundingMode",
+          "taxRate",
+          "temporaryAllowed",
+          "unitCode"
         ]
       },
-      "BatchAssign": {
+      "AllocationRequest": {
         "type": "object",
         "properties": {
           "communityId": {
@@ -4581,7 +5472,12 @@
             "type": "string",
             "minLength": 1
           },
-          "assetIds": {
+          "targetType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "ASSET|METER"
+          },
+          "targetIds": {
             "type": "array",
             "items": {
               "type": "string",
@@ -4600,14 +5496,53 @@
           "effectiveTo": {
             "type": "string",
             "format": "date"
+          },
+          "sourceType": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "MANUAL|IMPORT|MIGRATION"
           }
         },
         "required": [
-          "assetIds",
           "coefficient",
           "communityId",
           "effectiveFrom",
-          "feeStandardId"
+          "feeStandardId",
+          "sourceType",
+          "targetIds",
+          "targetType"
+        ]
+      },
+      "CancelAllocations": {
+        "type": "object",
+        "properties": {
+          "communityId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allocationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "effectiveTo": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "allocationIds",
+          "communityId",
+          "effectiveTo",
+          "reason"
         ]
       },
       "DepositCollect": {

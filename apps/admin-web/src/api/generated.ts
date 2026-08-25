@@ -116,6 +116,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fees/definitions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateDefinition"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/{resource}/{id}": {
         parameters: {
             query?: never;
@@ -148,7 +164,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/receivable-jobs": {
+    "/api/v1/temporary-receivables:preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -157,7 +173,39 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["generate"];
+        post: operations["previewTemporary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/temporary-receivable-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createTemporary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/receivable-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["jobs"];
+        put?: never;
+        post: operations["createPeriodic"];
         delete?: never;
         options?: never;
         head?: never;
@@ -173,7 +221,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["preview"];
+        post: operations["previewPeriodic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/receivables:preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewPeriodic_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -676,6 +740,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fees/standards/{id}:disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disableStandard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/standards/{id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["versions"];
+        put?: never;
+        post: operations["createVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/standards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["standards"];
+        put?: never;
+        post: operations["createStandard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fee-standards": {
         parameters: {
             query?: never;
@@ -685,7 +797,55 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["createStandard"];
+        post: operations["createStandard_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["definitions"];
+        put?: never;
+        post: operations["createDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/allocations:preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewAllocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/allocations:cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelAllocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -701,7 +861,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["batchCancel"];
+        post: operations["cancelAllocations_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/allocations:assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignAllocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -717,7 +893,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["batchAssign"];
+        post: operations["assignAllocations_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -798,6 +974,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/receivable-jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["job"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -972,6 +1164,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["permissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fees/allocations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["allocations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1208,6 +1416,25 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        UpdateDefinition: {
+            name: string;
+            feeType: string;
+            feeClass: string;
+            unitCode: string;
+            /** Format: int32 */
+            decimalScale: number;
+            lateFeeEnabled: boolean;
+            temporaryAllowed: boolean;
+            accountingSubjectCode?: string;
+            prepaymentSubjectCode?: string;
+            taxCategoryCode?: string;
+            taxRate: number;
+            roundingMode: string;
+            currencyCode: string;
+            enabled: boolean;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
         ChangePasswordRequest: {
             currentPassword: string;
             newPassword: string;
@@ -1226,7 +1453,24 @@ export interface components {
             projectIds?: string[];
             passwordChangeRequired?: boolean;
         };
-        ReceivableRequest: {
+        TemporaryLine: {
+            feeDefinitionId: string;
+            itemName: string;
+            quantity: number;
+            unitPrice: number;
+            coefficient: number;
+        };
+        TemporaryRequest: {
+            communityId: string;
+            assetId: string;
+            customerId?: string;
+            /** Format: date */
+            chargeDate: string;
+            /** Format: date */
+            dueDate: string;
+            lines: components["schemas"]["TemporaryLine"][];
+        };
+        PeriodicRequest: {
             communityId: string;
             billingPeriod: string;
             assetIds: string[];
@@ -1526,6 +1770,18 @@ export interface components {
             /** Format: date */
             hireDate?: string;
         };
+        CreateStandardVersion: {
+            communityId: string;
+            unitPrice: number;
+            minimumAmount?: number;
+            maximumAmount?: number;
+            formulaCode: string;
+            formulaExpression?: string;
+            /** Format: date */
+            effectiveFrom: string;
+            /** Format: date */
+            effectiveTo?: string;
+        };
         CreateStandard: {
             communityId: string;
             feeDefinitionId: string;
@@ -1533,27 +1789,54 @@ export interface components {
             name: string;
             assetType: string;
             billingCycle: string;
+            calculationBasis: string;
+            prorationRule: string;
             unitPrice: number;
+            minimumAmount?: number;
+            maximumAmount?: number;
             formulaCode: string;
-            formulaExpression: string;
+            formulaExpression?: string;
             /** Format: date */
             effectiveFrom: string;
             /** Format: date */
             effectiveTo?: string;
         };
-        BatchCancel: {
+        CreateDefinition: {
             communityId: string;
-            allocationIds: string[];
+            code: string;
+            name: string;
+            feeType: string;
+            feeClass: string;
+            unitCode: string;
+            /** Format: int32 */
+            decimalScale: number;
+            lateFeeEnabled: boolean;
+            temporaryAllowed: boolean;
+            accountingSubjectCode?: string;
+            prepaymentSubjectCode?: string;
+            taxCategoryCode?: string;
+            taxRate: number;
+            roundingMode: string;
+            currencyCode: string;
         };
-        BatchAssign: {
+        AllocationRequest: {
             communityId: string;
             feeStandardId: string;
-            assetIds: string[];
+            targetType: string;
+            targetIds: string[];
             coefficient: number;
             /** Format: date */
             effectiveFrom: string;
             /** Format: date */
             effectiveTo?: string;
+            sourceType: string;
+        };
+        CancelAllocations: {
+            communityId: string;
+            allocationIds: string[];
+            /** Format: date */
+            effectiveTo: string;
+            reason: string;
         };
         DepositCollect: {
             communityId: string;
@@ -2004,6 +2287,34 @@ export interface operations {
             };
         };
     };
+    updateDefinition: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDefinition"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
     get: {
         parameters: {
             query?: {
@@ -2117,18 +2428,16 @@ export interface operations {
             };
         };
     };
-    generate: {
+    previewTemporary: {
         parameters: {
             query?: never;
-            header?: {
-                "Idempotency-Key"?: string;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReceivableRequest"];
+                "application/json": components["schemas"]["TemporaryRequest"];
             };
         };
         responses: {
@@ -2143,7 +2452,82 @@ export interface operations {
             };
         };
     };
-    preview: {
+    createTemporary: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemporaryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    jobs: {
+        parameters: {
+            query: {
+                communityId: string;
+                jobType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    createPeriodic: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeriodicRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    previewPeriodic: {
         parameters: {
             query?: never;
             header?: never;
@@ -2152,7 +2536,31 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReceivableRequest"];
+                "application/json": components["schemas"]["PeriodicRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    previewPeriodic_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeriodicRequest"];
             };
         };
         responses: {
@@ -3102,6 +3510,105 @@ export interface operations {
             };
         };
     };
+    disableStandard: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    versions: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    createVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStandardVersion"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    standards: {
+        parameters: {
+            query: {
+                communityId: string;
+                feeDefinitionId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
     createStandard: {
         parameters: {
             query?: never;
@@ -3126,7 +3633,7 @@ export interface operations {
             };
         };
     };
-    batchCancel: {
+    createStandard_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3135,7 +3642,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BatchCancel"];
+                "application/json": components["schemas"]["CreateStandard"];
             };
         };
         responses: {
@@ -3150,7 +3657,31 @@ export interface operations {
             };
         };
     };
-    batchAssign: {
+    definitions: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    createDefinition: {
         parameters: {
             query?: never;
             header?: never;
@@ -3159,7 +3690,127 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BatchAssign"];
+                "application/json": components["schemas"]["CreateDefinition"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    previewAllocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    cancelAllocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAllocations"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    cancelAllocations_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAllocations"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    assignAllocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    assignAllocations_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationRequest"];
             };
         };
         responses: {
@@ -3328,6 +3979,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LoginResult"];
+                };
+            };
+        };
+    };
+    job: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
                 };
             };
         };
@@ -3581,6 +4256,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PermissionView"][];
+                };
+            };
+        };
+    };
+    allocations: {
+        parameters: {
+            query: {
+                communityId: string;
+                feeStandardId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
                 };
             };
         };

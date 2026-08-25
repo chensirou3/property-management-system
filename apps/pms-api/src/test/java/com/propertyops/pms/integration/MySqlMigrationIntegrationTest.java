@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(12);
-        assertThat(result.targetSchemaVersion).isEqualTo("12");
+        assertThat(result.migrationsExecuted).isEqualTo(14);
+        assertThat(result.targetSchemaVersion).isEqualTo("14");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -54,6 +54,8 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM vehicle", 31);
             assertCount(statement, "SELECT COUNT(*) FROM vehicle_parking_relation", 31);
             assertCount(statement, "SELECT COUNT(*) FROM meter", 32);
+            assertCount(statement, "SELECT COUNT(*) FROM fee_definition", 23);
+            assertCount(statement, "SELECT COUNT(*) FROM fee_definition WHERE temporary_allowed=TRUE", 1);
 
             var primaryProject = "30000000-0000-0000-0000-000000000001";
             var isolatedProject = "30000000-0000-0000-0000-000000000002";
@@ -128,6 +130,23 @@ class MySqlMigrationIntegrationTest {
                         'migration_reconciliation', 'migration_change_log', 'migration_batch_event'
                       )
                     """, 9);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = DATABASE()
+                      AND table_name IN (
+                        'fee_configuration_event', 'receivable_generation_item',
+                        'receivable_generation_reconciliation'
+                      )
+                    """, 3);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_schema = DATABASE()
+                      AND constraint_name IN (
+                        'ck_fee_definition_rounding', 'fk_fee_standard_definition_scope',
+                        'ck_standard_version_dates', 'ck_allocation_target',
+                        'uk_bill_periodic', 'ck_receivable_job_status'
+                      )
+                    """, 6);
             assertCount(statement, """
                     SELECT COUNT(*) FROM information_schema.table_constraints
                     WHERE constraint_schema = DATABASE()

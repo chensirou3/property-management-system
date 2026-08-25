@@ -27,6 +27,14 @@ for (const viewport of targetViewports) {
         await route.continue()
       }
     })
+    await page.route('**/api/v1/receivable-jobs*', async (route) => {
+      const requestUrl = new URL(route.request().url())
+      if (route.request().method() === 'GET' && requestUrl.pathname.endsWith('/api/v1/receivable-jobs')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      } else {
+        await route.continue()
+      }
+    })
     await page.goto('/login')
     await page.getByRole('textbox', { name: '账号' }).fill(username)
     await page.getByRole('textbox', { name: '密码' }).fill(password)

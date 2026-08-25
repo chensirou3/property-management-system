@@ -348,12 +348,15 @@ public class MeterService {
         String id = UUID.randomUUID().toString();
         var params = new MapSqlParameterSource("id", id).addValue("communityId", communityId).addValue("assetId", assetId)
                 .addValue("customerId", customers.isEmpty() ? null : customers.get(0)).addValue("billNo", "MTR-" + period.toString().replace("-", "") + "-" + assetId)
-                .addValue("period", period.toString()).addValue("dueDate", period.atEndOfMonth()).addValue("now", now);
+                .addValue("period", period.toString()).addValue("chargeDate", period.atDay(1))
+                .addValue("dueDate", period.atEndOfMonth()).addValue("now", now);
         jdbc.update("""
                 INSERT INTO bill
-                    (id, community_id, asset_id, customer_id, bill_no, billing_period, status,
+                    (id, community_id, asset_id, customer_id, bill_no, bill_type,
+                     billing_period, charge_date, configuration_checksum, status,
                      total_amount, paid_amount, outstanding_amount, due_date, version, created_at, updated_at)
-                VALUES (:id, :communityId, :assetId, :customerId, :billNo, :period, 'UNPAID',
+                VALUES (:id, :communityId, :assetId, :customerId, :billNo, 'PERIODIC',
+                        :period, :chargeDate, SHA2(CONCAT('meter|',:communityId,'|',:assetId,'|',:period),256), 'UNPAID',
                         0, 0, 0, :dueDate, 0, :now, :now)
                 """, params);
         return id;

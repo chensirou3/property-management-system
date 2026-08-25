@@ -8,7 +8,7 @@ import java.util.List;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 
-import com.propertyops.pms.fee.FeeService;
+import com.propertyops.pms.fee.FeeModels;
 import com.propertyops.pms.finance.FinanceService;
 import com.propertyops.pms.meter.MeterService;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ class BusinessRequestValidationTest {
                 "project", "SIMULATOR", List.of(new FinanceService.BillPayment("bill", BigDecimal.ZERO)));
         assertThat(validator.validate(payment)).isNotEmpty();
 
-        FeeService.ReceivableRequest receivable = new FeeService.ReceivableRequest(
+        FeeModels.PeriodicRequest receivable = new FeeModels.PeriodicRequest(
                 "project", "2026-00", List.of("asset"));
         assertThat(validator.validate(receivable)).isNotEmpty();
     }

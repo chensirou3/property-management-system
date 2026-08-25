@@ -19,13 +19,16 @@ const CapabilityWorkspaceView = () => import('../views/CapabilityWorkspaceView.v
 const AssetWorkspaceView = () => import('../views/AssetWorkspaceView.vue')
 const CustomerRelationshipView = () => import('../views/CustomerRelationshipView.vue')
 const MigrationCenterView = () => import('../views/MigrationCenterView.vue')
+const FeeConfigurationView = () => import('../views/FeeConfigurationView.vue')
+const TemporaryReceivableView = () => import('../views/TemporaryReceivableView.vue')
 
 const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
 const assetWorkspacePaths = ['/archives/rooms', '/archives/parking-spaces']
 const customerWorkspacePaths = ['/archives/customers', '/archives/customer-assets']
 const migrationWorkspacePath = '/system/migrations'
-const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths,
+const feeConfigurationPaths = ['/fees/definitions', '/fees/standards', '/fees/allocations']
+const specialPaths = new Set(['/dashboard', '/fees/receivables', '/fees/temporary-receivables', '/cashier', ...feeConfigurationPaths, ...meterWorkflowPaths,
   ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths, migrationWorkspacePath])
 
 function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
@@ -69,6 +72,11 @@ const router = createRouter({
         { path: 'dashboard', name: 'dashboard', component: DashboardView, meta: pageMeta('/dashboard', '项目看板', 'dashboard:read') },
         { path: 'forbidden', name: 'forbidden', component: ForbiddenView, meta: { title: '无权访问' } },
         { path: 'fees/receivables', name: 'receivable-workflow', component: ReceivableWorkflowView, meta: pageMeta('/fees/receivables', '应收生成', 'fee:read') },
+        { path: 'fees/temporary-receivables', name: 'temporary-receivable-workflow', component: TemporaryReceivableView, meta: pageMeta('/fees/temporary-receivables', '生成应收—临时', 'fee:read') },
+        ...feeConfigurationPaths.map((path) => ({
+          path: path.slice(1), name: `fee-configuration-${path.split('/').at(-1)}`, component: FeeConfigurationView,
+          meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'fee:read'),
+        })),
         { path: 'cashier', name: 'cashier-workflow', component: CashierView, meta: pageMeta('/cashier', '收银台', 'cashier:read') },
         ...meterWorkflowPaths.map((path) => ({
           path: path.slice(1),
