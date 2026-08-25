@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:visual": "playwright test e2e/visual-baselines.spec.ts",
     "api:generate": "openapi-typescript http://localhost:8088/v3/api-docs -o src/api/generated.ts",
     "preview": "vite preview --host 0.0.0.0 --port 4174"
   },

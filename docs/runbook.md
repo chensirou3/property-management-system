@@ -72,3 +72,4 @@ npm run api:generate
 - `401`：令牌缺失、过期或已由会话版本撤销；`403`：权限/项目范围不足，或首次改密前访问业务接口；`429`：账号/IP 登录失败达到阈值；`409`：版本冲突或幂等业务冲突；`400`：字段/业务规则错误。
 - MySQL/Redis 先查看 `docker compose ps` 健康状态，再检查端口占用和本地 `.env`。
 - Playwright 直接使用本机 Chrome；失败产物位于 `apps/admin-web/test-results` 和 `playwright-report`。
+- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与项目看板；基线清单、哈希和受控更新步骤见 `visual-baselines.md`。

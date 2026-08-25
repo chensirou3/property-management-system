@@ -21,4 +21,4 @@
 - 当前没有真实历史迁移、真实住户、真实票据模板或真实第三方密钥。
 - Docker Compose 已完成 API/Web 镜像重建，API、Web、MySQL、Redis 均可启动，API 健康检查通过。
 - API 已按 ADR-007 迁移到 Spring Boot 3.5.16，并完成 Jakarta、Spring Security 6、springdoc 2.9、Flyway/MySQL、OpenAPI 和端到端兼容验证。
-- G1 的企业、组织、岗位、人员、角色和账号完整生命周期已经通过 API/真实 MySQL/Playwright 验证；当前仅剩 3 个目标视口固定视觉基线。
+- G1 的企业组织权限生命周期和 3 个目标视口固定视觉基线已经通过本地门禁；G2 仍需把同样的验收卡、状态和视觉差异体系扩展到 49 个范围页面。
