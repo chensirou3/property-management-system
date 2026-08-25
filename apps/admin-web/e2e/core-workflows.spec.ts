@@ -46,6 +46,7 @@ test('ordinary employee is restricted to the granted project and cannot open IAM
   const suffix = Date.now()
   const username = `e2e-project-user-${suffix}`
   const employeePassword = `E2E-project-scope-${suffix}!`
+  const changedPassword = `Changed-E2E-scope-${suffix}!`
   const primaryProject = '30000000-0000-0000-0000-000000000001'
   const isolatedProject = '30000000-0000-0000-0000-000000000002'
   const projectManagerRole = '10000000-0000-0000-0000-000000000002'
@@ -74,6 +75,11 @@ test('ordinary employee is restricted to the granted project and cannot open IAM
     await page.getByRole('textbox', { name: '账号' }).fill(username)
     await page.getByRole('textbox', { name: '密码' }).fill(employeePassword)
     await page.getByRole('button', { name: '登录', exact: true }).click()
+    await expect(page).toHaveURL(/\/change-password$/)
+    await page.getByRole('textbox', { name: '当前密码' }).fill(employeePassword)
+    await page.getByRole('textbox', { name: '新密码', exact: true }).fill(changedPassword)
+    await page.getByRole('textbox', { name: '确认新密码' }).fill(changedPassword)
+    await page.getByRole('button', { name: '确认修改' }).click()
     await expect(page).toHaveURL(/\/dashboard$/)
     await expect(page.locator('.project-select .el-select__placeholder')).toContainText('优山美地（合成示范项目）')
 
@@ -97,9 +103,112 @@ test('ordinary employee is restricted to the granted project and cannot open IAM
         passwordChangeRequired: createdUser.passwordChangeRequired,
         roleIds: createdUser.roleIds,
         projectIds: createdUser.projectIds,
-        expectedVersion: createdUser.version,
+        expectedVersion: createdUser.version + 1,
       },
     })
     expect(cleanupResponse.ok(), await cleanupResponse.text()).toBeTruthy()
+  }
+})
+
+test('IAM read-only role can inspect accounts but cannot mutate data', async ({ page }) => {
+  const adminToken = await page.evaluate(() => sessionStorage.getItem('pms_access_token'))
+  expect(adminToken).toBeTruthy()
+  const suffix = Date.now()
+  const username = `e2e-iam-reader-${suffix}`
+  const initialPassword = `E2E-Iam-read-${suffix}!`
+  const changedPassword = `Changed-E2E-Iam-${suffix}!`
+  const primaryProject = '30000000-0000-0000-0000-000000000001'
+
+  const permissionsResponse = await page.request.get('/api/v1/iam/permissions', {
+    headers: { Authorization: `Bearer ${adminToken}` },
+  })
+  expect(permissionsResponse.ok(), await permissionsResponse.text()).toBeTruthy()
+  const permissions = await permissionsResponse.json()
+  const iamReadPermission = permissions.find((item: { code: string }) => item.code === 'iam:read')
+  expect(iamReadPermission).toBeTruthy()
+
+  const roleResponse = await page.request.post('/api/v1/iam/roles', {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: {
+      enterpriseId: null,
+      code: `E2E_IAM_READ_${suffix}`,
+      name: `E2E IAM 只读 ${suffix}`,
+      description: 'E2E temporary read-only role',
+      permissionIds: [iamReadPermission.id],
+    },
+  })
+  expect(roleResponse.ok(), await roleResponse.text()).toBeTruthy()
+  const createdRole = await roleResponse.json()
+
+  const userResponse = await page.request.post('/api/v1/iam/users', {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: {
+      username,
+      password: initialPassword,
+      displayName: 'E2E IAM 只读账号',
+      employeeId: null,
+      enabled: true,
+      roleIds: [createdRole.id],
+      projectIds: [primaryProject],
+    },
+  })
+  expect(userResponse.ok(), await userResponse.text()).toBeTruthy()
+  const createdUser = await userResponse.json()
+
+  try {
+    await page.evaluate(() => {
+      sessionStorage.clear()
+      localStorage.clear()
+    })
+    await page.goto('/login')
+    await page.getByRole('textbox', { name: '账号' }).fill(username)
+    await page.getByRole('textbox', { name: '密码' }).fill(initialPassword)
+    await page.getByRole('button', { name: '登录', exact: true }).click()
+    await expect(page).toHaveURL(/\/change-password$/)
+    await page.getByRole('textbox', { name: '当前密码' }).fill(initialPassword)
+    await page.getByRole('textbox', { name: '新密码', exact: true }).fill(changedPassword)
+    await page.getByRole('textbox', { name: '确认新密码' }).fill(changedPassword)
+    await page.getByRole('button', { name: '确认修改' }).click()
+    await expect(page).toHaveURL(/\/dashboard$/)
+
+    await page.goto('/enterprise/accounts')
+    await expect(page).toHaveURL(/\/enterprise\/accounts$/)
+    await expect(page.locator('.iam-summary-card').filter({ hasText: '当前模块' })).toContainText('账号与项目权限')
+    await expect(page.getByRole('button', { name: '新增账号' })).toHaveCount(0)
+    await expect(page.getByRole('columnheader', { name: '操作' })).toHaveCount(0)
+
+    const readerToken = await page.evaluate(() => sessionStorage.getItem('pms_access_token'))
+    const forbiddenWrite = await page.request.post('/api/v1/iam/enterprises', {
+      headers: { Authorization: `Bearer ${readerToken}` },
+      data: { code: `E2E_DENIED_${suffix}`, name: '不应创建的企业' },
+    })
+    expect(forbiddenWrite.status()).toBe(403)
+    expect((await forbiddenWrite.json()).code).toBe('PERMISSION_DENIED')
+  } finally {
+    const disableUserResponse = await page.request.put(`/api/v1/iam/users/${createdUser.id}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: {
+        displayName: createdUser.displayName,
+        employeeId: createdUser.employeeId,
+        enabled: false,
+        passwordChangeRequired: false,
+        roleIds: createdUser.roleIds,
+        projectIds: createdUser.projectIds,
+        expectedVersion: createdUser.version + 1,
+      },
+    })
+    expect(disableUserResponse.ok(), await disableUserResponse.text()).toBeTruthy()
+
+    const disableRoleResponse = await page.request.put(`/api/v1/iam/roles/${createdRole.id}`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      data: {
+        name: createdRole.name,
+        description: createdRole.description,
+        enabled: false,
+        permissionIds: createdRole.permissionIds,
+        expectedVersion: createdRole.version,
+      },
+    })
+    expect(disableRoleResponse.ok(), await disableRoleResponse.text()).toBeTruthy()
   }
 })

@@ -19,4 +19,6 @@
 - 收款、开票和 IoT 是确定性模拟通道，页面和审计快照均明确标记模拟。
 - 面积比例公摊和 `billableUsage × unitPrice` 是演示假设规则，不能直接作为生产收费依据。
 - 当前没有真实历史迁移、真实住户、真实票据模板或真实第三方密钥。
-- Docker Compose 定义已校验，MySQL/Redis 容器及宿主机 API/Web 已验证；本机访问 Docker Hub 鉴权端点超时，导致 API/Web 镜像基础层暂未在本机重新拉取构建。
+- Docker Compose 已完成 API/Web 镜像重建，API、Web、MySQL、Redis 均可启动，API 健康检查通过。
+- API 当前仍在 Spring Boot 2.7.18 短期兼容基线上；已接受 ADR-007，必须在 G1 退出前迁移到受支持的 3.5.x 线。
+- 企业、组织、岗位、人员、角色和账号的完整失败/冲突/停用生命周期 E2E，以及 3 个目标视口固定视觉基线仍待完成。

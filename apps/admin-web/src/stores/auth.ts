@@ -64,6 +64,13 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = data
   }
 
+  async function changePassword(currentPassword: string, newPassword: string) {
+    const { data } = await http.put('/auth/change-password', { currentPassword, newPassword })
+    token.value = data.accessToken
+    user.value = data.user
+    sessionStorage.setItem('pms_access_token', token.value)
+  }
+
   async function loadProjects() {
     if (!token.value) return
     if (token.value.startsWith('mock-')) {
@@ -95,6 +102,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token, user, projects, currentProjectId, currentProject, authenticated,
-    hasPermission, login, loadProfile, loadProjects, setProject, logout,
+    hasPermission, login, changePassword, loadProfile, loadProjects, setProject, logout,
   }
 })

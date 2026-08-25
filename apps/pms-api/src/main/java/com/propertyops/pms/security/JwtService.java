@@ -38,7 +38,7 @@ public class JwtService {
         this.algorithm = Algorithm.HMAC256(secret);
     }
 
-    public Token issue(AuthPrincipal principal) {
+    public Token issue(AuthPrincipal principal, long sessionVersion) {
         Instant issuedAt = clock.instant();
         Instant expiresAt = issuedAt.plus(properties.getAccessTokenMinutes(), ChronoUnit.MINUTES);
         String value = JWT.create()
@@ -48,6 +48,7 @@ public class JwtService {
                 .withExpiresAt(Date.from(expiresAt))
                 .withClaim("username", principal.username())
                 .withClaim("displayName", principal.displayName())
+                .withClaim("sessionVersion", sessionVersion)
                 .withArrayClaim("roles", principal.roles().toArray(String[]::new))
                 .withArrayClaim("permissions", principal.permissions().toArray(String[]::new))
                 .withArrayClaim("projectIds", principal.projectIds().toArray(String[]::new))
@@ -55,11 +56,11 @@ public class JwtService {
         return new Token(value, expiresAt);
     }
 
-    public AuthPrincipal verify(String token) throws JWTVerificationException {
+    public VerifiedToken verify(String token) throws JWTVerificationException {
         JWTVerifier.BaseVerification verification = (JWTVerifier.BaseVerification) JWT.require(algorithm);
         verification.withIssuer("property-ops-pms");
         DecodedJWT jwt = verification.build(clock).verify(token);
-        return new AuthPrincipal(
+        AuthPrincipal principal = new AuthPrincipal(
                 jwt.getSubject(),
                 jwt.getClaim("username").asString(),
                 jwt.getClaim("displayName").asString(),
@@ -67,6 +68,8 @@ public class JwtService {
                 set(jwt.getClaim("permissions").asList(String.class)),
                 set(jwt.getClaim("projectIds").asList(String.class))
         );
+        Long sessionVersion = jwt.getClaim("sessionVersion").asLong();
+        return new VerifiedToken(principal, sessionVersion == null ? -1 : sessionVersion);
     }
 
     private Set<String> set(List<String> values) {
@@ -74,4 +77,5 @@ public class JwtService {
     }
 
     public record Token(String value, Instant expiresAt) {}
+    public record VerifiedToken(AuthPrincipal principal, long sessionVersion) {}
 }

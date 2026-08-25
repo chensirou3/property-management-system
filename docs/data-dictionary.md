@@ -8,11 +8,11 @@
 - 金额为 `DECIMAL(18,2)`，用量、单价、系数和面积保留更高小数位。
 - JSON 快照用于保存公式、收据、适配器和计算上下文，避免未来规则变化改写历史。
 
-## 表分组（空库迁移后共 54 张业务/基础设施表）
+## 表分组（空库迁移后共 55 张业务/基础设施表）
 
 | 分组 | 核心表 | 作用 |
 |---|---|---|
-| IAM | `sys_user`、`sys_role`、`sys_permission`、`sys_user_role`、`sys_role_permission`、`sys_user_project_scope` | 登录、RBAC、项目数据范围 |
+| IAM | `sys_user`、`sys_role`、`sys_permission`、`sys_user_role`、`sys_role_permission`、`sys_user_project_scope`、`auth_login_guard` | 登录、RBAC、项目数据范围、会话版本与登录限流 |
 | 企业组织 | `enterprise`、`organization_unit`、`org_position`、`employee` | 企业、组织树、岗位、人员及其项目归属 |
 | 档案 | `community`、`building`、`building_unit`、`asset`、房屋/车位明细 | 项目和空间资产主数据 |
 | 客户车辆 | `customer`、`customer_asset_relation`、`vehicle`、`vehicle_parking_relation` | 客户、资产权属/租住、车辆和车位关系 |
@@ -50,4 +50,4 @@
 | 房屋费用分配 / 车位费用分配 | 549 / 194 |
 | 演示账单 | 20 |
 
-全新数据库验收结果：8 个 Flyway 迁移成功、54 张表、2 个有效项目、359 套房屋、403 个客户、743 条费用分配；账单恒等式违规、客户资产孤儿关系和跨项目越权测试均为 0。
+全新数据库验收结果：9 个 Flyway 迁移成功、55 张表、2 个有效项目、359 套房屋、403 个客户、743 条费用分配；账单恒等式违规、客户资产孤儿关系和跨项目越权测试均为 0。

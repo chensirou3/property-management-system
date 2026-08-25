@@ -3,6 +3,7 @@ package com.propertyops.pms.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,7 +35,8 @@ class IamProjectIsolationIntegrationTest {
     private static final String ADMIN_USERNAME = "integration-admin";
     private static final String ADMIN_PASSWORD = "integration-admin-password";
     private static final String EMPLOYEE_USERNAME = "integration-project-manager";
-    private static final String EMPLOYEE_PASSWORD = "integration-employee-password";
+    private static final String EMPLOYEE_PASSWORD = "Integration-Employee-2026!";
+    private static final String CHANGED_PASSWORD = "Changed-Employee-2026!";
 
     @Container
     private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
@@ -50,10 +53,12 @@ class IamProjectIsolationIntegrationTest {
         registry.add("pms.bootstrap.admin-username", () -> ADMIN_USERNAME);
         registry.add("pms.bootstrap.admin-password", () -> ADMIN_PASSWORD);
         registry.add("pms.security.jwt-secret", () -> "integration-only-jwt-secret-with-more-than-32-characters");
+        registry.add("pms.security.login-max-failures", () -> "3");
     }
 
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
+    @Autowired NamedParameterJdbcTemplate jdbc;
 
     @Test
     void ordinaryAccountSeesOnlyGrantedProjectAndCannotUseIamAdministration() throws Exception {
@@ -78,9 +83,25 @@ class IamProjectIsolationIntegrationTest {
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value(EMPLOYEE_USERNAME))
-                .andExpect(jsonPath("$.projectIds.length()").value(1));
+                .andExpect(jsonPath("$.projectIds.length()").value(1))
+                .andExpect(jsonPath("$.passwordChangeRequired").value(true));
 
-        String employeeToken = login(EMPLOYEE_USERNAME, EMPLOYEE_PASSWORD);
+        String temporaryToken = login(EMPLOYEE_USERNAME, EMPLOYEE_PASSWORD);
+        mockMvc.perform(get("/api/v1/data/communities")
+                        .header("Authorization", bearer(temporaryToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PASSWORD_CHANGE_REQUIRED"));
+
+        String passwordResponse = mockMvc.perform(put("/api/v1/auth/change-password")
+                        .header("Authorization", bearer(temporaryToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "currentPassword", EMPLOYEE_PASSWORD,
+                                "newPassword", CHANGED_PASSWORD))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.passwordChangeRequired").value(false))
+                .andReturn().getResponse().getContentAsString();
+        String employeeToken = objectMapper.readTree(passwordResponse).path("accessToken").asText();
 
         mockMvc.perform(get("/api/v1/data/communities")
                         .header("Authorization", bearer(employeeToken))
@@ -104,6 +125,58 @@ class IamProjectIsolationIntegrationTest {
         mockMvc.perform(get("/api/v1/iam/users").header("Authorization", bearer(employeeToken)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"));
+
+        mockMvc.perform(put("/api/v1/iam/users/{id}", userId(EMPLOYEE_USERNAME))
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "displayName", "隔离测试项目经理",
+                                "enabled", true,
+                                "passwordChangeRequired", false,
+                                "roleIds", Set.of(PROJECT_MANAGER_ROLE),
+                                "projectIds", Set.of(PRIMARY_PROJECT),
+                                "expectedVersion", 1))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/data/communities")
+                        .header("Authorization", bearer(employeeToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void repeatedInvalidLoginsAreRateLimitedAndAuditedWithoutRawIdentity() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "username", "missing-rate-limit-account", "password", "Wrong-Password-2026!"));
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                            .with(request -> { request.setRemoteAddr("198.51.100.24"); return request; })
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+        }
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(request -> { request.setRemoteAddr("198.51.100.24"); return request; })
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("TOO_MANY_LOGIN_ATTEMPTS"));
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .with(request -> { request.setRemoteAddr("198.51.100.24"); return request; })
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isTooManyRequests());
+
+        Long failures = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_event WHERE action_code='AUTH_LOGIN_FAILURE'
+                """, Map.of(), Long.class);
+        Long denied = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_event WHERE action_code='AUTH_LOGIN_RATE_LIMITED'
+                """, Map.of(), Long.class);
+        Long leaked = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_event WHERE detail_json LIKE '%missing-rate-limit-account%'
+                """, Map.of(), Long.class);
+        assertThat(failures).isGreaterThanOrEqualTo(3);
+        assertThat(denied).isGreaterThanOrEqualTo(1);
+        assertThat(leaked).isZero();
     }
 
     private String login(String username, String password) throws Exception {
@@ -119,5 +192,10 @@ class IamProjectIsolationIntegrationTest {
 
     private String bearer(String token) {
         return "Bearer " + token;
+    }
+
+    private String userId(String username) {
+        return jdbc.queryForObject("SELECT id FROM sys_user WHERE username=:username",
+                Map.of("username", username), String.class);
     }
 }

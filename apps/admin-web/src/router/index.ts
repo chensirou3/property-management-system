@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 const DashboardView = () => import('../views/DashboardView.vue')
 const GenericDataView = () => import('../views/GenericDataView.vue')
 const LoginView = () => import('../views/LoginView.vue')
+const ChangePasswordView = () => import('../views/ChangePasswordView.vue')
 const ForbiddenView = () => import('../views/ForbiddenView.vue')
 const ReceivableWorkflowView = () => import('../views/ReceivableWorkflowView.vue')
 const CashierView = () => import('../views/CashierView.vue')
@@ -29,6 +30,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: LoginView, meta: { public: true, title: '登录' } },
+    { path: '/change-password', name: 'change-password', component: ChangePasswordView, meta: { title: '修改临时密码' } },
     {
       path: '/',
       component: AppLayout,
@@ -61,11 +63,12 @@ router.beforeEach(async (to) => {
   document.title = `${String(to.meta.title || '物业管理平台')} - 物业管理平台`
   const hasToken = Boolean(sessionStorage.getItem('pms_access_token'))
   if (!to.meta.public && !hasToken) return '/login'
-  if (to.path === '/login' && hasToken) return '/dashboard'
-  if (hasToken && to.meta.permission) {
+  if (hasToken) {
     const auth = useAuthStore()
     await auth.loadProfile()
-    if (!auth.hasPermission(String(to.meta.permission))) return '/forbidden'
+    if (auth.user?.passwordChangeRequired && to.path !== '/change-password') return '/change-password'
+    if (to.path === '/login') return auth.user?.passwordChangeRequired ? '/change-password' : '/dashboard'
+    if (to.meta.permission && !auth.hasPermission(String(to.meta.permission))) return '/forbidden'
   }
 })
 

@@ -15,9 +15,9 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(username.value, password.value)
-    await router.push('/dashboard')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '登录失败')
+    await router.push(auth.user?.passwordChangeRequired ? '/change-password' : '/dashboard')
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.message || error.message || '登录失败')
   } finally {
     loading.value = false
   }

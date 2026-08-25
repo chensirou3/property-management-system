@@ -24,3 +24,6 @@
 
 种子数据只复现“优山美地”的规模、字段覆盖和关系统计。个人信息、原始 ID、房号、金额和业务凭据全部重新生成。
 
+## ADR-007：Spring Boot 受支持版本
+
+API 将在 G1 退出前从 Spring Boot 2.7.18 迁移到受支持的 3.5.x 线，保持 Java 17，并以独立提交完成 Jakarta、Spring Security 6、springdoc 与 Flyway 兼容迁移。详细决策、验收和回滚见 [`adr/ADR-007-spring-boot-supported-version.md`](adr/ADR-007-spring-boot-supported-version.md)。

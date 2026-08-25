@@ -28,13 +28,15 @@ public class IamAdminService {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordPolicy passwordPolicy;
     private final SecurityContextService security;
     private final AuditService audit;
 
     public IamAdminService(NamedParameterJdbcTemplate jdbc, PasswordEncoder passwordEncoder,
-                           SecurityContextService security, AuditService audit) {
+                           PasswordPolicy passwordPolicy, SecurityContextService security, AuditService audit) {
         this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
+        this.passwordPolicy = passwordPolicy;
         this.security = security;
         this.audit = audit;
     }
@@ -351,6 +353,11 @@ public class IamAdminService {
                 """, params);
         requireChanged(changed);
         replaceRolePermissions(id, request.permissionIds());
+        jdbc.update("""
+                UPDATE sys_user u JOIN sys_user_role ur ON ur.user_id=u.id
+                   SET u.session_version=u.session_version+1, u.updated_at=:now
+                 WHERE ur.role_id=:roleId
+                """, Map.of("now", now(), "roleId", id));
         audit.success(null, "iam:role:update", "role", id, Map.of("version", request.expectedVersion()));
         return role(id);
     }
@@ -371,6 +378,7 @@ public class IamAdminService {
     public UserView createUser(CreateUserRequest request) {
         requireWrite();
         validateAccess(request.employeeId(), request.roleIds(), request.projectIds());
+        passwordPolicy.validate(request.username(), request.password());
         String id = UUID.randomUUID().toString();
         var params = new MapSqlParameterSource()
                 .addValue("id", id).addValue("username", request.username())
@@ -419,7 +427,8 @@ public class IamAdminService {
         try {
             int changed = jdbc.update("""
                     UPDATE sys_user SET display_name=:displayName, employee_id=:employeeId, enabled=:enabled,
-                           password_change_required=:passwordChangeRequired, version=version+1, updated_at=:now
+                           password_change_required=:passwordChangeRequired,
+                           session_version=session_version+1, version=version+1, updated_at=:now
                      WHERE id=:id AND version=:version
                     """, params);
             requireChanged(changed);
@@ -436,8 +445,11 @@ public class IamAdminService {
     @Transactional
     public UserView resetPassword(String id, ResetPasswordRequest request) {
         requireWrite();
+        UserView target = user(id);
+        passwordPolicy.validate(target.username(), request.password());
         int changed = jdbc.update("""
                 UPDATE sys_user SET password_hash=:passwordHash, password_change_required=:requireChange,
+                       password_changed_at=:now, session_version=session_version+1,
                        version=version+1, updated_at=:now WHERE id=:id AND version=:version
                 """, Map.of("id", id, "passwordHash", passwordEncoder.encode(request.password()),
                 "requireChange", request.requireChange(), "version", request.expectedVersion(), "now", now()));

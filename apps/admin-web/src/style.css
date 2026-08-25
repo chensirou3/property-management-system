@@ -163,5 +163,14 @@ button, input, textarea, select { font: inherit; }
 .login-environment-note { margin: 15px 0 0; color: #9aa4b4; text-align: center; font-size: 10px; }
 .login-footer { flex: 0 0 46px; height: 46px; display: grid; place-items: center; color: #a4acb9; border-top: 1px solid #f0f2f5; font-size: 10px; }
 
+.password-change-page { min-height: 100vh; color: #1f2d3d; background: #f3f6fa; }
+.password-change-header { height: 52px; padding: 0 48px; display: flex; align-items: center; background: white; border-bottom: 1px solid #e5e9f0; }
+.password-change-main { min-height: calc(100vh - 52px); padding: 48px 20px; display: grid; place-items: center; background: linear-gradient(135deg, #edf5ff 0%, #f8fafc 50%, #eef3f8 100%); }
+.password-change-card { width: min(460px, calc(100vw - 40px)); padding: 0 30px 30px; background: white; border: 1px solid #dce3ec; border-radius: 4px; box-shadow: 0 14px 38px rgba(31, 56, 88, .10); }
+.password-change-card .login-card-title { height: auto; margin: 0 -30px 20px; padding: 22px 30px 18px; }
+.password-change-form { margin-top: 22px; }
+.password-policy-note { margin: -4px 0 20px; color: #778497; font-size: 12px; line-height: 1.7; }
+.password-change-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
 @media (max-width: 1300px) { .stat-grid { grid-template-columns: repeat(2, 1fr); }.dashboard-grid { grid-template-columns: 1fr; }.iam-summary-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 1180px) { .login-header { padding: 0 28px; }.login-nav span { min-width: 66px; padding: 0 8px; } }

@@ -6,6 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SecurityProperties {
     private String jwtSecret;
     private long accessTokenMinutes = 30;
+    private int loginMaxFailures = 5;
+    private long loginWindowMinutes = 15;
+    private long loginLockMinutes = 15;
 
     public String getJwtSecret() {
         return jwtSecret;
@@ -22,5 +25,28 @@ public class SecurityProperties {
     public void setAccessTokenMinutes(long accessTokenMinutes) {
         this.accessTokenMinutes = accessTokenMinutes;
     }
-}
 
+    public int getLoginMaxFailures() {
+        return loginMaxFailures;
+    }
+
+    public void setLoginMaxFailures(int loginMaxFailures) {
+        this.loginMaxFailures = loginMaxFailures;
+    }
+
+    public long getLoginWindowMinutes() {
+        return loginWindowMinutes;
+    }
+
+    public void setLoginWindowMinutes(long loginWindowMinutes) {
+        this.loginWindowMinutes = loginWindowMinutes;
+    }
+
+    public long getLoginLockMinutes() {
+        return loginLockMinutes;
+    }
+
+    public void setLoginLockMinutes(long loginLockMinutes) {
+        this.loginLockMinutes = loginLockMinutes;
+    }
+}

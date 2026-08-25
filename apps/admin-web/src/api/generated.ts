@@ -132,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["changePassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/receivable-jobs": {
         parameters: {
             query?: never;
@@ -596,6 +612,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/sessions:revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revokeAllSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -888,6 +920,24 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        ChangePasswordRequest: {
+            currentPassword: string;
+            newPassword: string;
+        };
+        LoginResult: {
+            accessToken?: string;
+            expiresAt?: string;
+            user?: components["schemas"]["UserProfile"];
+        };
+        UserProfile: {
+            id?: string;
+            username?: string;
+            displayName?: string;
+            roles?: string[];
+            permissions?: string[];
+            projectIds?: string[];
+            passwordChangeRequired?: boolean;
+        };
         ReceivableRequest: {
             communityId: string;
             billingPeriod: string;
@@ -1046,20 +1096,6 @@ export interface components {
         LoginRequest: {
             username: string;
             password: string;
-        };
-        LoginResult: {
-            accessToken?: string;
-            expiresAt?: string;
-            user?: components["schemas"]["UserProfile"];
-        };
-        UserProfile: {
-            id?: string;
-            username?: string;
-            displayName?: string;
-            roles?: string[];
-            permissions?: string[];
-            projectIds?: string[];
-            passwordChangeRequired?: boolean;
         };
         ProjectView: {
             id?: string;
@@ -1360,6 +1396,30 @@ export interface operations {
                     "*/*": {
                         [key: string]: Record<string, never>;
                     };
+                };
+            };
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LoginResult"];
                 };
             };
         };
@@ -2248,6 +2308,24 @@ export interface operations {
                         [key: string]: Record<string, never>;
                     };
                 };
+            };
+        };
+    };
+    revokeAllSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -30,7 +30,7 @@
 - 费用定义、版本化标准、资产分配、应收试算和幂等账单生成；
 - 收银台、支付模拟、账单、欠费、预收、押金、收据、发票模拟和冲正；
 - 抄表批次、读数、IoT 模拟、公摊试算/应用、审核、换表和计量费用；
-- 54 张表、8 个 Flyway 迁移、两个隔离的合成项目、OpenAPI 生成类型、Maven/Vitest/Playwright 测试。
+- 55 张表、9 个 Flyway 迁移、两个隔离的合成项目、OpenAPI 生成类型、Maven/Vitest/Playwright 测试。
 
 运行和验收命令见 `docs/runbook.md`，API 见 `docs/api-reference.md`，外部资料差距见 `docs/known-gaps.md`。
 

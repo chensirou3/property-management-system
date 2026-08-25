@@ -21,12 +21,14 @@ class JwtServiceTest {
                 "user-1", "admin", "管理员", Set.of("PROJECT_MANAGER"),
                 Set.of("property:read"), Set.of("community-1"));
 
-        JwtService.Token token = service.issue(principal);
-        AuthPrincipal verified = service.verify(token.value());
+        JwtService.Token token = service.issue(principal, 7);
+        JwtService.VerifiedToken verifiedToken = service.verify(token.value());
+        AuthPrincipal verified = verifiedToken.principal();
 
         assertThat(verified.userId()).isEqualTo("user-1");
         assertThat(verified.hasProject("community-1")).isTrue();
         assertThat(verified.authorities()).contains("ROLE_PROJECT_MANAGER", "property:read");
+        assertThat(verifiedToken.sessionVersion()).isEqualTo(7);
         assertThat(token.expiresAt()).isEqualTo(Instant.parse("2035-07-20T00:30:00Z"));
     }
 }

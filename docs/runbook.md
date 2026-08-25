@@ -21,7 +21,7 @@ mvn clean verify
 java '-Dfile.encoding=UTF-8' -jar target/pms-api-0.1.0-SNAPSHOT.jar
 ```
 
-后端使用 `.env` 对应的 `MYSQL_URL`、`MYSQL_USER`、`MYSQL_PASSWORD`、`REDIS_PASSWORD`、`JWT_SECRET` 和本地管理员变量。前端：
+后端使用 `.env` 对应的 `MYSQL_URL`、`MYSQL_USER`、`MYSQL_PASSWORD`、`REDIS_PASSWORD`、`JWT_SECRET`、本地管理员变量和 `LOGIN_MAX_FAILURES`/`LOGIN_WINDOW_MINUTES`/`LOGIN_LOCK_MINUTES` 登录保护参数。前端：
 
 ```powershell
 cd apps/admin-web
@@ -40,7 +40,7 @@ docker compose up -d
 docker compose ps
 ```
 
-当前机器若无法连接 `auth.docker.io`，镜像构建会在获取 Maven/Temurin/Node/Nginx 基础镜像时失败；这属于外部网络条件，不影响宿主机 Java/Node 启动。恢复 Docker Hub 访问后重试即可。
+若无法连接 `auth.docker.io`，镜像构建会在获取 Maven/Temurin/Node/Nginx 基础镜像时失败；可先使用宿主机 Java/Node 启动，恢复 Docker Hub 访问后重试。
 
 ## 测试与契约
 
@@ -69,6 +69,6 @@ npm run api:generate
 ## 故障定位
 
 - 每个响应带 `X-Request-Id`；错误响应和后端日志可按同一 ID 对齐。
-- `401`：令牌缺失/过期；`403`：权限或项目范围不足；`409`：版本冲突或幂等业务冲突；`400`：字段/业务规则错误。
+- `401`：令牌缺失、过期或已由会话版本撤销；`403`：权限/项目范围不足，或首次改密前访问业务接口；`429`：账号/IP 登录失败达到阈值；`409`：版本冲突或幂等业务冲突；`400`：字段/业务规则错误。
 - MySQL/Redis 先查看 `docker compose ps` 健康状态，再检查端口占用和本地 `.env`。
 - Playwright 直接使用本机 Chrome；失败产物位于 `apps/admin-web/test-results` 和 `playwright-report`。
