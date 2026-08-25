@@ -175,13 +175,19 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| POST | `/meter-reading-batches` | 创建或重放抄表批次 |
-| POST | `/meter-readings:input` | 批量录入读数；同批同表同值重放 |
-| POST | `/meter-readings:import-simulated` | 从确定性 IoT 模拟器导入 |
-| POST | `/meter-reading-batches/{id}:approve` | 审核批次和读数 |
-| POST | `/meter-share-rules:preview` | 按演示面积比例试算公摊 |
-| POST | `/meter-share-rules:apply` | 幂等保存 359 户公摊结果并更新草稿读数 |
-| POST | `/meters/{id}:replace` | 原子更新旧表、新表和换表记录 |
-| POST | `/meter-reading-batches/{id}:generate-charges` | 对审核读数幂等生成计量账单明细 |
+| GET | `/meter-workbench` | 返回仪表、批次、有效公摊版本、计量标准和异常/对账摘要 |
+| GET | `/meters` | 查询项目内仪表主档、资产/父表、倍率/损耗和末次审核读数 |
+| GET | `/meter-reading-batches` | 查询批次、来源、状态、正常/异常/已复核计数和聚合校验值 |
+| GET | `/meter-reading-batches/{id}` | 查询批次、读数原快照、IoT Inbox 和计量对账明细 |
+| POST | `/meter-reading-batches` | 以 `Idempotency-Key` 和请求哈希创建或重放抄表批次 |
+| POST | `/meter-readings:input` | 批量录入连续读数；跨期/倒序拒绝，同批同表同值重放 |
+| POST | `/meter-readings/{id}:review` | 按乐观版本复核异常并保存理由/经办；不覆盖原读数 |
+| POST | `/meter-readings:import-simulated` | 从确定性 IoT 模拟器导入并保存 Inbox 负载和 SHA-256 |
+| POST | `/meter-reading-batches/{id}:approve` | 阻断未复核异常，冻结读数并生成批次聚合校验值 |
+| POST | `/meter-share-rules:preview` | 按账期有效策略版本试算面积公摊 |
+| POST | `/meter-share-rules:apply` | 幂等保存版本化公摊结果并重算草稿读数快照 |
+| POST | `/meters/{id}:replace` | 以 `Idempotency-Key` 校验旧止码连续性并原子保存新旧表及凭证 |
+| POST | `/meter-reading-batches/{id}:generate-charges` | 仅对审核读数按有效计量标准/分配幂等生成账单明细 |
+| GET | `/meter-reading-batches/{id}/reconciliation` | 查询 COUNT、USAGE、AMOUNT 三项计量源—账单差异 |
 
-公摊和计量公式的响应快照包含 `assumptionRule=true`，明确表示仍需真实业务口径替换。
+读数固定保存公式输入、倍率、损耗、修正、公摊版本和 SHA-256；计量账单再嵌入原读数快照与原校验值，规则变化不会回写历史。面积公摊和计量公式的响应/账单快照包含 `assumptionRule=true`，明确表示仍需真实业务口径替换。G5 通用周期应收不会处理 `METER_USAGE` 分配，计量类应收只能从已审核批次生成。
