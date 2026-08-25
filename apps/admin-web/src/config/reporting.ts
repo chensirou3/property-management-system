@@ -1,0 +1,26 @@
+export const reportCodeByPath: Record<string, string> = {
+  '/reports/transaction-summary': 'TRANSACTION_SUMMARY',
+  '/reports/transaction-details': 'TRANSACTION_DETAILS',
+  '/finance/receipt-batch-print': 'RECEIPT_BATCH_PRINT',
+  '/finance/payments': 'PAYMENTS',
+  '/finance/arrears': 'ARREARS',
+  '/finance/bill-notifications': 'BILL_NOTIFICATIONS',
+  '/finance/bills': 'BILLS',
+  '/reports/collection-rate': 'COLLECTION_RATE',
+  '/reports/arrears-clearance-rate': 'ARREARS_CLEARANCE_RATE',
+  '/reports/comprehensive-query': 'COMPREHENSIVE_QUERY',
+  '/reports/collection-clearance-summary': 'COLLECTION_CLEARANCE_SUMMARY',
+  '/reports/charge-details': 'CHARGE_DETAILS',
+  '/reports/discount-details': 'DISCOUNT_DETAILS',
+  '/reports/prepayments': 'PREPAYMENTS',
+  '/reports/ownership-transfers': 'OWNERSHIP_TRANSFERS',
+  '/reports/reminders': 'REMINDERS',
+  '/reports/fee-status': 'FEE_STATUS',
+  '/reports/invoice-statistics': 'INVOICE_STATISTICS',
+  '/finance/deposits': 'DEPOSITS',
+  '/reports/daily-settlement-details': 'DAILY_SETTLEMENT_DETAILS',
+  '/finance/adjustments': 'ADJUSTMENTS',
+  '/finance/bank-trust': 'BANK_TRUST',
+}
+
+export const governedReportingPaths = Object.keys(reportCodeByPath)

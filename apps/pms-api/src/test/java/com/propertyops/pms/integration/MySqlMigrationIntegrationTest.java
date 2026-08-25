@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(16);
-        assertThat(result.targetSchemaVersion).isEqualTo("16");
+        assertThat(result.migrationsExecuted).isEqualTo(18);
+        assertThat(result.targetSchemaVersion).isEqualTo("18");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -58,7 +58,13 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM fee_definition WHERE temporary_allowed=TRUE", 1);
             assertCount(statement, "SELECT COUNT(*) FROM receipt_number_segment", 2);
             assertCount(statement, "SELECT COUNT(*) FROM discount_policy", 1);
-            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 77);
+            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 84);
+            assertCount(statement, "SELECT COUNT(*) FROM report_definition WHERE status='ACTIVE'", 22);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM report_definition
+                    WHERE report_code='RECEIPT_BATCH_PRINT'
+                      AND JSON_CONTAINS(columns_json, JSON_QUOTE('receiptId'))=1
+                    """, 1);
 
             var primaryProject = "30000000-0000-0000-0000-000000000001";
             var isolatedProject = "30000000-0000-0000-0000-000000000002";
@@ -170,6 +176,25 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM meter_share_rule_version", 1);
             assertCount(statement, "SELECT COUNT(*) FROM fee_standard WHERE asset_type='METER'", 1);
             assertCount(statement, "SELECT COUNT(*) FROM fee_allocation WHERE target_type='METER'", 30);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.tables
+                    WHERE table_schema = DATABASE()
+                      AND table_name IN (
+                        'report_definition', 'report_export_job', 'report_export_event',
+                        'receipt_print_job', 'receipt_print_item',
+                        'notification_batch', 'notification_message'
+                      )
+                    """, 7);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_schema = DATABASE()
+                      AND constraint_name IN (
+                        'uk_report_definition_code', 'uk_report_export_request',
+                        'uk_receipt_print_request', 'uk_receipt_print_item',
+                        'uk_notification_request', 'uk_notification_message_bill',
+                        'ck_notification_simulated', 'ck_receipt_print_counter'
+                      )
+                    """, 8);
             assertCount(statement, """
                     SELECT COUNT(*) FROM information_schema.table_constraints
                     WHERE constraint_schema = DATABASE()

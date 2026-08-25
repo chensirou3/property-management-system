@@ -29,6 +29,12 @@ public class SecurityContextService {
         }
     }
 
+    public void requireAnyPermission(String... permissions) {
+        var granted = requirePrincipal().permissions();
+        for (String permission : permissions) if (granted.contains(permission)) return;
+        throw new BusinessException("PERMISSION_DENIED", "没有执行该操作的权限", HttpStatus.FORBIDDEN);
+    }
+
     public void requireRole(String role) {
         if (!requirePrincipal().roles().contains(role)) {
             throw new BusinessException("ROLE_REQUIRED", "当前角色不能执行该操作", HttpStatus.FORBIDDEN);

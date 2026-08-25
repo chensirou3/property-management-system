@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -47,6 +48,15 @@ public class GlobalExceptionHandler {
         List<ApiError.FieldViolation> violations = error.getConstraintViolations().stream()
                 .map(item -> new ApiError.FieldViolation(item.getPropertyPath().toString(), item.getMessage()))
                 .collect(Collectors.toList());
+        return ResponseEntity.badRequest().body(new ApiError(
+                "VALIDATION_FAILED", "请求参数校验失败", requestId(request), java.time.Instant.now(), violations));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException error,
+                                                    HttpServletRequest request) {
+        List<ApiError.FieldViolation> violations = List.of(
+                new ApiError.FieldViolation(error.getParameterName(), "参数必填"));
         return ResponseEntity.badRequest().body(new ApiError(
                 "VALIDATION_FAILED", "请求参数校验失败", requestId(request), java.time.Instant.now(), violations));
     }

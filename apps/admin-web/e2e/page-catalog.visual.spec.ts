@@ -1,11 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createRequire } from 'node:module'
+import { reportCodeByPath } from '../src/config/reporting'
 
-const pageCatalog = createRequire(import.meta.url)('../src/config/page-catalog.json').pages as Array<{
-  pageNo: number
-  title: string
-  path: string
-}>
+type VisualCatalogPage = { pageNo: number; title: string; path: string; columns: string[] }
+const pageCatalog = createRequire(import.meta.url)('../src/config/page-catalog.json').pages as VisualCatalogPage[]
+const governedPageByCode = new Map(Object.entries(reportCodeByPath).map(([path, code]) => [
+  code, pageCatalog.find((page) => page.path === path)!,
+]))
 
 const username = process.env.PMS_E2E_USERNAME || 'admin'
 const password = process.env.PMS_E2E_PASSWORD
@@ -115,6 +116,24 @@ for (const viewport of targetViewports) {
         await route.continue()
       }
     })
+    await page.route('**/api/v1/reports/**', async (route) => {
+      if (route.request().method() !== 'GET') return route.continue()
+      const code = new URL(route.request().url()).pathname.split('/').at(-1) || ''
+      const catalogPage = governedPageByCode.get(code)
+      if (!catalogPage) return route.continue()
+      await route.fulfill({
+        status: 200, contentType: 'application/json', body: JSON.stringify(governedReportFixture(code, catalogPage)),
+      })
+    })
+    for (const pattern of ['**/api/v1/report-jobs*', '**/api/v1/receipt-print-jobs*', '**/api/v1/notification-batches*']) {
+      await page.route(pattern, async (route) => {
+        if (route.request().method() === 'GET') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+        } else {
+          await route.continue()
+        }
+      })
+    }
     await page.goto('/login')
     await page.getByRole('textbox', { name: '账号' }).fill(username)
     await page.getByRole('textbox', { name: '密码' }).fill(password)
@@ -146,4 +165,53 @@ async function installFixtureRoutes(page: Page, pattern: string, fixtures: Map<s
       await route.continue()
     }
   })
+}
+
+function governedReportFixture(code: string, catalogPage: VisualCatalogPage) {
+  const visibleColumns = catalogPage.columns.map(parseVisualField).filter((field) => field.type !== 'selection')
+  const columns = visibleColumns.map((field) => field.key)
+  if (code === 'RECEIPT_BATCH_PRINT') columns.unshift('receiptId')
+  const row = Object.fromEntries(visibleColumns.map((field) => [field.key, visualReportValue(field)]))
+  if (code === 'RECEIPT_BATCH_PRINT') row.receiptId = 'visual-receipt-1'
+  if (code === 'BANK_TRUST') Object.assign(row, {
+    trustNo: 'SIMULATOR-NOT-SUBMITTED', bankChannel: 'BANK_TRUST_SIMULATOR', submittedCount: 0,
+    submittedAmount: 0, successCount: 0, successAmount: 0, reconcileStatus: 'SIMULATOR_ONLY',
+  })
+  const numericTotals = Object.fromEntries(visibleColumns
+    .filter((field) => ['money', 'number'].includes(field.type))
+    .map((field) => [field.key, row[field.key]]))
+  const simulated = ['BILL_NOTIFICATIONS', 'REMINDERS', 'INVOICE_STATISTICS', 'BANK_TRUST'].includes(code)
+  return {
+    reportCode: code, title: catalogPage.title, rowGrain: `视觉固定样本 · ${catalogPage.title}`,
+    formulaNote: code === 'BANK_TRUST' ? '银行协议未授权，提交与成功数据固定为零。' : '固定视觉算例，汇总可追溯到当前明细行。',
+    formula: { visualRule: 'deterministic' }, fixedSample: { input: 100, output: 80 }, columns,
+    summary: { rowCount: 1, numericTotals }, rows: [row], page: 1, size: 50, total: 1,
+    queryChecksum: '8'.repeat(64), durationMs: 8, drillDown: { reportCode: code, key: columns[0] },
+    syntheticEnvironment: true,
+    integrationMode: code === 'BANK_TRUST' ? 'BANK_TRUST_SIMULATOR'
+      : code === 'INVOICE_STATISTICS' ? 'INVOICE_SIMULATOR'
+        : ['BILL_NOTIFICATIONS', 'REMINDERS'].includes(code) ? 'NOTIFICATION_SIMULATOR' : 'INTERNAL_LEDGER',
+    productionConnected: !simulated,
+  }
+}
+
+function visualReportValue(field: { key: string; label: string; type: string }) {
+  if (/Id$/.test(field.key)) return `visual-${field.key.toLowerCase()}-1`
+  if (/No$/.test(field.key)) return `VIS-${field.key.replace(/No$/, '').toUpperCase()}-0001`
+  if (/channel/i.test(field.key)) return 'BANK_TRANSFER'
+  if (/status/i.test(field.key)) return 'SUCCEEDED'
+  if (/rate/i.test(field.key) || field.type === 'percent') return 82.5
+  if (field.type === 'money') return 128.5
+  if (field.type === 'number') return 8
+  if (field.type === 'datetime') return '2026-08-25T10:30:00'
+  if (field.type === 'date') return '2026-08-25'
+  if (field.type === 'month') return '2026-08'
+  if (field.type === 'masked') return '视*客户'
+  return `视觉${field.label}`
+}
+
+function parseVisualField(token: string) {
+  const [key, label, type] = token.split('|')
+  if (!key || !label || !type) throw new Error(`Invalid visual field token: ${token}`)
+  return { key, label, type }
 }

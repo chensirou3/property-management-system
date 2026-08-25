@@ -18,6 +18,7 @@ test('G6 cashier and immutable ledger complete the governed financial lifecycle'
 
   await page.goto('/finance/bills')
   await expect(page.getByRole('heading', { name: '应收管理', exact: true, level: 1 })).toBeVisible()
+  await page.getByRole('button', { name: '业务处理' }).click()
   await expect(page.getByRole('columnheader', { name: '原应收' })).toBeVisible()
   await expect(page.getByRole('columnheader', { name: '调整' })).toBeVisible()
 
@@ -102,15 +103,18 @@ test('G6 cashier and immutable ledger complete the governed financial lifecycle'
   expect(lockedSettlement.status).toBe('LOCKED')
 
   await page.goto('/finance/adjustments')
+  await page.getByRole('button', { name: '业务处理' }).click()
   await expect(page.getByRole('row').filter({ hasText: adjustment.adjustment_no })).toContainText('APPLIED')
   await page.goto('/finance/payments')
+  await page.getByRole('button', { name: '业务处理' }).click()
   await expect(page.getByRole('columnheader', { name: '交易号' })).toBeVisible()
-  await expect(page.getByRole('row').filter({ hasText: 'REVERSAL' }).first()).toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: `REV-${reversal.reversalTransactionId}` })).toContainText('REVERSAL')
   await page.goto('/finance/deposits')
   await expect(page.getByRole('heading', { name: '押金记录表', exact: true, level: 1 })).toBeVisible()
   await page.goto('/finance/invoice-replacements')
   await expect(page.getByRole('row').filter({ hasText: replacedInvoice.request_no })).toContainText('REPLACE')
   await page.goto(`/reports/daily-settlement-details`)
+  await page.getByRole('button', { name: '业务处理' }).click()
   await expect(page.getByRole('row').filter({ hasText: settlementDate })).toContainText('LOCKED')
 
   const reconciliation = await apiJson(page.request, `/api/v1/finance/reconciliation?communityId=${project}`, headers)

@@ -1,7 +1,6 @@
 package com.propertyops.pms.dashboard;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -12,16 +11,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.propertyops.pms.security.SecurityContextService;
+import com.propertyops.pms.report.ReportQueryEngine;
 
 @RestController
 @RequestMapping("/api/v1/dashboard")
 public class DashboardController {
     private final NamedParameterJdbcTemplate jdbc;
     private final SecurityContextService security;
+    private final ReportQueryEngine reports;
 
-    public DashboardController(NamedParameterJdbcTemplate jdbc, SecurityContextService security) {
+    public DashboardController(NamedParameterJdbcTemplate jdbc, SecurityContextService security,
+                               ReportQueryEngine reports) {
         this.jdbc = jdbc;
         this.security = security;
+        this.reports = reports;
     }
 
     @GetMapping
@@ -48,17 +51,7 @@ public class DashboardController {
                 WHERE a.community_id=:communityId
                 """, params, Long.class));
 
-        Map<String, Object> finance = jdbc.queryForMap("""
-                SELECT COALESCE(SUM(total_amount),0) AS receivable,
-                       COALESCE(SUM(paid_amount),0) AS received,
-                       COALESCE(SUM(outstanding_amount),0) AS outstanding,
-                       COUNT(*) AS bill_count
-                FROM bill WHERE community_id=:communityId
-                """, params);
-        BigDecimal receivable = (BigDecimal) finance.get("receivable");
-        BigDecimal received = (BigDecimal) finance.get("received");
-        finance.put("collection_rate", receivable.signum() == 0 ? BigDecimal.ZERO
-                : received.multiply(BigDecimal.valueOf(100)).divide(receivable, 2, RoundingMode.HALF_UP));
+        Map<String, Object> finance = reports.dashboardFinance(communityId);
 
         Map<String, Object> quality = new LinkedHashMap<>();
         quality.put("orphan_customer_relations", jdbc.queryForObject("""

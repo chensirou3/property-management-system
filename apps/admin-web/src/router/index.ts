@@ -5,6 +5,7 @@ import { pageCatalog, pageFor } from '../config/pageCatalog'
 import { schemaFor } from '../config/pageSchemas'
 import { firstAuthorizedPath } from '../config/access'
 import { useAuthStore } from '../stores/auth'
+import { governedReportingPaths } from '../config/reporting'
 
 const DashboardView = () => import('../views/DashboardView.vue')
 const GenericDataView = () => import('../views/GenericDataView.vue')
@@ -22,6 +23,7 @@ const MigrationCenterView = () => import('../views/MigrationCenterView.vue')
 const FeeConfigurationView = () => import('../views/FeeConfigurationView.vue')
 const TemporaryReceivableView = () => import('../views/TemporaryReceivableView.vue')
 const FinancialOperationsView = () => import('../views/FinancialOperationsView.vue')
+const ReportingWorkbenchView = () => import('../views/ReportingWorkbenchView.vue')
 
 const meterWorkflowPaths = ['/archives/meters', '/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
@@ -30,13 +32,12 @@ const customerWorkspacePaths = ['/archives/customers', '/archives/customer-asset
 const migrationWorkspacePath = '/system/migrations'
 const feeConfigurationPaths = ['/fees/definitions', '/fees/standards', '/fees/allocations']
 const financialOperationsPaths = [
-  '/finance/arrears', '/finance/bills', '/reports/daily-settlement-details', '/finance/adjustments',
   '/finance/instruments', '/fees/discounts', '/finance/prepayment-batch-offsets',
-  '/reports/transaction-summary', '/reports/transaction-details', '/finance/payments',
-  '/reports/prepayments', '/finance/deposits', '/finance/invoice-replacements',
+  '/finance/invoice-replacements',
 ]
+const reportingPaths = governedReportingPaths
 const specialPaths = new Set(['/dashboard', '/fees/receivables', '/fees/temporary-receivables', '/cashier', ...feeConfigurationPaths, ...meterWorkflowPaths,
-  ...financialOperationsPaths, ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths, migrationWorkspacePath])
+  ...financialOperationsPaths, ...reportingPaths, ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths, migrationWorkspacePath])
 
 function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
   const page = pageFor(path)
@@ -88,6 +89,11 @@ const router = createRouter({
         ...financialOperationsPaths.map((path) => ({
           path: path.slice(1), name: `financial-operations-${path.replaceAll('/', '-').slice(1)}`,
           component: FinancialOperationsView,
+          meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'finance:read'),
+        })),
+        ...reportingPaths.map((path) => ({
+          path: path.slice(1), name: `governed-report-${path.replaceAll('/', '-').slice(1)}`,
+          component: ReportingWorkbenchView,
           meta: pageMeta(path, allNavigationItems.find((item) => item.path === path)?.title, 'finance:read'),
         })),
         ...meterWorkflowPaths.map((path) => ({
