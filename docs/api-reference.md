@@ -10,6 +10,15 @@
 - 幂等写操作使用 `Idempotency-Key`。相同业务和相同键返回已存在结果，不重复落账。
 - 错误结构包含 `code`、`message`、`requestId`、`timestamp` 和可选 `violations`。
 
+## 契约生成与漂移门禁
+
+- 后端提交版契约：`apps/pms-api/src/test/resources/openapi-contract.json`；
+- 前端生成类型：`apps/admin-web/src/api/generated.ts`；
+- `npm run api:check` 比较提交版契约与生成类型，已包含在 `npm test`；
+- `npm run api:check:live` 额外比较运行中 `/v3/api-docs`，环境相关的 `servers` 字段会先规范化；
+- Spring 集成测试 `openApiContractMatchesCommittedSnapshot` 从后端侧阻止未同步的契约变更；
+- 只有确认 API 变更符合验收卡后才运行 `npm run api:generate`，并同时提交 JSON 快照、TypeScript 类型和相关测试。
+
 ## 认证和平台
 
 | 方法 | 路径 | 说明 |

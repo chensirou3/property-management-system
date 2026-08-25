@@ -54,10 +54,14 @@ npm test
 npm run build
 $env:PMS_E2E_PASSWORD='<本地管理员密码>'
 npm run test:e2e
-npm run api:generate
+npm run test:catalog-smoke
+npm run test:catalog-visual
+npm run api:check:live
 ```
 
-`api:generate` 要求 API 已在 `8088` 运行，并更新 `src/api/generated.ts`。
+`npm test` 会核对 49 页验收卡未漂移、提交版 OpenAPI 快照与 `src/api/generated.ts` 一致。`api:check:live` 还要求 API 已在 `8088` 运行，并确认运行中契约与两份提交物一致。只有后端契约发生受审变更时才运行 `npm run api:generate` 更新快照和类型，并在同一提交中审查差异。
+
+`test:catalog-smoke` 覆盖 49/49 路由、标题、非占位内容和横向溢出；`test:catalog-visual` 比对三个目标视口的 147 张 Windows/Chrome 基线。首次建立或受审 UI 变更时使用 `npx playwright test e2e/page-catalog.visual.spec.ts --update-snapshots`，人工检查后必须再执行一次不带更新参数的纯比对。
 
 ## 数据库迁移和备份
 
@@ -72,4 +76,4 @@ npm run api:generate
 - `401`：令牌缺失、过期或已由会话版本撤销；`403`：权限/项目范围不足，或首次改密前访问业务接口；`429`：账号/IP 登录失败达到阈值；`409`：版本冲突或幂等业务冲突；`400`：字段/业务规则错误。
 - MySQL/Redis 先查看 `docker compose ps` 健康状态，再检查端口占用和本地 `.env`。
 - Playwright 直接使用本机 Chrome；失败产物位于 `apps/admin-web/test-results` 和 `playwright-report`。
-- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与项目看板；基线清单、哈希和受控更新步骤见 `visual-baselines.md`。
+- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与看板；G2 使用 `test:catalog-smoke` 和 `test:catalog-visual` 覆盖 49 页。基线清单、摘要和受控更新步骤见 `visual-baselines.md`。
