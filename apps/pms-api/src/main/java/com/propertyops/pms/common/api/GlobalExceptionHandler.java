@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -48,6 +49,14 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.toList());
         return ResponseEntity.badRequest().body(new ApiError(
                 "VALIDATION_FAILED", "请求参数校验失败", requestId(request), java.time.Instant.now(), violations));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException error,
+                                                 HttpServletRequest request) {
+        log.warn("Data integrity conflict, requestId={}", requestId(request));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(
+                "DATA_INTEGRITY_CONFLICT", "数据与现有记录冲突，或仍被其他业务引用", requestId(request)));
     }
 
     @ExceptionHandler(Exception.class)

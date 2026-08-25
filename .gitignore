@@ -20,7 +20,6 @@ test-results/
 target/
 *.log
 
-# Runtime data
-data/
+# Runtime data (root only; do not hide Java packages named data)
+/data/
 uploads/
-

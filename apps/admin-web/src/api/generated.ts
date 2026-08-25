@@ -180,6 +180,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/property/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["startRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/relations/{id}:end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["endRelation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/imports:validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["validateImport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/assets/{id}:transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/prepayment-accounts": {
         parameters: {
             query?: never;
@@ -644,6 +708,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/property/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["tree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/imports/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["importTemplate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["customers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/customers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["customer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["assets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/property/assets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["asset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/runtime": {
         parameters: {
             query?: never;
@@ -943,6 +1103,66 @@ export interface components {
             billingPeriod: string;
             assetIds: string[];
         };
+        StartRelationRequest: {
+            communityId: string;
+            customerId: string;
+            assetId: string;
+            relationType: string;
+            primaryRelation?: boolean;
+            /** Format: date */
+            startDate: string;
+            reason?: string;
+        };
+        RelationCommandResult: {
+            eventId?: string;
+            relationId?: string;
+            assetId?: string;
+            customerId?: string;
+            status?: string;
+            replayed?: boolean;
+        };
+        EndRelationRequest: {
+            communityId: string;
+            /** Format: date */
+            effectiveDate: string;
+            reason: string;
+            /** Format: int64 */
+            expectedVersion?: number;
+        };
+        ImportValidationRequest: {
+            communityId: string;
+            resource: string;
+            rows: {
+                [key: string]: unknown;
+            }[];
+        };
+        ImportRowResult: {
+            /** Format: int32 */
+            rowNumber?: number;
+            valid?: boolean;
+            errors?: string[];
+            warnings?: string[];
+        };
+        ImportValidationReport: {
+            resource?: string;
+            /** Format: int32 */
+            totalRows?: number;
+            /** Format: int32 */
+            validRows?: number;
+            /** Format: int32 */
+            invalidRows?: number;
+            readyToImport?: boolean;
+            rows?: components["schemas"]["ImportRowResult"][];
+        };
+        TransferOwnershipRequest: {
+            communityId: string;
+            newOwnerCustomerId: string;
+            /** Format: date */
+            effectiveDate: string;
+            reason: string;
+            /** Format: int64 */
+            expectedAssetVersion?: number;
+        };
         AccountRequest: {
             communityId: string;
             customerId: string;
@@ -1096,6 +1316,219 @@ export interface components {
         LoginRequest: {
             username: string;
             password: string;
+        };
+        AssetNode: {
+            id?: string;
+            gridId?: string;
+            buildingId?: string;
+            unitId?: string;
+            assetType?: string;
+            code?: string;
+            name?: string;
+            occupancyStatus?: string;
+            operationStatus?: string;
+            enabled?: boolean;
+        };
+        AssetTreeResponse: {
+            communityId?: string;
+            grids?: components["schemas"]["GridNode"][];
+            buildings?: components["schemas"]["BuildingNode"][];
+            units?: components["schemas"]["UnitNode"][];
+            assets?: components["schemas"]["AssetNode"][];
+            /** Format: int32 */
+            assetCount?: number;
+        };
+        BuildingNode: {
+            id?: string;
+            gridId?: string;
+            code?: string;
+            name?: string;
+            status?: string;
+        };
+        GridNode: {
+            id?: string;
+            parentId?: string;
+            code?: string;
+            name?: string;
+            status?: string;
+        };
+        UnitNode: {
+            id?: string;
+            buildingId?: string;
+            code?: string;
+            name?: string;
+            status?: string;
+        };
+        CustomerListItem: {
+            id?: string;
+            customerNo?: string;
+            displayName?: string;
+            customerType?: string;
+            customerClass?: string;
+            mobileMasked?: string;
+            status?: string;
+            /** Format: int32 */
+            activeAssetCount?: number;
+            /** Format: int32 */
+            activeVehicleCount?: number;
+            /** Format: int64 */
+            version?: number;
+        };
+        PageResponseCustomerListItem: {
+            items?: components["schemas"]["CustomerListItem"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            total?: number;
+        };
+        CustomerDetail: {
+            id?: string;
+            communityId?: string;
+            customerNo?: string;
+            displayName?: string;
+            customerType?: string;
+            customerClass?: string;
+            mobileMasked?: string;
+            certificateType?: string;
+            certificateMasked?: string;
+            gender?: string;
+            /** Format: date */
+            birthday?: string;
+            remarks?: string;
+            status?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        CustomerProfile: {
+            customer?: components["schemas"]["CustomerDetail"];
+            relations?: components["schemas"]["RelationItem"][];
+            vehicles?: components["schemas"]["VehicleItem"][];
+            timeline?: components["schemas"]["PropertyEventItem"][];
+        };
+        PropertyEventItem: {
+            id?: string;
+            eventType?: string;
+            relationType?: string;
+            /** Format: date */
+            effectiveDate?: string;
+            customerId?: string;
+            customerName?: string;
+            reason?: string;
+            previousRelationId?: string;
+            newRelationId?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        RelationItem: {
+            id?: string;
+            customerId?: string;
+            customerName?: string;
+            assetId?: string;
+            assetName?: string;
+            relationType?: string;
+            primaryRelation?: boolean;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            changeReason?: string;
+            status?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        VehicleItem: {
+            id?: string;
+            plateNoMasked?: string;
+            vehicleType?: string;
+            color?: string;
+            status?: string;
+            parkingAssetId?: string;
+            parkingName?: string;
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+        };
+        AssetListItem: {
+            id?: string;
+            assetType?: string;
+            code?: string;
+            displayName?: string;
+            gridName?: string;
+            buildingName?: string;
+            unitName?: string;
+            floorNo?: string;
+            buildingArea?: number;
+            usableArea?: number;
+            occupancyStatus?: string;
+            operationStatus?: string;
+            enabled?: boolean;
+            primaryCustomerName?: string;
+            /** Format: int32 */
+            activeRelationCount?: number;
+            /** Format: int64 */
+            version?: number;
+        };
+        PageResponseAssetListItem: {
+            items?: components["schemas"]["AssetListItem"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            total?: number;
+        };
+        AssetDetail: {
+            id?: string;
+            communityId?: string;
+            gridId?: string;
+            buildingId?: string;
+            unitId?: string;
+            assetType?: string;
+            code?: string;
+            displayName?: string;
+            floorNo?: string;
+            buildingArea?: number;
+            usableArea?: number;
+            occupancyStatus?: string;
+            operationStatus?: string;
+            enabled?: boolean;
+            /** Format: date */
+            validFrom?: string;
+            /** Format: date */
+            validTo?: string;
+            gridName?: string;
+            buildingName?: string;
+            unitName?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        AssetProfile: {
+            asset?: components["schemas"]["AssetDetail"];
+            typeDetail?: {
+                [key: string]: unknown;
+            };
+            relations?: components["schemas"]["RelationItem"][];
+            vehicles?: components["schemas"]["VehicleItem"][];
+            meters?: components["schemas"]["MeterItem"][];
+            timeline?: components["schemas"]["PropertyEventItem"][];
+        };
+        MeterItem: {
+            id?: string;
+            meterNo?: string;
+            meterType?: string;
+            meterClass?: string;
+            status?: string;
         };
         ProjectView: {
             id?: string;
@@ -1470,6 +1903,112 @@ export interface operations {
                 };
                 content: {
                     "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    startRelation: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRelationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RelationCommandResult"];
+                };
+            };
+        };
+    };
+    endRelation: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EndRelationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RelationCommandResult"];
+                };
+            };
+        };
+    };
+    validateImport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ImportValidationReport"];
+                };
+            };
+        };
+    };
+    transfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransferOwnershipRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RelationCommandResult"];
                 };
             };
         };
@@ -2349,6 +2888,152 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LoginResult"];
+                };
+            };
+        };
+    };
+    tree: {
+        parameters: {
+            query: {
+                communityId: string;
+                assetType?: string;
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssetTreeResponse"];
+                };
+            };
+        };
+    };
+    importTemplate: {
+        parameters: {
+            query: {
+                resource: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv;charset=UTF-8": string;
+                };
+            };
+        };
+    };
+    customers: {
+        parameters: {
+            query: {
+                communityId: string;
+                keyword?: string;
+                customerType?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseCustomerListItem"];
+                };
+            };
+        };
+    };
+    customer: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CustomerProfile"];
+                };
+            };
+        };
+    };
+    assets: {
+        parameters: {
+            query: {
+                communityId: string;
+                assetType?: string;
+                keyword?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAssetListItem"];
+                };
+            };
+        };
+    };
+    asset: {
+        parameters: {
+            query: {
+                communityId: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AssetProfile"];
                 };
             };
         };

@@ -2,6 +2,7 @@ package com.propertyops.pms.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -162,6 +163,135 @@ class IamProjectIsolationIntegrationTest {
                         .header("Authorization", bearer(employeeToken)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void propertyArchiveLifecycleIsIdempotentScopedAndAudited() throws Exception {
+        String adminToken = login(ADMIN_USERNAME, ADMIN_PASSWORD);
+        String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String roomId = "40000000-0000-0000-0000-000000000001";
+        String secondRoomId = "40000000-0000-0000-0000-000000000002";
+        String isolatedRoomId = "35200000-0000-0000-0000-000000000001";
+        String isolatedBuildingId = "35000000-0000-0000-0000-000000000001";
+
+        getJsonRequest(adminToken, "/api/v1/property/tree?communityId=" + PRIMARY_PROJECT + "&assetType=ROOM")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assetCount").value(359))
+                .andExpect(jsonPath("$.buildings.length()").value(8));
+        getJsonRequest(adminToken, "/api/v1/property/tree?communityId=" + ISOLATED_PROJECT)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.grids.length()").value(1))
+                .andExpect(jsonPath("$.assets.length()").value(2));
+
+        JsonNode room = getJsonOk(adminToken,
+                "/api/v1/property/assets/" + roomId + "?communityId=" + PRIMARY_PROJECT);
+        assertThat(room.path("asset").path("code").asText()).isEqualTo("R0001");
+        long roomVersion = room.path("asset").path("version").asLong();
+
+        JsonNode customer = postJsonOk(adminToken, "/api/v1/data/customers?communityId=" + PRIMARY_PROJECT,
+                body("customer_no", "E2E-CUS-" + suffix, "display_name", "关系生命周期客户 " + suffix,
+                        "customer_type", "PERSON", "customer_class", "OWNER",
+                        "mobile_masked", "E2E-***-" + suffix, "gender", "UNKNOWN", "status", "ACTIVE"));
+        String customerId = customer.path("id").asText();
+
+        postJsonRequest(adminToken, "/api/v1/property/relations",
+                body("communityId", PRIMARY_PROJECT, "customerId", customerId, "assetId", isolatedRoomId,
+                        "relationType", "OCCUPANT", "primaryRelation", false,
+                        "startDate", "2026-08-25", "reason", "跨项目拒绝样本"), "cross-project-" + suffix)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PROPERTY_DATA_NOT_FOUND"));
+
+        postJsonRequest(adminToken, "/api/v1/data/assets?communityId=" + PRIMARY_PROJECT,
+                body("grid_id", null, "building_id", isolatedBuildingId, "asset_type", "ROOM",
+                        "code", "CROSS-" + suffix, "display_name", "跨项目无效房屋",
+                        "building_area", 80, "usable_area", 70, "occupancy_status", "VACANT",
+                        "operation_status", "NORMAL", "enabled", true))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("PROPERTY_INVALID_REFERENCE"));
+
+        String relationKey = "relation-start-" + suffix;
+        var relationRequest = body("communityId", PRIMARY_PROJECT, "customerId", customerId,
+                "assetId", secondRoomId, "relationType", "OCCUPANT", "primaryRelation", false,
+                "startDate", "2026-08-25", "reason", "入住登记");
+        String relationResponse = postJsonRequest(adminToken, "/api/v1/property/relations", relationRequest, relationKey)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.replayed").value(false))
+                .andReturn().getResponse().getContentAsString();
+        String relationId = objectMapper.readTree(relationResponse).path("relationId").asText();
+        postJsonRequest(adminToken, "/api/v1/property/relations", relationRequest, relationKey)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.relationId").value(relationId))
+                .andExpect(jsonPath("$.replayed").value(true));
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM customer_asset_relation WHERE id=:id",
+                Map.of("id", relationId), Long.class)).isEqualTo(1);
+
+        postJsonRequest(adminToken, "/api/v1/property/relations/" + relationId + ":end",
+                body("communityId", PRIMARY_PROJECT, "effectiveDate", "2026-08-31",
+                        "reason", "结束入住", "expectedVersion", 0), "relation-end-" + suffix)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ENDED"));
+
+        var transferRequest = body("communityId", PRIMARY_PROJECT, "newOwnerCustomerId", customerId,
+                "effectiveDate", "2026-09-01", "reason", "产权变更验收", "expectedAssetVersion", roomVersion);
+        String transferKey = "ownership-transfer-" + suffix;
+        postJsonRequest(adminToken, "/api/v1/property/assets/" + roomId + ":transfer", transferRequest, transferKey)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerId").value(customerId))
+                .andExpect(jsonPath("$.replayed").value(false));
+        postJsonRequest(adminToken, "/api/v1/property/assets/" + roomId + ":transfer", transferRequest, transferKey)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.replayed").value(true));
+
+        JsonNode transferredRoom = getJsonOk(adminToken,
+                "/api/v1/property/assets/" + roomId + "?communityId=" + PRIMARY_PROJECT);
+        assertThat(transferredRoom.path("asset").path("version").asLong()).isEqualTo(roomVersion + 1);
+        assertThat(transferredRoom.path("timeline").get(0).path("eventType").asText())
+                .isEqualTo("OWNERSHIP_TRANSFERRED");
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM customer_asset_relation
+                WHERE asset_id=:assetId AND customer_id=:customerId AND relation_type='OWNER'
+                  AND status='ACTIVE' AND end_date IS NULL
+                """, Map.of("assetId", roomId, "customerId", customerId), Long.class)).isEqualTo(1);
+
+        mockMvc.perform(delete("/api/v1/data/assets/{id}", roomId)
+                        .header("Authorization", bearer(adminToken))
+                        .param("communityId", PRIMARY_PROJECT)
+                        .param("version", String.valueOf(roomVersion + 1)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PROPERTY_RESOURCE_IN_USE"));
+
+        getJsonRequest(adminToken, "/api/v1/property/customers/" + customerId + "?communityId=" + PRIMARY_PROJECT)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.relations.length()").value(2))
+                .andExpect(jsonPath("$.timeline.length()").value(3));
+
+        postJsonRequest(adminToken, "/api/v1/property/imports:validate",
+                body("communityId", PRIMARY_PROJECT, "resource", "ASSET", "rows", java.util.List.of(
+                        body("assetType", "ROOM", "code", "IMP-" + suffix, "displayName", "导入校验房屋",
+                                "buildingId", "31000000-0000-0000-0000-000000000001",
+                                "buildingArea", "70", "usableArea", "80"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.readyToImport").value(false))
+                .andExpect(jsonPath("$.invalidRows").value(1))
+                .andExpect(jsonPath("$.rows[0].errors[0]").value("usableArea 不能大于 buildingArea"));
+        postJsonRequest(adminToken, "/api/v1/property/imports:validate",
+                body("communityId", PRIMARY_PROJECT, "resource", "GRID", "rows", java.util.List.of(
+                        body("code", "IMP-GRID-" + suffix, "name", "可导入网格", "status", "ACTIVE", "sortOrder", 10))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.readyToImport").value(true))
+                .andExpect(jsonPath("$.validRows").value(1));
+        getJsonRequest(adminToken, "/api/v1/property/imports/template?resource=ASSET")
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsString()).contains("assetType,code,displayName"));
+
+        assertThat(jdbc.queryForObject("""
+                SELECT COUNT(*) FROM audit_event
+                WHERE community_id=:communityId AND action_code IN
+                    ('property-relation:start','property-relation:end','property-ownership:transfer')
+                  AND resource_id IN (:relationId, :assetId)
+                """, Map.of("communityId", PRIMARY_PROJECT, "relationId", relationId, "assetId", roomId), Long.class))
+                .isEqualTo(3);
     }
 
     @Test
@@ -510,6 +640,15 @@ class IamProjectIsolationIntegrationTest {
     private ResultActions postJsonRequest(String token, String path, Object request) throws Exception {
         var builder = post(path).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request));
+        if (token != null) builder.header("Authorization", bearer(token));
+        return mockMvc.perform(builder);
+    }
+
+    private ResultActions postJsonRequest(String token, String path, Object request, String idempotencyKey)
+            throws Exception {
+        var builder = post(path).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+                .header("Idempotency-Key", idempotencyKey);
         if (token != null) builder.header("Authorization", bearer(token));
         return mockMvc.perform(builder);
     }
