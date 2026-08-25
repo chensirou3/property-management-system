@@ -10,6 +10,7 @@ import TreeWorkspace from '../components/shared/TreeWorkspace.vue'
 import { pageFor, type PageField, type PageState } from '../config/pageCatalog'
 import { useAuthStore } from '../stores/auth'
 import { useTaskStore } from '../stores/tasks'
+import { firstAuthorizedPath } from '../config/access'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,6 +39,7 @@ const isExternal = computed(() => /external|integration|invoice|notification/.te
 const canImport = computed(() => auth.hasPermission(catalogPage.value?.permissions.import))
 const canExport = computed(() => auth.hasPermission(catalogPage.value?.permissions.export))
 const canPrint = computed(() => auth.hasPermission(catalogPage.value?.permissions.print))
+const returnPath = computed(() => firstAuthorizedPath(auth.user?.permissions))
 const loading = computed(() => localLoading.value || acceptanceState.value === 'loading')
 const errorMessage = computed(() => acceptanceState.value === 'request-error' ? '请求失败：验收状态演练已触发，可使用“重新加载”恢复。' : '')
 const displayRows = computed(() => ['normal'].includes(acceptanceState.value) ? rows.value : [])
@@ -164,7 +166,7 @@ onBeforeUnmount(() => window.clearTimeout(queryTimer))
     <el-alert v-if="acceptanceState === 'partial-failure'" type="warning" :closable="false" show-icon class="capability-note" title="批量任务部分失败：5 条成功，2 条失败；失败明细可从任务中心下载。" />
 
     <el-result v-if="acceptanceState === 'forbidden'" icon="warning" title="无权访问" sub-title="当前账号缺少此页面的读取权限。">
-      <template #extra><el-button type="primary" @click="router.push('/dashboard')">返回看板</el-button></template>
+      <template #extra><el-button type="primary" @click="router.push(returnPath)">返回可用工作台</el-button></template>
     </el-result>
 
     <template v-else>

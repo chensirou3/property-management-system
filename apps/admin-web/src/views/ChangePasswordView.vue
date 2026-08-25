@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
+import { firstAuthorizedPath } from '../config/access'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -30,7 +31,7 @@ async function submit() {
   try {
     await auth.changePassword(currentPassword.value, newPassword.value)
     ElMessage.success('密码修改成功，其他旧会话已失效')
-    await router.replace('/dashboard')
+    await router.replace(firstAuthorizedPath(auth.user?.permissions))
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || '密码修改失败')
   } finally {

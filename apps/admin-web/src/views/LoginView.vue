@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
+import { firstAuthorizedPath } from '../config/access'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -15,7 +16,9 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(username.value, password.value)
-    await router.push(auth.user?.passwordChangeRequired ? '/change-password' : '/dashboard')
+    await router.push(auth.user?.passwordChangeRequired
+      ? '/change-password'
+      : firstAuthorizedPath(auth.user?.permissions))
   } catch (error: any) {
     ElMessage.error(error.response?.data?.message || error.message || '登录失败')
   } finally {

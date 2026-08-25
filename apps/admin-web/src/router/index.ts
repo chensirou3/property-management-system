@@ -3,6 +3,7 @@ import AppLayout from '../layout/AppLayout.vue'
 import { allNavigationItems } from '../config/navigation'
 import { pageCatalog, pageFor } from '../config/pageCatalog'
 import { schemaFor } from '../config/pageSchemas'
+import { firstAuthorizedPath } from '../config/access'
 import { useAuthStore } from '../stores/auth'
 
 const DashboardView = () => import('../views/DashboardView.vue')
@@ -90,7 +91,11 @@ router.beforeEach(async (to) => {
     const auth = useAuthStore()
     await auth.loadProfile()
     if (auth.user?.passwordChangeRequired && to.path !== '/change-password') return '/change-password'
-    if (to.path === '/login') return auth.user?.passwordChangeRequired ? '/change-password' : '/dashboard'
+    if (to.path === '/login') {
+      return auth.user?.passwordChangeRequired
+        ? '/change-password'
+        : firstAuthorizedPath(auth.user?.permissions)
+    }
     if (to.meta.permission && !auth.hasPermission(String(to.meta.permission))) return '/forbidden'
   }
 })

@@ -15,6 +15,7 @@ import {
   SwitchButton,
 } from '@element-plus/icons-vue'
 import { navigation } from '../config/navigation'
+import { canAccessNavigationPath, firstAuthorizedNavigationItem } from '../config/access'
 import { schemaFor } from '../config/pageSchemas'
 import TaskDrawer from '../components/shared/TaskDrawer.vue'
 import { useAuthStore } from '../stores/auth'
@@ -33,12 +34,10 @@ const router = useRouter()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
 const currentTitle = computed(() => String(route.meta.title || '物业管理平台'))
+const homeItem = computed(() => firstAuthorizedNavigationItem(auth.user?.permissions))
 const visibleNavigation = computed(() => navigation.map((group) => ({
   ...group,
-  children: group.children.filter((item) => {
-    if (item.path === '/dashboard') return auth.hasPermission('dashboard:read')
-    return auth.hasPermission(item.permission || schemaFor(item.path)?.readPermission)
-  }),
+  children: group.children.filter((item) => auth.hasPermission(item.permission || schemaFor(item.path)?.readPermission)),
 })).filter((group) => group.children.length > 0))
 const currentGroupKey = computed(() => visibleNavigation.value.find((group) =>
   group.children.some((item) => item.path === route.path))?.key || '')
@@ -63,11 +62,13 @@ function persistTabs() {
 
 function ensureCurrentTab() {
   if (route.meta.public || route.path === '/forbidden') return
+  workspaceTabs.value = workspaceTabs.value.filter((item) =>
+    canAccessNavigationPath(item.path, auth.user?.permissions))
   const existing = workspaceTabs.value.find((item) => item.path === route.path)
   if (existing) existing.title = currentTitle.value
   else workspaceTabs.value.push({ path: route.path, title: currentTitle.value })
-  if (!workspaceTabs.value.some((item) => item.path === '/dashboard')) {
-    workspaceTabs.value.unshift({ path: '/dashboard', title: '项目看板' })
+  if (homeItem.value && !workspaceTabs.value.some((item) => item.path === homeItem.value?.path)) {
+    workspaceTabs.value.unshift({ path: homeItem.value.path, title: homeItem.value.title })
   }
   if (workspaceTabs.value.length > 12) {
     workspaceTabs.value = [workspaceTabs.value[0], ...workspaceTabs.value.slice(-11)]
@@ -80,22 +81,22 @@ function goToTab(path: string) {
 }
 
 function closeTab(path: string) {
-  if (path === '/dashboard') return
+  if (path === homeItem.value?.path) return
   const index = workspaceTabs.value.findIndex((item) => item.path === path)
   if (index < 0) return
   workspaceTabs.value.splice(index, 1)
   persistTabs()
   if (route.path === path) {
     const next = workspaceTabs.value[Math.max(0, index - 1)] || workspaceTabs.value[0]
-    void router.push(next?.path || '/dashboard')
+    void router.push(next?.path || homeItem.value?.path || '/forbidden')
   }
 }
 
 function closeOtherTabs() {
   const current = workspaceTabs.value.find((item) => item.path === route.path)
   workspaceTabs.value = [
-    { path: '/dashboard', title: '项目看板' },
-    ...(current && current.path !== '/dashboard' ? [current] : []),
+    ...(homeItem.value ? [{ path: homeItem.value.path, title: homeItem.value.title }] : []),
+    ...(current && current.path !== homeItem.value?.path ? [current] : []),
   ]
   persistTabs()
 }
@@ -206,9 +207,9 @@ function logout() {
           :class="{ active: tab.path === route.path }"
           @click="goToTab(tab.path)"
         >
-          <el-icon v-if="tab.path === '/dashboard'"><HomeFilled /></el-icon>
+          <el-icon v-if="tab.path === homeItem?.path"><HomeFilled /></el-icon>
           <span>{{ tab.title }}</span>
-          <el-icon v-if="tab.path !== '/dashboard'" class="tab-close" @click.stop="closeTab(tab.path)"><Close /></el-icon>
+          <el-icon v-if="tab.path !== homeItem?.path" class="tab-close" @click.stop="closeTab(tab.path)"><Close /></el-icon>
         </button>
         <div class="workspace-tab-actions">
           <el-tooltip content="刷新当前页面" placement="bottom">

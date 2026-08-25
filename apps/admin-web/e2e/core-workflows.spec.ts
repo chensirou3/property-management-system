@@ -169,7 +169,7 @@ test('IAM read-only role can inspect accounts but cannot mutate data', async ({ 
     await page.getByRole('textbox', { name: '新密码', exact: true }).fill(changedPassword)
     await page.getByRole('textbox', { name: '确认新密码' }).fill(changedPassword)
     await page.getByRole('button', { name: '确认修改' }).click()
-    await expect(page).toHaveURL(/\/dashboard$/)
+    await expect(page).toHaveURL(/\/enterprise\/enterprises$/)
 
     await page.goto('/enterprise/accounts')
     await expect(page).toHaveURL(/\/enterprise\/accounts$/)
