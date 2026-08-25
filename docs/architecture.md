@@ -27,3 +27,7 @@
 ## ADR-007：Spring Boot 受支持版本
 
 API 已从 Spring Boot 2.7.18 迁移到 Spring Boot 3.5.16，保持 Java 17，并完成 Jakarta、Spring Security 6、springdoc 2.9 与 Flyway/MySQL 兼容迁移。详细决策、验收和回滚见 [`adr/ADR-007-spring-boot-supported-version.md`](adr/ADR-007-spring-boot-supported-version.md)。
+
+## ADR-008：统一资产与不可变关系事件
+
+房屋、车位和公共区域统一使用 `asset` 聚合，类型专属字段放入一对一明细表；网格—楼栋—单元—资产通过带 `community_id` 的复合外键保证项目内层级。客户资产关系使用有效期、状态和版本表达权属/租住变化，不覆盖历史；关系起止和产权转移另写入 `property_relation_event`，请求键保证幂等。档案停用使用引用保护和软状态，不通过级联删除清除业务历史。

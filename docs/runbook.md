@@ -53,6 +53,7 @@ npm audit
 npm test
 npm run build
 $env:PMS_E2E_PASSWORD='<本地管理员密码>'
+$env:PMS_E2E_USERNAME='<本地管理员账号>'
 npm run test:e2e
 npm run test:catalog-smoke
 npm run test:catalog-visual
@@ -63,12 +64,21 @@ npm run api:check:live
 
 `test:catalog-smoke` 覆盖 49/49 路由、标题、非占位内容和横向溢出；`test:catalog-visual` 比对三个目标视口的 147 张 Windows/Chrome 基线。首次建立或受审 UI 变更时使用 `npx playwright test e2e/page-catalog.visual.spec.ts --update-snapshots`，人工检查后必须再执行一次不带更新参数的纯比对。
 
+G3 房产—客户主链路可独立重复验证：
+
+```powershell
+npx playwright test e2e/property-customer-lifecycle.spec.ts --repeat-each=2 --workers=1
+```
+
+测试会创建临时客户、完成产权转移及幂等重放、通过房产和客户两个工作台检查时间线，然后恢复执行前的全部 OWNER/CO_OWNER 关系并软停用临时客户。连续执行后，主项目有效客户资产关系应稳定为 403；若计数变化，不能更新验收证据，必须先修复清理逻辑。
+
 ## 数据库迁移和备份
 
 - 应用启动时自动执行 Flyway；生产环境禁止修改已执行的迁移文件，只能新增版本。
 - 升级前使用 `mysqldump --single-transaction` 备份业务库，另行备份 `.env` 中的秘密到受控密码库。
 - 回滚代码前确认新迁移是否向后兼容；财务数据不得以删除迁移方式回退。
 - 恢复后必须检查 Flyway 状态、账单恒等式、孤儿外键、登录、仪表和支付模拟链路。
+- G3 档案恢复检查至少包括：Flyway 为 V11、主项目有效房屋/车位/客户/客户资产关系为 359/250/403/403、隔离项目具备 1/1/1/2/1 的网格/楼栋/单元/资产/客户链，以及孤儿关系、跨项目关系、重复有效关系和非法面积均为 0。
 
 ## 故障定位
 
@@ -76,4 +86,4 @@ npm run api:check:live
 - `401`：令牌缺失、过期或已由会话版本撤销；`403`：权限/项目范围不足，或首次改密前访问业务接口；`429`：账号/IP 登录失败达到阈值；`409`：版本冲突或幂等业务冲突；`400`：字段/业务规则错误。
 - MySQL/Redis 先查看 `docker compose ps` 健康状态，再检查端口占用和本地 `.env`。
 - Playwright 直接使用本机 Chrome；失败产物位于 `apps/admin-web/test-results` 和 `playwright-report`。
-- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与看板；G2 使用 `test:catalog-smoke` 和 `test:catalog-visual` 覆盖 49 页。基线清单、摘要和受控更新步骤见 `visual-baselines.md`。
+- G1 固定视觉门禁使用 `npm run test:visual`，覆盖 1366×768、1440×900、1920×1080 的登录页与看板；G2—G3 使用 `test:catalog-smoke` 和 `test:catalog-visual` 覆盖 49 页。G3 更新了 12 张档案领域图片、15 张 IAM 有效态稳定图片和 9 张精确重录产生的字节级图片；原因、人工检查和摘要见 `visual-baselines.md`。

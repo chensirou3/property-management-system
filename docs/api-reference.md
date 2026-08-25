@@ -40,7 +40,9 @@
 - `PUT /data/{resource}/{id}?version=n`（乐观锁）；
 - `DELETE /data/{resource}/{id}?version=n`（软停用，不物理删除）。
 
-资源包括小区、楼栋、单元、资产、客户、客户资产关系、车辆、仪表、费用定义/标准/版本/分配、账单、支付订单/流水、预收、押金、收据、抄表批次/读数、公摊、换表、字典、用户和审计等。
+资源包括小区、网格、楼栋、单元、资产、客户、客户资产关系、车辆、仪表、费用定义/标准/版本/分配、账单、支付订单/流水、预收、押金、收据、抄表批次/读数、公摊、换表、字典、用户和审计等。
+
+G3 已将 `grids`、`buildings`、`units`、`assets` 和 `customers` 接到真实可写资源。档案写入会校验同项目引用、层级关系、面积/日期/状态；创建房屋或车位会原子补齐对应类型明细。停用资产会同时设置 `enabled=false` 与 `operation_status=INACTIVE`，存在下级或有效业务引用时返回 `409 RESOURCE_IN_USE`。
 
 ## 企业、组织与权限管理
 
@@ -65,6 +67,25 @@
 | GET | `/iam/projects` | 仅返回当前操作者可管理的有效项目 |
 
 IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联在职人员、启用角色和启用项目；人员、企业角色和项目范围必须保持企业一致。仍被启用下级资源或账号引用的企业、组织、岗位、人员和角色不能直接停用，返回 `409 IAM_RESOURCE_IN_USE`，操作者必须先按账号→人员→岗位/组织/角色的依赖顺序处理。
+
+## 基础档案与客户关系
+
+以下接口要求 `property:read`；关系、产权和档案写操作同时要求 `property:write`。所有接口都在服务端校验 `communityId`，不能依赖前端项目选择器形成隔离。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/property/tree` | 按项目和可选资产类型返回网格—楼栋—单元—资产树与稳定计数 |
+| GET | `/property/assets` | 分页查询房屋/车位，返回层级、有效客户数和版本 |
+| GET | `/property/assets/{id}` | 资产档案、类型明细、客户关系、车辆、仪表和关系事件时间线 |
+| GET | `/property/customers` | 按关键字、客户类型和 ACTIVE/INACTIVE 状态分页查询 |
+| GET | `/property/customers/{id}` | 客户档案、资产关系、车辆和关系事件时间线 |
+| POST | `/property/relations` | 幂等创建 OWNER/CO_OWNER/TENANT/OCCUPANT 关系 |
+| POST | `/property/relations/{id}:end` | 按版本和生效日幂等结束关系，历史行保留 |
+| POST | `/property/assets/{id}:transfer` | 幂等执行产权变更，结束原 OWNER/CO_OWNER 并创建新 OWNER |
+| GET | `/property/imports/template` | 下载 GRID/BUILDING/UNIT/ASSET/CUSTOMER/RELATION 的 UTF-8 CSV 模板 |
+| POST | `/property/imports:validate` | 最多 500 行的无写入预校验，逐行返回错误、警告和汇总 |
+
+关系写入需要 `Idempotency-Key`；同一项目和请求键重放返回原结果。数据库生成列禁止重复有效关系，乐观锁防止静默覆盖；类型化响应不会返回手机、证件原文。导入预校验只检查模板、必填项、项目引用、重复编码、面积、日期和关系重叠，不会实际写库；批量落库、断点续跑和对账属于 G4 迁移中心。
 
 ## 费用
 
