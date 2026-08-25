@@ -52,13 +52,16 @@ export const pageSchemas: Record<string, PageSchema> = {
   ], {
     writePermission: 'property:write',
     form: [
+      { prop: 'enterprise_id', label: '所属企业', type: 'select', required: true, options: [
+        { label: '合成物业集团', value: '31000000-0000-0000-0000-000000000001' },
+      ] },
       { prop: 'name', label: '小区名称', required: true },
       { prop: 'managed_area', label: '管理面积（㎡）', type: 'number', required: true },
       { prop: 'address', label: '地址', type: 'textarea' },
       { prop: 'contact_name', label: '服务中心名称' },
       { prop: 'status', label: '状态', type: 'select', required: true, options: statusOptions.slice(0, 2) },
     ],
-    defaults: { status: 'ACTIVE', managed_area: '0' },
+    defaults: { enterprise_id: '31000000-0000-0000-0000-000000000001', status: 'ACTIVE', managed_area: '0' },
   }),
   '/archives/buildings': base('buildings', 'property', [
     { prop: 'code', label: '楼栋编码', width: 130, sortable: true, sortKey: 'code' },

@@ -4,6 +4,118 @@
  */
 
 export interface paths {
+    "/api/v1/iam/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateUser"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["resetPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/positions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updatePosition"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/organizations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateOrganization"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/enterprises/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateEnterprise"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/employees/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateEmployee"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/{resource}/{id}": {
         parameters: {
             query?: never;
@@ -292,6 +404,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/iam/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["users"];
+        put?: never;
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["roles"];
+        put?: never;
+        post: operations["createRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["positions"];
+        put?: never;
+        post: operations["createPosition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["organizations"];
+        put?: never;
+        post: operations["createOrganization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/enterprises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["enterprises"];
+        put?: never;
+        post: operations["createEnterprise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["employees"];
+        put?: never;
+        post: operations["createEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fee-standards": {
         parameters: {
             query?: never;
@@ -420,6 +628,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/iam/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["projects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/iam/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["permissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard": {
         parameters: {
             query?: never;
@@ -488,6 +728,166 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        UpdateUserRequest: {
+            displayName: string;
+            employeeId?: string;
+            enabled: boolean;
+            passwordChangeRequired: boolean;
+            roleIds: string[];
+            projectIds: string[];
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        UserView: {
+            id?: string;
+            username?: string;
+            displayName?: string;
+            employeeId?: string;
+            enabled?: boolean;
+            passwordChangeRequired?: boolean;
+            /** Format: int64 */
+            version?: number;
+            roleIds?: string[];
+            projectIds?: string[];
+            /** Format: date-time */
+            lastLoginAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        ResetPasswordRequest: {
+            password: string;
+            requireChange: boolean;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        UpdateRoleRequest: {
+            name: string;
+            description?: string;
+            enabled: boolean;
+            permissionIds: string[];
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        RoleView: {
+            id?: string;
+            enterpriseId?: string;
+            code?: string;
+            name?: string;
+            description?: string;
+            enabled?: boolean;
+            /** Format: int64 */
+            version?: number;
+            permissionIds?: string[];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        UpdatePositionRequest: {
+            organizationId: string;
+            name: string;
+            description?: string;
+            status: string;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        PositionView: {
+            id?: string;
+            enterpriseId?: string;
+            organizationId?: string;
+            code?: string;
+            name?: string;
+            description?: string;
+            status?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        UpdateOrganizationRequest: {
+            parentId?: string;
+            communityId?: string;
+            name: string;
+            organizationType: string;
+            /** Format: int32 */
+            sortOrder: number;
+            status: string;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        OrganizationView: {
+            id?: string;
+            enterpriseId?: string;
+            parentId?: string;
+            communityId?: string;
+            code?: string;
+            name?: string;
+            organizationType?: string;
+            /** Format: int32 */
+            sortOrder?: number;
+            status?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        UpdateEnterpriseRequest: {
+            name: string;
+            status: string;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        EnterpriseView: {
+            id?: string;
+            code?: string;
+            name?: string;
+            status?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        UpdateEmployeeRequest: {
+            organizationId: string;
+            positionId?: string;
+            displayName: string;
+            mobileMasked?: string;
+            employmentStatus: string;
+            /** Format: date */
+            hireDate?: string;
+            /** Format: date */
+            leaveDate?: string;
+            /** Format: int64 */
+            expectedVersion: number;
+        };
+        EmployeeView: {
+            id?: string;
+            enterpriseId?: string;
+            organizationId?: string;
+            positionId?: string;
+            employeeNo?: string;
+            displayName?: string;
+            mobileMasked?: string;
+            employmentStatus?: string;
+            /** Format: date */
+            hireDate?: string;
+            /** Format: date */
+            leaveDate?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         ReceivableRequest: {
             communityId: string;
             billingPeriod: string;
@@ -560,6 +960,53 @@ export interface components {
             receiptId: string;
             title: string;
         };
+        CreateUserRequest: {
+            username: string;
+            password: string;
+            displayName: string;
+            employeeId?: string;
+            enabled: boolean;
+            roleIds: string[];
+            projectIds: string[];
+        };
+        CreateRoleRequest: {
+            enterpriseId?: string;
+            code: string;
+            name: string;
+            description?: string;
+            permissionIds: string[];
+        };
+        CreatePositionRequest: {
+            enterpriseId: string;
+            organizationId: string;
+            code: string;
+            name: string;
+            description?: string;
+        };
+        CreateOrganizationRequest: {
+            enterpriseId: string;
+            parentId?: string;
+            communityId?: string;
+            code: string;
+            name: string;
+            organizationType: string;
+            /** Format: int32 */
+            sortOrder: number;
+        };
+        CreateEnterpriseRequest: {
+            code: string;
+            name: string;
+        };
+        CreateEmployeeRequest: {
+            enterpriseId: string;
+            organizationId: string;
+            positionId?: string;
+            employeeNo: string;
+            displayName: string;
+            mobileMasked?: string;
+            /** Format: date */
+            hireDate?: string;
+        };
         CreateStandard: {
             communityId: string;
             feeDefinitionId: string;
@@ -612,6 +1059,19 @@ export interface components {
             roles?: string[];
             permissions?: string[];
             projectIds?: string[];
+            passwordChangeRequired?: boolean;
+        };
+        ProjectView: {
+            id?: string;
+            enterpriseId?: string;
+            name?: string;
+            status?: string;
+        };
+        PermissionView: {
+            id?: string;
+            code?: string;
+            name?: string;
+            resourceType?: string;
         };
         PageResponseMapStringObject: {
             items?: {
@@ -633,6 +1093,188 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserView"];
+                };
+            };
+        };
+    };
+    resetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserView"];
+                };
+            };
+        };
+    };
+    updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RoleView"];
+                };
+            };
+        };
+    };
+    updatePosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePositionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PositionView"];
+                };
+            };
+        };
+    };
+    updateOrganization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganizationView"];
+                };
+            };
+        };
+    };
+    updateEnterprise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEnterpriseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EnterpriseView"];
+                };
+            };
+        };
+    };
+    updateEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEmployeeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EmployeeView"];
+                };
+            };
+        };
+    };
     get: {
         parameters: {
             query?: {
@@ -1151,6 +1793,276 @@ export interface operations {
             };
         };
     };
+    users: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserView"][];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserView"];
+                };
+            };
+        };
+    };
+    roles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RoleView"][];
+                };
+            };
+        };
+    };
+    createRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RoleView"];
+                };
+            };
+        };
+    };
+    positions: {
+        parameters: {
+            query?: {
+                enterpriseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PositionView"][];
+                };
+            };
+        };
+    };
+    createPosition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePositionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PositionView"];
+                };
+            };
+        };
+    };
+    organizations: {
+        parameters: {
+            query?: {
+                enterpriseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganizationView"][];
+                };
+            };
+        };
+    };
+    createOrganization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrganizationView"];
+                };
+            };
+        };
+    };
+    enterprises: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EnterpriseView"][];
+                };
+            };
+        };
+    };
+    createEnterprise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEnterpriseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EnterpriseView"];
+                };
+            };
+        };
+    };
+    employees: {
+        parameters: {
+            query?: {
+                enterpriseId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EmployeeView"][];
+                };
+            };
+        };
+    };
+    createEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEmployeeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["EmployeeView"];
+                };
+            };
+        };
+    };
     createStandard: {
         parameters: {
             query?: never;
@@ -1381,6 +2293,46 @@ export interface operations {
                     "*/*": {
                         [key: string]: Record<string, never>;
                     };
+                };
+            };
+        };
+    };
+    projects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProjectView"][];
+                };
+            };
+        };
+    };
+    permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PermissionView"][];
                 };
             };
         };

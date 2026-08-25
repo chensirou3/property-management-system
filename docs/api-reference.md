@@ -31,6 +31,28 @@
 
 资源包括小区、楼栋、单元、资产、客户、客户资产关系、车辆、仪表、费用定义/标准/版本/分配、账单、支付订单/流水、预收、押金、收据、抄表批次/读数、公摊、换表、字典、用户和审计等。
 
+## 企业、组织与权限管理
+
+以下接口要求 `iam:read`；写接口同时要求 `iam:write`。账号读取和业务数据仍受服务端项目范围约束，菜单隐藏不构成授权。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET/POST | `/iam/enterprises` | 查询或创建企业 |
+| PUT | `/iam/enterprises/{id}` | 按版本更新企业状态和名称 |
+| GET/POST | `/iam/organizations` | 查询或创建组织树节点 |
+| PUT | `/iam/organizations/{id}` | 更新组织归属、顺序和状态，拒绝循环父子关系 |
+| GET/POST | `/iam/positions` | 查询或创建岗位 |
+| PUT | `/iam/positions/{id}` | 更新岗位及组织归属 |
+| GET/POST | `/iam/employees` | 查询或创建人员 |
+| PUT | `/iam/employees/{id}` | 更新人员、岗位和在离职状态 |
+| GET | `/iam/permissions` | 查询权限字典 |
+| GET/POST | `/iam/roles` | 查询或创建角色及权限集合 |
+| PUT | `/iam/roles/{id}` | 按版本更新角色、启停和权限集合 |
+| GET/POST | `/iam/users` | 查询或创建账号及角色/项目范围 |
+| PUT | `/iam/users/{id}` | 按版本更新账号、角色和项目范围 |
+| PUT | `/iam/users/{id}/password` | 重置密码并设置首次改密标识 |
+| GET | `/iam/projects` | 仅返回当前操作者可管理的有效项目 |
+
 ## 费用
 
 | 方法 | 路径 | 说明 |

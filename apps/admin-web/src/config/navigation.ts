@@ -21,6 +21,7 @@ export interface NavigationItem {
   path: string
   title: string
   icon?: Component
+  permission?: string
 }
 
 export interface NavigationGroup {
@@ -41,7 +42,14 @@ export const navigation: NavigationGroup[] = [
     key: 'enterprise',
     title: '企业信息',
     icon: OfficeBuilding,
-    children: [{ path: '/system/users', title: '人员与权限', icon: User }],
+    children: [
+      { path: '/enterprise/enterprises', title: '企业管理', icon: OfficeBuilding, permission: 'iam:read' },
+      { path: '/enterprise/organizations', title: '组织管理', icon: Menu, permission: 'iam:read' },
+      { path: '/enterprise/roles', title: '角色管理', icon: Setting, permission: 'iam:read' },
+      { path: '/enterprise/positions', title: '岗位管理', icon: Grid, permission: 'iam:read' },
+      { path: '/enterprise/employees', title: '人员管理', icon: User, permission: 'iam:read' },
+      { path: '/enterprise/accounts', title: '账号与项目权限', icon: Operation, permission: 'iam:read' },
+    ],
   },
   {
     key: 'archives',

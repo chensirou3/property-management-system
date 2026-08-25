@@ -32,11 +32,16 @@ public class AuthService {
         }
         AuthPrincipal principal = repository.loadPrincipal(account);
         JwtService.Token token = jwtService.issue(principal);
-        return new LoginResult(token.value(), token.expiresAt().toString(), UserProfile.from(principal));
+        repository.markLogin(account.id());
+        return new LoginResult(token.value(), token.expiresAt().toString(),
+                UserProfile.from(principal, account.passwordChangeRequired()));
     }
 
     public UserProfile me() {
-        return UserProfile.from(securityContext.requirePrincipal());
+        AuthPrincipal principal = securityContext.requirePrincipal();
+        boolean passwordChangeRequired = repository.findByUsername(principal.username())
+                .map(AuthRepository.UserAccount::passwordChangeRequired).orElse(false);
+        return UserProfile.from(principal, passwordChangeRequired);
     }
 
     private BusinessException invalidCredentials() {
@@ -47,11 +52,10 @@ public class AuthService {
 
     public record UserProfile(String id, String username, String displayName,
                               java.util.Set<String> roles, java.util.Set<String> permissions,
-                              java.util.Set<String> projectIds) {
-        static UserProfile from(AuthPrincipal principal) {
+                              java.util.Set<String> projectIds, boolean passwordChangeRequired) {
+        static UserProfile from(AuthPrincipal principal, boolean passwordChangeRequired) {
             return new UserProfile(principal.userId(), principal.username(), principal.displayName(),
-                    principal.roles(), principal.permissions(), principal.projectIds());
+                    principal.roles(), principal.permissions(), principal.projectIds(), passwordChangeRequired);
         }
     }
 }
-

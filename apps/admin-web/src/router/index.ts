@@ -11,9 +11,11 @@ const ForbiddenView = () => import('../views/ForbiddenView.vue')
 const ReceivableWorkflowView = () => import('../views/ReceivableWorkflowView.vue')
 const CashierView = () => import('../views/CashierView.vue')
 const MeterWorkbenchView = () => import('../views/MeterWorkbenchView.vue')
+const IamManagementView = () => import('../views/IamManagementView.vue')
 
 const meterWorkflowPaths = ['/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
-const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths])
+const iamPaths = flatNavigation.filter((item) => item.path.startsWith('/enterprise/'))
+const specialPaths = new Set(['/dashboard', '/fees/receivables', '/cashier', ...meterWorkflowPaths, ...iamPaths.map((item) => item.path)])
 const genericRoutes: RouteRecordRaw[] = flatNavigation
   .filter((item) => !specialPaths.has(item.path))
   .map((item) => ({
@@ -41,6 +43,12 @@ const router = createRouter({
           name: `workflow-${path.replaceAll('/', '-').slice(1)}`,
           component: MeterWorkbenchView,
           meta: { title: flatNavigation.find((item) => item.path === path)?.title, permission: 'meter:read' },
+        })),
+        ...iamPaths.map((item) => ({
+          path: item.path.slice(1),
+          name: `iam-${item.path.split('/').at(-1)}`,
+          component: IamManagementView,
+          meta: { title: item.title, permission: item.permission || 'iam:read' },
         })),
         ...genericRoutes,
       ],

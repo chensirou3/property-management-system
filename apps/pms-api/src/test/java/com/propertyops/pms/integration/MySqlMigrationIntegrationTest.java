@@ -34,7 +34,15 @@ class MySqlMigrationIntegrationTest {
              var statement = connection.createStatement()) {
             try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM community")) {
                 assertThat(resultSet.next()).isTrue();
-                assertThat(resultSet.getInt(1)).isGreaterThanOrEqualTo(1);
+                assertThat(resultSet.getInt(1)).isEqualTo(2);
+            }
+            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM organization_unit")) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getInt(1)).isEqualTo(3);
+            }
+            try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM sys_permission WHERE code LIKE 'iam:%'")) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getInt(1)).isEqualTo(2);
             }
             try (var resultSet = statement.executeQuery("SELECT COUNT(*) FROM room_detail")) {
                 assertThat(resultSet.next()).isTrue();

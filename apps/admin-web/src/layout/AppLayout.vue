@@ -34,7 +34,7 @@ const visibleNavigation = computed(() => navigation.map((group) => ({
   ...group,
   children: group.children.filter((item) => {
     if (item.path === '/dashboard') return auth.hasPermission('dashboard:read')
-    return auth.hasPermission(schemaFor(item.path)?.readPermission)
+    return auth.hasPermission(item.permission || schemaFor(item.path)?.readPermission)
   }),
 })).filter((group) => group.children.length > 0))
 const currentGroupKey = computed(() => visibleNavigation.value.find((group) =>
