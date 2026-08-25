@@ -64,7 +64,7 @@ try {
 
     $sourceDatabase = (& docker exec $containerId sh -lc 'printf %s "$MYSQL_DATABASE"').Trim()
     if ($LASTEXITCODE -ne 0 -or $sourceDatabase -notmatch '^[a-zA-Z0-9_]+$') { throw 'Cannot resolve a safe source database name.' }
-    $countSql = 'SELECT CONCAT((SELECT COUNT(*) FROM community),CHAR(124),(SELECT COUNT(*) FROM asset),CHAR(124),(SELECT COUNT(*) FROM customer),CHAR(124),(SELECT COUNT(*) FROM bill),CHAR(124),(SELECT COUNT(*) FROM payment_transaction),CHAR(124),(SELECT COUNT(*) FROM outbox_event),CHAR(124),(SELECT COUNT(*) FROM audit_event))'
+    $countSql = 'SELECT CONCAT((SELECT COUNT(*) FROM community),CHAR(124),(SELECT COUNT(*) FROM asset),CHAR(124),(SELECT COUNT(*) FROM customer),CHAR(124),(SELECT COUNT(*) FROM bill),CHAR(124),(SELECT COUNT(*) FROM payment_transaction),CHAR(124),(SELECT COUNT(*) FROM outbox_event),CHAR(124),(SELECT COUNT(*) FROM audit_event),CHAR(124),(SELECT COUNT(*) FROM dashboard_widget_configuration),CHAR(124),(SELECT COUNT(*) FROM visitor_record))'
     $sourceCounts = Invoke-MySql $sourceDatabase $countSql
     $restoredCounts = Invoke-MySql $drillDatabase $countSql
     if ($sourceCounts -ne $restoredCounts) {
@@ -76,12 +76,14 @@ try {
     $reportCount = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM report_definition WHERE status=''ACTIVE''')
     $adapterCount = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM integration_adapter_policy')
     $productionReady = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM integration_adapter_policy WHERE production_ready=TRUE')
+    $productionConnectedVisitors = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM visitor_record WHERE production_connected=TRUE')
     $checksumMismatches = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM outbox_event WHERE payload_checksum<>SHA2(payload_json,256)')
 
-    if ($schemaVersion -ne 19) { throw "Expected Flyway v19, restored v$schemaVersion." }
-    if ($tableCount -ne 88) { throw "Expected 88 base tables, restored $tableCount." }
+    if ($schemaVersion -ne 20) { throw "Expected Flyway v20, restored v$schemaVersion." }
+    if ($tableCount -ne 90) { throw "Expected 90 base tables, restored $tableCount." }
     if ($reportCount -ne 22) { throw "Expected 22 enabled reports, restored $reportCount." }
     if ($adapterCount -ne 5 -or $productionReady -ne 0) { throw 'Fail-closed adapter policy reconciliation failed.' }
+    if ($productionConnectedVisitors -ne 0) { throw 'Visitor production-connection reconciliation failed.' }
     if ($checksumMismatches -ne 0) { throw 'Outbox payload checksum reconciliation failed.' }
 
     [pscustomobject]@{
@@ -94,6 +96,7 @@ try {
         EnabledReports = $reportCount
         AdapterPolicies = $adapterCount
         ProductionReadyAdapters = $productionReady
+        ProductionConnectedVisitors = $productionConnectedVisitors
         KeyTableCounts = $restoredCounts
         KeptForInspection = [bool]$KeepRestoredDatabase
     }

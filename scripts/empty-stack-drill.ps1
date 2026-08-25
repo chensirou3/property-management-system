@@ -13,8 +13,8 @@ Set-StrictMode -Version Latest
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $composeFile = Join-Path $repositoryRoot 'docker-compose.yml'
 $suffix = ([DateTime]::UtcNow.ToString('yyyyMMddHHmmss') + [Guid]::NewGuid().ToString('N').Substring(0, 5)).ToLowerInvariant()
-$projectName = "pms3-g9-empty-$suffix"
-if ($projectName -notmatch '^pms3-g9-empty-[a-z0-9]+$') { throw 'Unsafe isolated Compose project name.' }
+$projectName = "pms3-g10-empty-$suffix"
+if ($projectName -notmatch '^pms3-g10-empty-[a-z0-9]+$') { throw 'Unsafe isolated Compose project name.' }
 
 $overrideNames = @(
     'PMS_MYSQL_HOST_PORT', 'PMS_REDIS_HOST_PORT', 'PMS_API_PORT', 'PMS_WEB_PORT',
@@ -70,11 +70,11 @@ try {
 
     $mysqlContainer = (& docker compose -p $projectName -f $composeFile ps -q mysql).Trim()
     if (-not $mysqlContainer) { throw 'The isolated MySQL container cannot be resolved.' }
-    $verificationSql = 'SELECT CONCAT((SELECT COALESCE(MAX(CAST(version AS UNSIGNED)),0) FROM flyway_schema_history WHERE success=1),CHAR(124),(SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type=''BASE TABLE''),CHAR(124),(SELECT COUNT(*) FROM report_definition WHERE status=''ACTIVE''),CHAR(124),(SELECT COUNT(*) FROM integration_adapter_policy),CHAR(124),(SELECT COUNT(*) FROM integration_adapter_policy WHERE production_ready=TRUE))'
+    $verificationSql = 'SELECT CONCAT((SELECT COALESCE(MAX(CAST(version AS UNSIGNED)),0) FROM flyway_schema_history WHERE success=1),CHAR(124),(SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type=''BASE TABLE''),CHAR(124),(SELECT COUNT(*) FROM report_definition WHERE status=''ACTIVE''),CHAR(124),(SELECT COUNT(*) FROM integration_adapter_policy),CHAR(124),(SELECT COUNT(*) FROM integration_adapter_policy WHERE production_ready=TRUE),CHAR(124),(SELECT COUNT(*) FROM dashboard_widget_configuration WHERE status=''PUBLISHED''),CHAR(124),(SELECT COUNT(*) FROM visitor_record),CHAR(124),(SELECT COUNT(*) FROM visitor_record WHERE production_connected=TRUE))'
     $queryCommand = 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot "$MYSQL_DATABASE" -N -B -e "' + $verificationSql + '"'
     $verification = (& docker exec $mysqlContainer sh -lc $queryCommand).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'The isolated database verification query failed.' }
-    if ($verification -ne '19|88|22|5|0') { throw "Unexpected isolated database invariants: $verification" }
+    if ($verification -ne '20|90|22|5|0|4|3|0') { throw "Unexpected isolated database invariants: $verification" }
 
     $health = Invoke-RestMethod -Uri "http://127.0.0.1:$ApiPort/actuator/health/readiness" -TimeoutSec 15
     if ($health.status -ne 'UP') { throw 'The isolated API readiness probe is not UP.' }
@@ -84,11 +84,14 @@ try {
     [pscustomobject]@{
         Status = 'PASSED'
         ProjectName = $projectName
-        FlywayVersion = 19
-        BaseTables = 88
+        FlywayVersion = 20
+        BaseTables = 90
         EnabledReports = 22
         AdapterPolicies = 5
         ProductionReadyAdapters = 0
+        PublishedDashboardWidgets = 4
+        VisitorRecords = 3
+        ProductionConnectedVisitors = 0
         ApiReadiness = $health.status
         WebStatus = $webResponse.StatusCode
         KeptForInspection = [bool]$KeepStack

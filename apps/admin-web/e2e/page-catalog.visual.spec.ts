@@ -97,6 +97,25 @@ const integrationVisualWorkbench = {
   security: { signedCallbacks: true, maxSkewSeconds: 300, secretConfigured: true, secretsReadable: false },
   observability: { health: '/actuator/health', readiness: '/actuator/health/readiness', metrics: '/actuator/prometheus', requestTraceHeader: 'X-Request-Id' },
 }
+const dashboardConfigurationVisualFixture = {
+  communityId: '30000000-0000-0000-0000-000000000001', roleCode: 'ALL', total: 4, publishedCount: 4,
+  availableMetrics: ['ARREARS_SUMMARY', 'ASSET_COUNTS', 'COLLECTION_RATE', 'DATA_QUALITY', 'INTEGRATION_STATUS', 'METER_PROGRESS'],
+  items: [
+    { id: 'visual-widget-1', widget_code: 'ASSET_SUMMARY', widget_name: '资产概览', metric_code: 'ASSET_COUNTS', position_code: 'SUMMARY', visible: true, refresh_interval_seconds: 300, display_order: 1, status: 'PUBLISHED', version: 2 },
+    { id: 'visual-widget-2', widget_code: 'FINANCE_OVERVIEW', widget_name: '收费概览', metric_code: 'COLLECTION_RATE', position_code: 'MAIN', visible: true, refresh_interval_seconds: 300, display_order: 2, status: 'PUBLISHED', version: 2 },
+    { id: 'visual-widget-3', widget_code: 'DATA_QUALITY', widget_name: '数据质量', metric_code: 'DATA_QUALITY', position_code: 'SIDE', visible: true, refresh_interval_seconds: 600, display_order: 3, status: 'PUBLISHED', version: 2 },
+    { id: 'visual-widget-4', widget_code: 'INTEGRATION_STATUS', widget_name: '集成状态', metric_code: 'INTEGRATION_STATUS', position_code: 'SIDE', visible: false, refresh_interval_seconds: 600, display_order: 4, status: 'PUBLISHED', version: 2 },
+  ],
+}
+const visitorVisualFixture = {
+  adapterCode: 'IOT_SIMULATOR', simulated: true, productionConnected: false, sensitiveFieldsStoredMasked: true,
+  page: 1, size: 20, total: 3,
+  items: [
+    { id: 'visual-visitor-1', visit_no: 'SYN-VISIT-0003', visitor_name_masked: '合成访客丙**', visitor_mobile_masked: '137****0003', host_name_masked: '合成住户丙**', asset_name: '3号楼-1单元-0301', scheduled_at: '2026-08-25T14:00:00', check_in_at: null, check_out_at: null, visit_status: 'REGISTERED', source_mode: 'IOT_SIMULATOR', production_connected: false, version: 0 },
+    { id: 'visual-visitor-2', visit_no: 'SYN-VISIT-0002', visitor_name_masked: '合成访客乙**', visitor_mobile_masked: '139****0002', host_name_masked: '合成住户乙**', asset_name: '2号楼-2单元-0202', scheduled_at: '2026-08-25T10:00:00', check_in_at: '2026-08-25T10:03:00', check_out_at: null, visit_status: 'CHECKED_IN', source_mode: 'IOT_SIMULATOR', production_connected: false, version: 0 },
+    { id: 'visual-visitor-3', visit_no: 'SYN-VISIT-0001', visitor_name_masked: '合成访客甲**', visitor_mobile_masked: '138****0001', host_name_masked: '合成住户甲**', asset_name: '1号楼-1单元-0101', scheduled_at: '2026-08-25T08:30:00', check_in_at: '2026-08-25T08:35:00', check_out_at: '2026-08-25T09:15:00', visit_status: 'CHECKED_OUT', source_mode: 'IOT_SIMULATOR', production_connected: false, version: 0 },
+  ],
+}
 const targetViewports = [
   { name: '1366x768', width: 1366, height: 768 },
   { name: '1440x900', width: 1440, height: 900 },
@@ -134,6 +153,20 @@ for (const viewport of targetViewports) {
     await page.route('**/api/v1/integrations/workbench*', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(integrationVisualWorkbench) })
+      } else {
+        await route.continue()
+      }
+    })
+    await page.route('**/api/v1/dashboard/configurations*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dashboardConfigurationVisualFixture) })
+      } else {
+        await route.continue()
+      }
+    })
+    await page.route('**/api/v1/visitors*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(visitorVisualFixture) })
       } else {
         await route.continue()
       }

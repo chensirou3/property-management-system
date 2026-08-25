@@ -232,3 +232,19 @@ IAM 写接口统一使用版本号防止静默覆盖。启用账号只能关联�
 回调规范串为 `timestamp + "\n" + adapterCode + "\n" + callbackId + "\n" + rawJsonPayload`，签名以小写十六进制传递。默认时间窗为 ±300 秒，最大请求体 1 MB；同一 `(adapter_code, callback_id)` 与同一负载安全重放，不同负载返回 `409 CALLBACK_REPLAY_CONFLICT`。当前只允许四个 `SIMULATOR` 和一个 `DISABLED`，所有 `productionReady=false`；任何未实现的 production 模式在启动时拒绝运行。
 
 内部可观测接口为 `/actuator/health/liveness`、`/actuator/health/readiness` 和 `/actuator/prometheus`。生产入口必须按 `deployment-security.md` 隔离 actuator/OpenAPI，并在 TLS 反向代理继续限制登录和回调速率。
+
+## 看板配置与访客模拟核销
+
+看板配置读取要求 `dashboard:read`，写入/排序/发布要求 `dashboard:configure`；服务端同时校验项目范围和角色范围。访客读取要求 `visitor:read`，登记与进出操作要求 `visitor:write`，导出任务要求 `visitor:export-sensitive`。访客接口只接受已经脱敏的姓名和手机号，且仅能使用受治理的 IoT 模拟器。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET/POST | `/dashboard/configurations` | 按 `communityId`、`roleId` 查询或新增预定义指标组件；不接受任意 SQL、脚本或外部数据源 |
+| PUT | `/dashboard/configurations/{id}` | 按乐观版本更新标题、显示状态、位置和刷新间隔，拒绝跨项目/角色访问 |
+| POST | `/dashboard/configurations:reorder` | 原子校验同一项目/角色下的组件集合、顺序和版本后重新排序 |
+| POST | `/dashboard/configurations:publish` | 发布当前项目/角色配置，返回版本化发布结果并写入审计 |
+| GET/POST | `/visitors` | 按项目、日期、关键词和状态查询，或以请求键登记脱敏访客记录；未脱敏字段返回 422 |
+| POST | `/visitors/{id}:check-in` | 复核 `IOT_SIMULATOR` 策略后幂等进入；同键同请求重放、同键异请求冲突 |
+| POST | `/visitors/{id}:check-out` | 从已进入状态幂等离开并保留时间线、请求哈希和审计证据 |
+
+`visitor_record.source_mode` 固定为 `IOT_SIMULATOR`，`productionConnected` 在数据库、服务和响应三层均为 `false`。页面中的导入校验和脱敏导出走服务端任务边界；没有任何真实门禁控制器、厂商账号、设备密钥或生产网络能力。

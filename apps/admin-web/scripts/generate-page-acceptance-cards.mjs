@@ -37,6 +37,8 @@ function renderPermissions(permissions) {
 }
 
 function renderPage(page) {
+  const achieved = page.targetLevels.includes('L3') ? 'L1 / L2 / L3' : 'L1 / L2'
+  const screenshotStem = `page-${String(page.pageNo).padStart(2, '0')}`
   return `## ${String(page.pageNo).padStart(2, '0')}. ${page.title}
 
 | 项目 | 定义 |
@@ -50,7 +52,7 @@ function renderPage(page) {
 | 必备状态 | ${catalog.requiredStates.map((state) => stateLabels[state]).join('、')} |
 | 来源索引 | ${page.sourceRef} |
 | 目标路由 | \`${page.targetPath}\` |
-| 当前目录状态 | G2 路由、查询模型、列模型、权限码与状态骨架已登记；业务闭环、数据对账和最终视觉证据按对应 Goal 阶段验收 |
+| 当前目录状态 | G10 最终闭合；达到 ${achieved}，完成矩阵与四态结论见 \`acceptance-report.md\` |
 
 ### 查询模型
 
@@ -63,10 +65,10 @@ ${renderFields(page.columns)}
 ### 验收记录
 
 - 业务假设：${page.assumptions}
-- 结构证据：待填写页面截图、目标扫描索引与三视口差异结果。
-- 功能证据：待填写 API、组件、E2E、权限与失败路径测试。
-- 数据证据：待填写数量/金额/关系对账；不适用时说明原因。
-- 外部边界：涉及真实支付、发票、银行、通知、IoT 或生产数据时，必须标明真实、模拟或待授权。
+- 结构证据：目标扫描索引 ${page.sourceRef}；三视口基线 \`${screenshotStem}-{1366x768,1440x900,1920x1080}-win32.png\`；49/49 路由烟雾和 147/147 视觉纯比对通过。
+- 功能证据：最终完成矩阵、API/权限/失败路径与领域主旅程见 \`acceptance-report.md\`、\`requirements-traceability.md\` 和对应 G3—G10 集成/E2E 测试。
+- 数据证据：${page.targetLevels.includes('L3') ? '已按 L3 完成关系、数量、规则或金额对账；具体口径与合成边界见最终验收报告。' : '本页目标为 L2；内部合成/模拟数据可重复，真实业务口径和外部数据不伪装为已完成。'}
+- 外部边界：最终四态分类见 \`acceptance-report.md\`；生产数据、支付、发票、银行、通知、IoT、Java110 或正式 UAT 缺少外部授权时保持“待外部资料”。
 `
 }
 
@@ -84,7 +86,7 @@ const content = `# PMS3 49 页验收卡
 
 - 这 49 张卡是固定范围，不把辅助管理页误算为目标页面，也不以菜单出现代替完成。
 - 每页必须具备稳定路由、明确查询/列模型、按钮权限和八类可见状态。
-- “已登记”仅表示 G2 元数据完备；只有结构、功能、数据和外部边界证据齐全后，才可在最终追踪矩阵中标为完成。
+- 本卡已在 G10 与最终完成矩阵闭合；页面的达成等级、四态分类和外部门禁以 \`acceptance-report.md\` 为准。
 - 复杂工作台、状态流转、报表、迁移和外部适配页面必须使用对应专用实现，不得退化为万能 CRUD。
 - 生成命令：\`npm run pages:acceptance\`；漂移检查：\`npm run pages:acceptance:check\`。
 

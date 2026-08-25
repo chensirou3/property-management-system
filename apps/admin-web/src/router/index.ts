@@ -25,6 +25,8 @@ const TemporaryReceivableView = () => import('../views/TemporaryReceivableView.v
 const FinancialOperationsView = () => import('../views/FinancialOperationsView.vue')
 const ReportingWorkbenchView = () => import('../views/ReportingWorkbenchView.vue')
 const IntegrationSettingsView = () => import('../views/IntegrationSettingsView.vue')
+const DashboardConfigurationView = () => import('../views/DashboardConfigurationView.vue')
+const VisitorRecordsView = () => import('../views/VisitorRecordsView.vue')
 
 const meterWorkflowPaths = ['/archives/meters', '/metering/batches', '/metering/readings', '/metering/share-preview', '/metering/replacements', '/metering/charges']
 const iamPaths = allNavigationItems.filter((item) => item.path.startsWith('/enterprise/'))
@@ -32,6 +34,8 @@ const assetWorkspacePaths = ['/archives/rooms', '/archives/parking-spaces']
 const customerWorkspacePaths = ['/archives/customers', '/archives/customer-assets']
 const migrationWorkspacePath = '/system/migrations'
 const integrationSettingsPath = '/system/third-party-settings'
+const dashboardConfigurationPath = '/dashboard/configuration'
+const visitorRecordsPath = '/security/visitor-records'
 const feeConfigurationPaths = ['/fees/definitions', '/fees/standards', '/fees/allocations']
 const financialOperationsPaths = [
   '/finance/instruments', '/fees/discounts', '/finance/prepayment-batch-offsets',
@@ -40,7 +44,7 @@ const financialOperationsPaths = [
 const reportingPaths = governedReportingPaths
 const specialPaths = new Set(['/dashboard', '/fees/receivables', '/fees/temporary-receivables', '/cashier', ...feeConfigurationPaths, ...meterWorkflowPaths,
   ...financialOperationsPaths, ...reportingPaths, ...iamPaths.map((item) => item.path), ...assetWorkspacePaths, ...customerWorkspacePaths,
-  migrationWorkspacePath, integrationSettingsPath])
+  migrationWorkspacePath, integrationSettingsPath, dashboardConfigurationPath, visitorRecordsPath])
 
 function pageMeta(path: string, fallbackTitle?: string, fallbackPermission?: string) {
   const page = pageFor(path)
@@ -127,6 +131,10 @@ const router = createRouter({
           meta: pageMeta(migrationWorkspacePath, '数据迁移', 'migration:read') },
         { path: integrationSettingsPath.slice(1), name: 'integration-settings', component: IntegrationSettingsView,
           meta: pageMeta(integrationSettingsPath, '第三方参数设置', 'integration:read') },
+        { path: dashboardConfigurationPath.slice(1), name: 'dashboard-configuration', component: DashboardConfigurationView,
+          meta: pageMeta(dashboardConfigurationPath, '看板配置', 'dashboard:read') },
+        { path: visitorRecordsPath.slice(1), name: 'visitor-records', component: VisitorRecordsView,
+          meta: pageMeta(visitorRecordsPath, '访客记录', 'visitor:read') },
         ...genericRoutes,
         ...capabilityRoutes,
       ],

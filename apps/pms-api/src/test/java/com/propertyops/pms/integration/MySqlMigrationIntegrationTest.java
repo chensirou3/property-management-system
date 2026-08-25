@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(19);
-        assertThat(result.targetSchemaVersion).isEqualTo("19");
+        assertThat(result.migrationsExecuted).isEqualTo(20);
+        assertThat(result.targetSchemaVersion).isEqualTo("20");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -58,7 +58,7 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM fee_definition WHERE temporary_allowed=TRUE", 1);
             assertCount(statement, "SELECT COUNT(*) FROM receipt_number_segment", 2);
             assertCount(statement, "SELECT COUNT(*) FROM discount_policy", 1);
-            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 88);
+            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 90);
             assertCount(statement, "SELECT COUNT(*) FROM report_definition WHERE status='ACTIVE'", 22);
             assertCount(statement, """
                     SELECT COUNT(*) FROM report_definition
@@ -244,6 +244,21 @@ class MySqlMigrationIntegrationTest {
                         'uk_cashier_open_shift', 'uk_successful_payment_order',
                         'ck_payment_transaction_amount', 'uk_deposit_account_identity',
                         'uk_receipt_segment_sequence', 'uk_bill_adjustment_request'
+                      )
+                    """, 6);
+            assertCount(statement, "SELECT COUNT(*) FROM dashboard_widget_configuration WHERE status='PUBLISHED'", 4);
+            assertCount(statement, "SELECT COUNT(*) FROM visitor_record", 3);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM visitor_record
+                    WHERE source_mode<>'IOT_SIMULATOR' OR production_connected=TRUE
+                    """, 0);
+            assertCount(statement, """
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_schema = DATABASE()
+                      AND constraint_name IN (
+                        'uk_dashboard_widget_scope', 'ck_dashboard_widget_status',
+                        'uk_visitor_record_no', 'ck_visitor_record_status',
+                        'ck_visitor_record_source', 'ck_visitor_record_timeline'
                       )
                     """, 6);
         }
