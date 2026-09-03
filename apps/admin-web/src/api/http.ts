@@ -18,9 +18,8 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       sessionStorage.removeItem('pms_access_token')
-      if (location.pathname !== '/login') location.assign('/login')
+      if (!['/login', '/setup'].includes(location.pathname)) location.assign('/login')
     }
     return Promise.reject(error)
   },
 )
-

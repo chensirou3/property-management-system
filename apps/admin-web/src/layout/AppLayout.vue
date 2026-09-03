@@ -137,7 +137,11 @@ function logout() {
       </button>
       <div class="topbar-app"><el-icon><Grid /></el-icon><span>我的应用</span></div>
       <div class="topbar-spacer"></div>
+      <span v-if="auth.projects.length === 1" class="project-single" title="当前部署仅启用一个项目">
+        {{ auth.projects[0].name }}
+      </span>
       <el-select
+        v-else
         :model-value="auth.currentProjectId"
         class="project-select"
         popper-class="project-select-popper"

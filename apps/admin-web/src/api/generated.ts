@@ -276,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/setup/initialize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["initialize"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/report-jobs": {
         parameters: {
             query?: never;
@@ -1476,6 +1492,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/setup/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/{code}": {
         parameters: {
             query?: never;
@@ -2107,7 +2139,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["status"];
+        get: operations["status_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2370,6 +2402,22 @@ export interface components {
             /** Format: date */
             dueDate: string;
             lines: components["schemas"]["TemporaryLine"][];
+        };
+        InitializeRequest: {
+            companyName: string;
+            projectName: string;
+            adminUsername: string;
+            adminDisplayName: string;
+            adminPassword: string;
+        };
+        SetupResult: {
+            initialized?: boolean;
+            deploymentMode?: string;
+            enterpriseId?: string;
+            companyName?: string;
+            projectId?: string;
+            projectName?: string;
+            adminUsername?: string;
         };
         CreateExportJob: {
             communityId: string;
@@ -2885,6 +2933,12 @@ export interface components {
         LoginRequest: {
             username: string;
             password: string;
+        };
+        SetupStatus: {
+            initialized?: boolean;
+            deploymentMode?: string;
+            companyName?: string;
+            projectName?: string;
         };
         FilterOption: {
             value?: string;
@@ -3679,6 +3733,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    initialize: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitializeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SetupResult"];
                 };
             };
         };
@@ -6087,6 +6165,26 @@ export interface operations {
             };
         };
     };
+    status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SetupStatus"];
+                };
+            };
+        };
+    };
     query: {
         parameters: {
             query: {
@@ -7021,7 +7119,7 @@ export interface operations {
             };
         };
     };
-    status: {
+    status_1: {
         parameters: {
             query?: never;
             header?: never;

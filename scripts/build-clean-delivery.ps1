@@ -1,10 +1,10 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)]
     [string]$WorkbookPath,
 
     [string]$OutputParent,
 
-    [string]$DeliveryName = 'PMS3-交付版-2026-09-03'
+    [string]$DeliveryName = 'PMS3-交付版-2026-09-03-rc2'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,6 +37,7 @@ if ($status) {
 }
 
 $temporaryZip = Join-Path ([System.IO.Path]::GetTempPath()) ("pms3-delivery-" + [guid]::NewGuid().ToString('N') + '.zip')
+$completed = $false
 try {
     & git -c "safe.directory=$repoGit" -C $repo archive --format=zip --output=$temporaryZip HEAD
     if ($LASTEXITCODE -ne 0) {
@@ -61,7 +62,7 @@ try {
 
     $files = Get-ChildItem -LiteralPath $deliveryDirectory -Recurse -File | Sort-Object FullName
     $fileHashes = foreach ($file in $files) {
-        $relative = [System.IO.Path]::GetRelativePath($deliveryDirectory, $file.FullName).Replace('\', '/')
+        $relative = $file.FullName.Substring($deliveryDirectory.Length).TrimStart('\').Replace('\', '/')
         $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
         [pscustomobject]@{ RelativePath = $relative; Length = $file.Length; Sha256 = $hash }
     }
@@ -85,6 +86,8 @@ try {
     $zipHash = (Get-FileHash -LiteralPath $deliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
     Set-Content -LiteralPath ($deliveryZip + '.sha256') -Value "$zipHash  $([System.IO.Path]::GetFileName($deliveryZip))" -Encoding ascii
 
+    $completed = $true
+
     [pscustomobject]@{
         DeliveryDirectory = $deliveryDirectory
         DeliveryZip = $deliveryZip
@@ -96,5 +99,16 @@ try {
 finally {
     if (Test-Path -LiteralPath $temporaryZip) {
         Remove-Item -LiteralPath $temporaryZip -Force
+    }
+    if (-not $completed) {
+        if (Test-Path -LiteralPath $deliveryDirectory) {
+            Remove-Item -LiteralPath $deliveryDirectory -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $deliveryZip) {
+            Remove-Item -LiteralPath $deliveryZip -Force
+        }
+        if (Test-Path -LiteralPath ($deliveryZip + '.sha256')) {
+            Remove-Item -LiteralPath ($deliveryZip + '.sha256') -Force
+        }
     }
 }

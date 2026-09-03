@@ -82,7 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (token.value.startsWith('mock-')) {
       projects.value = [{ id: '30000000-0000-0000-0000-000000000001', name: '优山美地（合成示范项目）', status: 'ACTIVE' }]
     } else {
-      const { data } = await http.get('/data/communities', { params: { page: 1, size: 100, sort: 'name,asc' } })
+      const { data } = await http.get('/data/communities', { params: { page: 1, size: 100, sort: 'name,asc', status: 'ACTIVE' } })
       projects.value = data.items
     }
     if (!projects.value.some((item) => item.id === currentProjectId.value)) {

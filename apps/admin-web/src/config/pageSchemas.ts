@@ -19,6 +19,8 @@ export interface PageSchema {
   resource: string
   readPermission: string
   writePermission?: string
+  allowCreate?: boolean
+  allowArchive?: boolean
   category?: string
   status?: string
   columns: TableColumn[]
@@ -51,6 +53,8 @@ export const pageSchemas: Record<string, PageSchema> = {
     { prop: 'address', label: '地址', minWidth: 240 }, state(), updated,
   ], {
     writePermission: 'property:write',
+    allowCreate: false,
+    allowArchive: false,
     form: [
       { prop: 'enterprise_id', label: '所属企业', type: 'select', required: true, options: [
         { label: '合成物业集团', value: '31000000-0000-0000-0000-000000000001' },
@@ -62,6 +66,7 @@ export const pageSchemas: Record<string, PageSchema> = {
       { prop: 'status', label: '状态', type: 'select', required: true, options: statusOptions.slice(0, 2) },
     ],
     defaults: { enterprise_id: '31000000-0000-0000-0000-000000000001', status: 'ACTIVE', managed_area: '0' },
+    description: '当前为单项目独立数据库：可维护本项目名称和档案，但不能新增或停用第二个项目。',
   }),
   '/archives/grids': base('grids', 'property', [
     { prop: 'code', label: '网格编码', width: 140, sortable: true, sortKey: 'code' },

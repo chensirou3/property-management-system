@@ -42,6 +42,10 @@ public class DataResourceService {
         int safeSize = Math.min(Math.max(size, 1), 200);
         MapSqlParameterSource parameters = new MapSqlParameterSource();
         List<String> predicates = scopePredicates(definition, communityId, parameters);
+        if (definition.communityResource() && (status == null || status.isBlank())
+                && definition.statusExpression() != null) {
+            predicates.add(definition.statusExpression() + " = 'ACTIVE'");
+        }
         if (keyword != null && !keyword.isBlank() && !definition.searchColumns().isEmpty()) {
             parameters.addValue("keyword", "%" + escapeLike(keyword.trim()) + "%");
             predicates.add(definition.searchColumns().stream()
@@ -88,6 +92,10 @@ public class DataResourceService {
         Map<String, Object> values = allowed(body, definition.createColumns());
         if (definition.communityResource()) {
             security.requireRole("PLATFORM_ADMIN");
+            if (singleProjectInitialized()) {
+                throw new BusinessException("SINGLE_PROJECT_LIMIT", "当前数据库采用单项目模式，不能新增第二个项目",
+                        HttpStatus.CONFLICT);
+            }
         } else {
             requireCommunity(communityId);
             security.requireProject(communityId);
@@ -118,6 +126,11 @@ public class DataResourceService {
         requireWritableRow(definition, id, effectiveCommunity);
         Map<String, Object> values = allowed(body, definition.updateColumns());
         if (values.isEmpty()) throw new BusinessException("EMPTY_UPDATE", "没有可更新字段", HttpStatus.BAD_REQUEST);
+        if (definition.communityResource() && singleProjectInitialized()
+                && values.containsKey("status") && !"ACTIVE".equals(String.valueOf(values.get("status")))) {
+            throw new BusinessException("SINGLE_PROJECT_REQUIRED", "单项目模式不能停用当前唯一项目",
+                    HttpStatus.CONFLICT);
+        }
         validateReferences(resourceName, id, effectiveCommunity, values, false);
         values.put("id", id);
         values.put("version", version);
@@ -138,6 +151,10 @@ public class DataResourceService {
     public Map<String, Object> archive(String resourceName, String id, String communityId, long version) {
         ResourceDefinition definition = writable(resourceName);
         security.requirePermission(definition.writePermission());
+        if (definition.communityResource() && singleProjectInitialized()) {
+            throw new BusinessException("SINGLE_PROJECT_REQUIRED", "单项目模式不能停用当前唯一项目",
+                    HttpStatus.CONFLICT);
+        }
         if (definition.archiveColumn() == null) {
             throw new BusinessException("ARCHIVE_NOT_SUPPORTED", "该资源不支持停用", HttpStatus.CONFLICT);
         }
@@ -186,6 +203,14 @@ public class DataResourceService {
         if (column == null) throw new BusinessException("INVALID_SORT", "不支持的排序字段", HttpStatus.BAD_REQUEST);
         String direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1]) ? "DESC" : "ASC";
         return column + " " + direction;
+    }
+
+    private boolean singleProjectInitialized() {
+        Long count = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM system_setup
+                 WHERE singleton_id=1 AND initialized=TRUE AND deployment_mode='SINGLE_PROJECT'
+                """, Map.of(), Long.class);
+        return count != null && count > 0;
     }
 
     private ResourceDefinition writable(String name) {

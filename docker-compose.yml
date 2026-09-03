@@ -15,7 +15,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
     ports:
-      - "${PMS_MYSQL_HOST_PORT:-3307}:3306"
+      - "127.0.0.1:${PMS_MYSQL_HOST_PORT:-3307}:3306"
     volumes:
       - mysql80-data:/var/lib/mysql
     healthcheck:
@@ -28,7 +28,7 @@ services:
     image: redis:7.4-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}"]
     ports:
-      - "${PMS_REDIS_HOST_PORT:-6379}:6379"
+      - "127.0.0.1:${PMS_REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -52,14 +52,14 @@ services:
       PMS_CALLBACK_SIGNING_SECRET: ${PMS_CALLBACK_SIGNING_SECRET:-${JWT_SECRET}}
       PMS_CALLBACK_MAX_SKEW_SECONDS: ${PMS_CALLBACK_MAX_SKEW_SECONDS:-300}
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
-      PMS_BOOTSTRAP_ADMIN_USERNAME: ${PMS_BOOTSTRAP_ADMIN_USERNAME:-admin}
-      PMS_BOOTSTRAP_ADMIN_PASSWORD: ${PMS_BOOTSTRAP_ADMIN_PASSWORD:?set PMS_BOOTSTRAP_ADMIN_PASSWORD in .env}
+      PMS_BOOTSTRAP_ADMIN_USERNAME: ${PMS_BOOTSTRAP_ADMIN_USERNAME:-}
+      PMS_BOOTSTRAP_ADMIN_PASSWORD: ${PMS_BOOTSTRAP_ADMIN_PASSWORD:-}
       LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:-5}
       LOGIN_WINDOW_MINUTES: ${LOGIN_WINDOW_MINUTES:-15}
       LOGIN_LOCK_MINUTES: ${LOGIN_LOCK_MINUTES:-15}
       PMS_API_PORT: 8088
     ports:
-      - "${PMS_API_PORT:-8088}:8088"
+      - "127.0.0.1:${PMS_API_PORT:-8088}:8088"
     depends_on:
       mysql:
         condition: service_healthy
@@ -75,7 +75,7 @@ services:
     build:
       context: ./apps/admin-web
     ports:
-      - "${PMS_WEB_PORT:-5174}:8080"
+      - "127.0.0.1:${PMS_WEB_PORT:-5174}:8080"
     depends_on:
       api:
         condition: service_healthy

@@ -39,7 +39,7 @@ pms:
     login-window-minutes: ${LOGIN_WINDOW_MINUTES:15}
     login-lock-minutes: ${LOGIN_LOCK_MINUTES:15}
   bootstrap:
-    admin-username: ${PMS_BOOTSTRAP_ADMIN_USERNAME:admin}
+    admin-username: ${PMS_BOOTSTRAP_ADMIN_USERNAME:}
     admin-password: ${PMS_BOOTSTRAP_ADMIN_PASSWORD:}
   adapters:
     payment: simulator

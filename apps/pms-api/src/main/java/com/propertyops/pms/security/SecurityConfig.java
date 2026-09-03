@@ -33,6 +33,7 @@ public class SecurityConfig {
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                        .requestMatchers("/api/v1/setup/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/integrations/callbacks/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/v3/api-docs/**", "/docs/**", "/swagger-ui/**").permitAll()
                         .anyRequest().authenticated())

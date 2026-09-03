@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(22);
-        assertThat(result.targetSchemaVersion).isEqualTo("22");
+        assertThat(result.migrationsExecuted).isEqualTo(23);
+        assertThat(result.targetSchemaVersion).isEqualTo("23");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {
@@ -58,7 +58,8 @@ class MySqlMigrationIntegrationTest {
             assertCount(statement, "SELECT COUNT(*) FROM fee_definition WHERE temporary_allowed=TRUE", 1);
             assertCount(statement, "SELECT COUNT(*) FROM receipt_number_segment", 2);
             assertCount(statement, "SELECT COUNT(*) FROM discount_policy", 1);
-            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 90);
+            assertCount(statement, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE()", 91);
+            assertCount(statement, "SELECT COUNT(*) FROM system_setup WHERE initialized=FALSE", 1);
             assertCount(statement, "SELECT COUNT(*) FROM report_definition WHERE status='ACTIVE'", 22);
             assertCount(statement, """
                     SELECT COUNT(*) FROM report_definition

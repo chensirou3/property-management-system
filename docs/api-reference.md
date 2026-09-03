@@ -3,7 +3,7 @@
 ## 通用约定
 
 - 基础路径：`/api/v1`；OpenAPI：`/v3/api-docs`；Swagger UI：`/docs`。
-- 除登录、健康检查和 OpenAPI 外，所有请求使用 `Authorization: Bearer <JWT>`。
+- 除一次性首次配置、登录、健康检查和 OpenAPI 外，所有请求使用 `Authorization: Bearer <JWT>`。
 - 前端为每个请求生成 `X-Request-Id`；后端会校验并回写该响应头，缺失或不安全时生成 UUID。
 - 写接口先校验 RBAC 权限，再校验 `communityId` 是否在登录人的项目范围内。
 - 金额和用量在 JSON 中以字符串输出，后端使用 `BigDecimal`，数据库使用 `DECIMAL`。
@@ -23,6 +23,8 @@
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
+| GET | `/setup/status` | 公开读取是否已经初始化、部署模式和已配置项目名称；不返回账号或秘密 |
+| POST | `/setup/initialize` | 仅全新无账号数据库可调用一次；配置企业、唯一项目和首个管理员，重复调用返回 409 |
 | POST | `/auth/login` | 本地账号登录，返回 JWT、角色、权限、项目范围和首次改密标识；失败达到阈值返回 429 |
 | GET | `/auth/me` | 当前用户与权限快照 |
 | PUT | `/auth/change-password` | 校验当前密码和强密码策略，修改密码并签发新令牌；旧令牌立即失效 |

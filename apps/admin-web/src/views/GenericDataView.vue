@@ -36,6 +36,8 @@ const title = computed(() => String(route.meta.title || '数据管理'))
 const schema = computed(() => schemaFor(route.path))
 const catalogPage = computed(() => pageFor(route.path))
 const canWrite = computed(() => Boolean(schema.value?.form && auth.hasPermission(schema.value.writePermission)))
+const canCreate = computed(() => canWrite.value && schema.value?.allowCreate !== false)
+const canArchive = computed(() => canWrite.value && schema.value?.allowArchive !== false)
 const canImport = computed(() => Boolean(catalogPage.value?.permissions.import && (auth.hasPermission(catalogPage.value.permissions.import) || canWrite.value)))
 const canExport = computed(() => Boolean(auth.hasPermission(catalogPage.value?.permissions.export) || auth.hasPermission(schema.value?.readPermission)))
 const canPrint = computed(() => Boolean(catalogPage.value?.permissions.print && (auth.hasPermission(catalogPage.value.permissions.print) || auth.hasPermission(schema.value?.readPermission))))
@@ -269,7 +271,7 @@ onBeforeUnmount(() => controller?.abort())
       :loading="loading" :error-message="errorMessage" :total="total" :storage-key="route.path"
       @selection-change="selectedRows = $event" @sort-change="onSort" @reload="load">
       <template #toolbar>
-        <el-button v-if="canWrite" type="primary" :icon="Plus" @click="openCreate">新增{{ title }}</el-button>
+        <el-button v-if="canCreate" type="primary" :icon="Plus" @click="openCreate">新增{{ title }}</el-button>
         <el-upload v-if="canImport" action="#" accept=".csv,text/csv" :auto-upload="false" :show-file-list="false" :on-change="handleImport">
           <el-button :icon="Upload">导入 CSV</el-button>
         </el-upload>
@@ -280,7 +282,7 @@ onBeforeUnmount(() => controller?.abort())
       <template #operations="{ row }">
         <el-button link type="primary" @click="openEdit(row)">查看</el-button>
         <el-button v-if="canWrite" link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
-        <el-button v-if="canWrite" link type="danger" @click="archive(row)">停用</el-button>
+        <el-button v-if="canArchive" link type="danger" @click="archive(row)">停用</el-button>
       </template>
     </DataGrid>
 

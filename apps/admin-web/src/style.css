@@ -37,6 +37,7 @@ button, input, textarea, select { font: inherit; }
 .topbar-app { height: 42px; padding: 0 15px; display: flex; align-items: center; gap: 7px; background: rgba(0,45,116,.12); font-size: 13px; }
 .topbar-spacer { flex: 1; }
 .project-select { width: 210px; }
+.project-single { max-width: 250px; height: 42px; padding: 0 16px; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: white; background: rgba(0,45,116,.12); font-size: 13px; }
 .topbar .project-select .el-select__wrapper { min-height: 42px; border-radius: 0; color: white; background: rgba(0,45,116,.12); box-shadow: none; }
 .topbar .project-select .el-select__selected-item, .topbar .project-select .el-select__placeholder, .topbar .project-select .el-select__caret { color: white; }
 .topbar-tools { display: flex; align-items: center; }
@@ -162,6 +163,24 @@ button, input, textarea, select { font: inherit; }
 .login-submit { width: 100%; height: 40px; margin-top: 4px; border-radius: 3px; letter-spacing: .18em; }
 .login-environment-note { margin: 15px 0 0; color: #9aa4b4; text-align: center; font-size: 10px; }
 .login-footer { flex: 0 0 46px; height: 46px; display: grid; place-items: center; color: #a4acb9; border-top: 1px solid #f0f2f5; font-size: 10px; }
+
+.setup-mode-badge { margin-left: auto; padding: 6px 12px; color: #0474f4; border: 1px solid #bedbfc; border-radius: 14px; background: #f3f8ff; font-size: 11px; }
+.setup-main { flex: 1; padding: 30px 24px 36px; display: flex; justify-content: center; align-items: flex-start; background: linear-gradient(#fff, #f7faff); }
+.setup-card { width: min(780px, 100%); border: 1px solid #dfe5ed; border-radius: 4px; background: white; box-shadow: 0 12px 34px rgba(51,76,117,.09); }
+.setup-card-title { height: auto; min-height: 104px; padding: 18px 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.setup-card-title > div { flex: 0 0 270px; }
+.setup-steps { flex: 1; min-width: 360px; padding: 10px 12px !important; background: #f7f9fc !important; }
+.setup-steps .el-step__title { font-size: 11px !important; }
+.setup-form { padding: 24px 30px 26px; }
+.setup-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
+.setup-section-title { margin: 0 0 14px; display: flex; align-items: center; gap: 7px; color: #34425a; font-size: 13px; font-weight: 600; }
+.setup-section-title:not(:first-child) { margin-top: 5px; padding-top: 20px; border-top: 1px solid #edf0f4; }
+.setup-form .el-form-item { margin-bottom: 18px; }
+.setup-form .el-form-item__label { padding-bottom: 5px; color: #536078; font-size: 12px; }
+.setup-data-note { margin-top: 4px; }
+.setup-data-note .el-alert__description { line-height: 1.65; }
+.setup-accept { margin: 17px 0 2px; color: #647087; }
+.setup-submit { margin-top: 14px; }
 
 .password-change-page { min-height: 100vh; color: #1f2d3d; background: #f3f6fa; }
 .password-change-header { height: 52px; padding: 0 48px; display: flex; align-items: center; background: white; border-bottom: 1px solid #e5e9f0; }

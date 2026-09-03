@@ -100,7 +100,7 @@ pwsh -File scripts/backup-mysql.ps1
 pwsh -File scripts/restore-drill.ps1
 ```
 
-备份文件和 SHA-256 元数据进入忽略目录 `.artifacts/backups`。恢复脚本只创建经过正则约束的 `pms3_restore_drill_*` 临时库，核对 Flyway V22、90 张表、22 个启用报表、5 个 fail-closed 策略、4 个已发布看板配置、3 条脱敏访客种子、生产访客连接 0、关键表计数和 Outbox 校验值，最后删除该临时库。`-KeepRestoredDatabase` 只用于受控人工检查。
+备份文件和 SHA-256 元数据进入忽略目录 `.artifacts/backups`。恢复脚本只创建经过正则约束的 `pms3_restore_drill_*` 临时库，核对 Flyway V23、91 张表、22 个启用报表、5 个 fail-closed 策略、4 个已发布看板配置、3 条脱敏访客种子、生产访客连接 0、关键表计数和 Outbox 校验值，最后删除该临时库。`-KeepRestoredDatabase` 只用于受控人工检查。
 
 Flyway 采用 forward-only 策略。迁移失败时先停止写入并保留失败现场；应用镜像回滚只有在 schema 向后兼容时才允许。涉及破坏性 schema 变化时，必须用升级前备份恢复到新的数据库实例并切换流量，不能直接修改 `flyway_schema_history`。
 
@@ -110,7 +110,7 @@ Flyway 采用 forward-only 策略。迁移失败时先停止写入并保留失�
 pwsh -File scripts/empty-stack-drill.ps1
 ```
 
-脚本生成一次性强密码、使用独立 Compose project/端口/卷，从空库构建 API 和 Web，验证 `V22/90/22/5/0/4/3/0`、API readiness 和登录页，然后仅对校验过的精确 project 执行 `down -v`。它不会读取或输出本地 `.env` 的秘密。
+脚本生成一次性强密码、使用独立 Compose project/端口/卷，从空库构建 API 和 Web，验证 `V23/91/22/5/0/4/3/0`、API readiness 和登录页，然后仅对校验过的精确 project 执行 `down -v`。它不会读取或输出本地 `.env` 的秘密。
 
 ## 9. 供应链门禁
 

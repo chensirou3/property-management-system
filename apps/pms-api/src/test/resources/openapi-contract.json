@@ -887,6 +887,36 @@
         }
       }
     },
+    "/api/v1/setup/initialize": {
+      "post": {
+        "tags": [
+          "setup-controller"
+        ],
+        "operationId": "initialize",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitializeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/report-jobs": {
       "get": {
         "tags": [
@@ -4405,6 +4435,26 @@
         }
       }
     },
+    "/api/v1/setup/status": {
+      "get": {
+        "tags": [
+          "setup-controller"
+        ],
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/reports/{code}": {
       "get": {
         "tags": [
@@ -6098,7 +6148,7 @@
         "tags": [
           "adapter-controller"
         ],
-        "operationId": "status",
+        "operationId": "status_1",
         "responses": {
           "200": {
             "description": "OK",
@@ -6991,6 +7041,70 @@
           "dueDate",
           "lines"
         ]
+      },
+      "InitializeRequest": {
+        "type": "object",
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 2
+          },
+          "projectName": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 2
+          },
+          "adminUsername": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "pattern": "^[\\p{L}\\p{N}._-]+$"
+          },
+          "adminDisplayName": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2
+          },
+          "adminPassword": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 12
+          }
+        },
+        "required": [
+          "adminDisplayName",
+          "adminPassword",
+          "adminUsername",
+          "companyName",
+          "projectName"
+        ]
+      },
+      "SetupResult": {
+        "type": "object",
+        "properties": {
+          "initialized": {
+            "type": "boolean"
+          },
+          "deploymentMode": {
+            "type": "string"
+          },
+          "enterpriseId": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "projectName": {
+            "type": "string"
+          },
+          "adminUsername": {
+            "type": "string"
+          }
+        }
       },
       "CreateExportJob": {
         "type": "object",
@@ -9024,6 +9138,23 @@
           "password",
           "username"
         ]
+      },
+      "SetupStatus": {
+        "type": "object",
+        "properties": {
+          "initialized": {
+            "type": "boolean"
+          },
+          "deploymentMode": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "projectName": {
+            "type": "string"
+          }
+        }
       },
       "FilterOption": {
         "type": "object",

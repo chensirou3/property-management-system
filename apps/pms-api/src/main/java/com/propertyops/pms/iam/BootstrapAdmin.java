@@ -29,7 +29,7 @@ public class BootstrapAdmin implements ApplicationRunner {
     public BootstrapAdmin(NamedParameterJdbcTemplate jdbc,
                           PasswordEncoder passwordEncoder,
                           PasswordPolicy passwordPolicy,
-                          @Value("${pms.bootstrap.admin-username:admin}") String username,
+                          @Value("${pms.bootstrap.admin-username:}") String username,
                           @Value("${pms.bootstrap.admin-password:}") String password) {
         this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
@@ -42,8 +42,11 @@ public class BootstrapAdmin implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (password == null || password.isBlank()) {
-            log.warn("PMS_BOOTSTRAP_ADMIN_PASSWORD is empty; no bootstrap administrator was created");
+            log.info("Bootstrap administrator is disabled; use the one-time web setup on a fresh database");
             return;
+        }
+        if (username == null || username.isBlank()) {
+            throw new IllegalStateException("PMS_BOOTSTRAP_ADMIN_USERNAME is required when bootstrap password is set");
         }
         var parameters = Map.of("username", username);
         var ids = jdbc.queryForList("SELECT id FROM sys_user WHERE username = :username", parameters, String.class);
@@ -70,6 +73,17 @@ public class BootstrapAdmin implements ApplicationRunner {
         jdbc.update("""
                 INSERT IGNORE INTO sys_user_project_scope (user_id, community_id, data_scope)
                 SELECT :userId, id, 'PROJECT' FROM community
+                """, Map.of("userId", userId));
+        jdbc.update("""
+                UPDATE system_setup
+                   SET initialized=TRUE,
+                       enterprise_id=COALESCE(enterprise_id, (SELECT id FROM enterprise ORDER BY created_at, id LIMIT 1)),
+                       community_id=COALESCE(community_id, (SELECT id FROM community WHERE status='ACTIVE' ORDER BY created_at, id LIMIT 1)),
+                       initialized_by=COALESCE(initialized_by, :userId),
+                       initialized_at=COALESCE(initialized_at, CURRENT_TIMESTAMP(3)),
+                       version=CASE WHEN initialized=FALSE THEN version+1 ELSE version END,
+                       updated_at=CURRENT_TIMESTAMP(3), initialized=TRUE
+                 WHERE singleton_id=1
                 """, Map.of("userId", userId));
     }
 }

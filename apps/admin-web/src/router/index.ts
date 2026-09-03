@@ -5,11 +5,13 @@ import { pageCatalog, pageFor } from '../config/pageCatalog'
 import { schemaFor } from '../config/pageSchemas'
 import { firstAuthorizedPath } from '../config/access'
 import { useAuthStore } from '../stores/auth'
+import { useSetupStore } from '../stores/setup'
 import { governedReportingPaths } from '../config/reporting'
 
 const DashboardView = () => import('../views/DashboardView.vue')
 const GenericDataView = () => import('../views/GenericDataView.vue')
 const LoginView = () => import('../views/LoginView.vue')
+const SetupView = () => import('../views/SetupView.vue')
 const ChangePasswordView = () => import('../views/ChangePasswordView.vue')
 const ForbiddenView = () => import('../views/ForbiddenView.vue')
 const ReceivableWorkflowView = () => import('../views/ReceivableWorkflowView.vue')
@@ -77,6 +79,7 @@ const capabilityRoutes: RouteRecordRaw[] = pageCatalog
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: '/setup', name: 'setup', component: SetupView, meta: { public: true, title: '首次配置' } },
     { path: '/login', name: 'login', component: LoginView, meta: { public: true, title: '登录' } },
     { path: '/change-password', name: 'change-password', component: ChangePasswordView, meta: { title: '修改临时密码' } },
     {
@@ -145,6 +148,16 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   document.title = `${String(to.meta.title || '物业管理平台')} - 物业管理平台`
+  const setup = useSetupStore()
+  try {
+    const setupStatus = await setup.loadStatus()
+    if (!setupStatus.initialized && to.path !== '/setup') return '/setup'
+    if (setupStatus.initialized && to.path === '/setup') {
+      return sessionStorage.getItem('pms_access_token') ? '/dashboard' : '/login'
+    }
+  } catch {
+    if (to.path === '/setup') return true
+  }
   const hasToken = Boolean(sessionStorage.getItem('pms_access_token'))
   if (!to.meta.public && !hasToken) return '/login'
   if (hasToken) {
