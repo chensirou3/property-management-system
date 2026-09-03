@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, OfficeBuilding, User } from '@element-plus/icons-vue'
@@ -12,6 +12,7 @@ const auth = useAuthStore()
 const setup = useSetupStore()
 const loading = ref(false)
 const accepted = ref(false)
+const submissionError = ref('')
 const form = reactive({
   companyName: '',
   projectName: '',
@@ -21,15 +22,45 @@ const form = reactive({
   confirmPassword: '',
 })
 
-const canSubmit = computed(() => Object.values(form).every((value) => value.trim()) && accepted.value)
+const usernamePattern = /^[\p{L}\p{N}._-]+$/u
+
+function firstValidationError() {
+  if (form.companyName.trim().length < 2) return '物业企业名称至少填写 2 个字符'
+  if (form.projectName.trim().length < 2) return '项目名称至少填写 2 个字符'
+  if (form.adminDisplayName.trim().length < 2) return '管理员姓名至少填写 2 个字符'
+
+  const username = form.adminUsername.trim()
+  if (username.length < 2) return '登录账号至少填写 2 个字符'
+  if (!usernamePattern.test(username)) return '登录账号只能包含中英文、数字、点、下划线或连字符'
+
+  const password = form.adminPassword
+  if (password.length < 12 || password.length > 200) return '登录密码长度必须为 12–200 个字符'
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password) || !/[^\p{L}\p{N}]/u.test(password)) {
+    return '登录密码必须同时包含大写字母、小写字母、数字和符号'
+  }
+  if (username.length >= 3 && password.toLowerCase().includes(username.toLowerCase())) {
+    return '登录密码不能包含完整登录账号'
+  }
+  if (password !== form.confirmPassword) return '两次输入的密码不一致'
+  if (!accepted.value) return '请先勾选确认数据边界'
+  return ''
+}
+
+function responseErrorMessage(error: any) {
+  const violations = error.response?.data?.violations
+  if (Array.isArray(violations) && violations.length) {
+    const messages = violations.map((item: any) => item?.message).filter(Boolean)
+    if (messages.length) return [...new Set(messages)].join('；')
+  }
+  return error.response?.data?.message || error.message || '初始化失败'
+}
 
 async function submit() {
-  if (!canSubmit.value) {
-    ElMessage.warning('请完整填写初始化信息并确认数据边界')
-    return
-  }
-  if (form.adminPassword !== form.confirmPassword) {
-    ElMessage.error('两次输入的密码不一致')
+  submissionError.value = ''
+  const validationError = firstValidationError()
+  if (validationError) {
+    submissionError.value = validationError
+    ElMessage.warning(validationError)
     return
   }
   loading.value = true
@@ -51,7 +82,9 @@ async function submit() {
       await router.replace('/login')
       return
     }
-    ElMessage.error(error.response?.data?.message || error.message || '初始化失败')
+    const message = responseErrorMessage(error)
+    submissionError.value = message
+    ElMessage.error(message)
   } finally {
     loading.value = false
   }
@@ -127,7 +160,8 @@ async function submit() {
           <el-checkbox v-model="accepted" class="setup-accept">
             我已了解：该数据库只服务当前项目，初始化信息提交后不能再次通过此页面修改
           </el-checkbox>
-          <el-button type="primary" native-type="submit" :loading="loading" :disabled="!canSubmit" class="login-submit setup-submit">
+          <el-alert v-if="submissionError" :title="submissionError" type="error" :closable="false" show-icon class="setup-error-note" />
+          <el-button type="primary" native-type="submit" :loading="loading" class="login-submit setup-submit">
             创建项目并进入系统
           </el-button>
         </el-form>

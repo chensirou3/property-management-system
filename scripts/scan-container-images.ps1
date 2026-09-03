@@ -1,9 +1,9 @@
 [CmdletBinding()]
 param(
     [string[]]$Images = @(
-        'pms3-replica-api:latest',
-        'pms3-replica-web:latest',
-        'pms3-replica-mysql:8.4-hardened',
+        'property-management-system-api:latest',
+        'property-management-system-web:latest',
+        'property-management-system-mysql:8.4-hardened',
         'redis:7.4-alpine'
     ),
     [string[]]$JavaImages = @()

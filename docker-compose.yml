@@ -1,8 +1,12 @@
-name: pms3-replica
+# Every fresh delivery generates a stable installation ID in .env. This keeps
+# containers, networks, and named volumes isolated even when several copies are
+# tested on the same computer.
+name: ${COMPOSE_PROJECT_NAME:-property-management-system}
 
 services:
   mysql:
-    image: pms3-replica-mysql:8.4-hardened
+    image: property-management-system-mysql:8.4-hardened
+    restart: unless-stopped
     build:
       context: ./deploy/mysql
     environment:
@@ -26,6 +30,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}"]
     ports:
       - "127.0.0.1:${PMS_REDIS_HOST_PORT:-6379}:6379"
@@ -40,6 +45,8 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
 
   api:
+    image: property-management-system-api:latest
+    restart: unless-stopped
     build:
       context: ./apps/pms-api
     environment:
@@ -73,6 +80,8 @@ services:
       retries: 30
 
   web:
+    image: property-management-system-web:latest
+    restart: unless-stopped
     build:
       context: ./apps/admin-web
     ports:
@@ -80,6 +89,11 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
 volumes:
   mysql80-data:

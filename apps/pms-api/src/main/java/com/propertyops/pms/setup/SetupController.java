@@ -31,12 +31,17 @@ public class SetupController {
     }
 
     public record InitializeRequest(
-            @NotBlank @Size(min = 2, max = 160) String companyName,
-            @NotBlank @Size(min = 2, max = 160) String projectName,
-            @NotBlank @Size(min = 2, max = 80)
+            @NotBlank(message = "物业企业名称不能为空")
+            @Size(min = 2, max = 160, message = "物业企业名称长度必须为 2–160 个字符") String companyName,
+            @NotBlank(message = "项目名称不能为空")
+            @Size(min = 2, max = 160, message = "项目名称长度必须为 2–160 个字符") String projectName,
+            @NotBlank(message = "登录账号不能为空")
+            @Size(min = 2, max = 80, message = "登录账号长度必须为 2–80 个字符")
             @Pattern(regexp = "^[\\p{L}\\p{N}._-]+$", message = "账号只能包含中英文、数字、点、下划线或连字符")
             String adminUsername,
-            @NotBlank @Size(min = 2, max = 120) String adminDisplayName,
-            @NotBlank @Size(min = 12, max = 200) String adminPassword
+            @NotBlank(message = "管理员姓名不能为空")
+            @Size(min = 2, max = 120, message = "管理员姓名长度必须为 2–120 个字符") String adminDisplayName,
+            @NotBlank(message = "登录密码不能为空")
+            @Size(min = 12, max = 200, message = "登录密码长度必须为 12–200 个字符") String adminPassword
     ) {}
 }

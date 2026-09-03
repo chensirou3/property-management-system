@@ -4,7 +4,7 @@
 
     [string]$OutputParent,
 
-    [string]$DeliveryName = '物业管理系统-交付版-2026-09-03'
+    [string]$DeliveryName = '物业管理系统-便携交付版-v0.1.4-2026-09-03'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -98,7 +98,7 @@ try {
 
     Compress-Archive -Path (Join-Path $deliveryDirectory '*') -DestinationPath $deliveryZip -CompressionLevel Optimal
     $zipHash = (Get-FileHash -LiteralPath $deliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
-    Set-Content -LiteralPath ($deliveryZip + '.sha256') -Value "$zipHash  $([System.IO.Path]::GetFileName($deliveryZip))" -Encoding ascii
+    [IO.File]::WriteAllText(($deliveryZip + '.sha256'), "$zipHash  $([IO.Path]::GetFileName($deliveryZip))`r`n", [Text.UTF8Encoding]::new($false))
 
     $completed = $true
 

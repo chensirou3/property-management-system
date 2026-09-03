@@ -180,6 +180,7 @@ button, input, textarea, select { font: inherit; }
 .setup-data-note { margin-top: 4px; }
 .setup-data-note .el-alert__description { line-height: 1.65; }
 .setup-accept { margin: 17px 0 2px; color: #647087; }
+.setup-error-note { margin-top: 12px; }
 .setup-submit { margin-top: 14px; }
 
 .password-change-page { min-height: 100vh; color: #1f2d3d; background: #f3f6fa; }
