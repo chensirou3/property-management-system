@@ -51,6 +51,18 @@ try {
     }
     Copy-Item -LiteralPath $workbookResolved -Destination (Join-Path $sampleDirectory '物业管理系统-模拟导入数据-32条合格1条隔离.xlsx')
 
+    $convenienceCopies = @(
+        @{ Source = 'delivery\物业管理系统交付版使用说明.md'; Destination = '物业管理系统交付版使用说明.md' }
+        @{ Source = 'delivery\交付清单.md'; Destination = '交付清单.md' }
+        @{ Source = 'delivery\最终交付测试报告-2026-09-03.md'; Destination = '最终交付测试报告-2026-09-03.md' }
+        @{ Source = 'delivery\sample-data\物业管理系统-模拟导入-32条合格1条隔离.json'; Destination = '物业管理系统-模拟导入-32条合格1条隔离.json' }
+        @{ Source = 'delivery\sample-data\物业管理系统-模拟导入数据-32条合格1条隔离.xlsx'; Destination = '物业管理系统-模拟导入数据-32条合格1条隔离.xlsx' }
+    )
+    foreach ($copy in $convenienceCopies) {
+        Copy-Item -LiteralPath (Join-Path $deliveryDirectory $copy.Source) `
+            -Destination (Join-Path $deliveryDirectory $copy.Destination)
+    }
+
     $forbiddenDirectories = @('.git', 'node_modules', 'target', 'dist', 'coverage', 'playwright-report', 'test-results', '.artifacts', '.tools', 'e2e')
     $forbidden = Get-ChildItem -LiteralPath $deliveryDirectory -Recurse -Force | Where-Object {
         ($_.PSIsContainer -and $forbiddenDirectories -contains $_.Name) -or
