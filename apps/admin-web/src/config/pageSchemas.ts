@@ -56,16 +56,13 @@ export const pageSchemas: Record<string, PageSchema> = {
     allowCreate: false,
     allowArchive: false,
     form: [
-      { prop: 'enterprise_id', label: '所属企业', type: 'select', required: true, options: [
-        { label: '合成物业集团', value: '31000000-0000-0000-0000-000000000001' },
-      ] },
       { prop: 'name', label: '小区名称', required: true },
       { prop: 'managed_area', label: '管理面积（㎡）', type: 'number', required: true },
       { prop: 'address', label: '地址', type: 'textarea' },
       { prop: 'contact_name', label: '服务中心名称' },
       { prop: 'status', label: '状态', type: 'select', required: true, options: statusOptions.slice(0, 2) },
     ],
-    defaults: { enterprise_id: '31000000-0000-0000-0000-000000000001', status: 'ACTIVE', managed_area: '0' },
+    defaults: { status: 'ACTIVE', managed_area: '0' },
     description: '当前为单项目独立数据库：可维护本项目名称和档案，但不能新增或停用第二个项目。',
   }),
   '/archives/grids': base('grids', 'property', [
@@ -280,8 +277,8 @@ export const pageSchemas: Record<string, PageSchema> = {
   ]),
   '/metering/share-preview': base('meter-share-rules', 'meter', [
     { prop: 'code', label: '规则编码', width: 150 }, { prop: 'name', label: '待试算规则', minWidth: 240 },
-    { prop: 'strategy_code', label: '演示策略', width: 160 }, state(),
-  ], { description: '公摊公式为可替换演示策略，尚未宣称生产口径。' }),
+    { prop: 'strategy_code', label: '规则策略', width: 160 }, state(),
+  ], { description: '公摊公式为可替换策略，正式使用前必须确认项目业务口径。' }),
   '/metering/replacements': base('meter-replacements', 'meter', [
     { prop: 'old_meter_id', label: '旧表 ID', minWidth: 220 }, { prop: 'new_meter_id', label: '新表 ID', minWidth: 220 },
     { prop: 'old_final_reading', label: '旧表末次读数', width: 140 }, { prop: 'new_initial_reading', label: '新表初始读数', width: 140 },

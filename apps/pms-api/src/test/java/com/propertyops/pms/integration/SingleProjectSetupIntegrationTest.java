@@ -43,6 +43,7 @@ class SingleProjectSetupIntegrationTest {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("spring.flyway.placeholders.formalEmptyBaseline", () -> "true");
         registry.add("pms.bootstrap.admin-username", () -> "");
         registry.add("pms.bootstrap.admin-password", () -> "");
         registry.add("pms.security.jwt-secret", () -> "setup-test-jwt-secret-with-more-than-32-characters");
@@ -54,6 +55,8 @@ class SingleProjectSetupIntegrationTest {
 
     @Test
     void initializesExactlyOnceAndExposesOnlyTheConfiguredProject() throws Exception {
+        assertEmptyBusinessBaseline();
+
         mockMvc.perform(get("/api/v1/setup/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.initialized").value(false))
@@ -119,5 +122,32 @@ class SingleProjectSetupIntegrationTest {
         assertThat(jdbc.queryForObject(
                 "SELECT COUNT(*) FROM audit_event WHERE action_code='system:initialize'",
                 Map.of(), Long.class)).isEqualTo(1L);
+        assertThat(count("enterprise")).isEqualTo(1L);
+        assertThat(count("community")).isEqualTo(1L);
+        assertThat(count("organization_unit")).isEqualTo(2L);
+        assertThat(count("dashboard_widget_configuration")).isEqualTo(4L);
+        assertThat(count("asset")).isZero();
+        assertThat(count("customer")).isZero();
+        assertThat(count("fee_definition")).isZero();
+        assertThat(count("bill")).isZero();
+        assertThat(count("visitor_record")).isZero();
+    }
+
+    private void assertEmptyBusinessBaseline() {
+        assertThat(count("enterprise")).isZero();
+        assertThat(count("community")).isZero();
+        assertThat(count("organization_unit")).isZero();
+        assertThat(count("asset")).isZero();
+        assertThat(count("customer")).isZero();
+        assertThat(count("fee_definition")).isZero();
+        assertThat(count("fee_standard")).isZero();
+        assertThat(count("fee_allocation")).isZero();
+        assertThat(count("bill")).isZero();
+        assertThat(count("visitor_record")).isZero();
+        assertThat(count("sys_user")).isZero();
+    }
+
+    private long count(String table) {
+        return jdbc.getJdbcTemplate().queryForObject("SELECT COUNT(*) FROM " + table, Long.class);
     }
 }

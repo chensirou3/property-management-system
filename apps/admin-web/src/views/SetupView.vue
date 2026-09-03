@@ -122,7 +122,7 @@ async function submit() {
 
           <el-alert type="info" :closable="false" show-icon class="setup-data-note">
             <template #title>数据说明</template>
-            系统内置数据全部为合成演示数据。正式使用前，请在“数据迁移”页面按模板导入并核对本项目业务数据。
+            系统不会预置房屋、客户、车位、费用、账单或访客数据。首次配置完成后，请在“数据迁移”页面按模板导入并核对正式业务数据。
           </el-alert>
           <el-checkbox v-model="accepted" class="setup-accept">
             我已了解：该数据库只服务当前项目，初始化信息提交后不能再次通过此页面修改

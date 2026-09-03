@@ -219,7 +219,7 @@ onMounted(loadWorkbench)
       <div><span class="section-kicker">METER GOVERNANCE</span><h2>计量数据闭环</h2><p>主档、跨期连续读数、异常复核、公摊版本、换表凭证与账单对账使用同一条证据链。</p></div>
       <el-button :icon="Refresh" @click="loadWorkbench">刷新状态</el-button>
     </div>
-    <el-alert title="IoT 当前为本地可替换模拟适配器；公摊为明确标记的合成假设规则，不能作为生产口径承诺。" type="warning" show-icon :closable="false" />
+    <el-alert title="IoT 当前为本地可替换模拟适配器；公摊规则需按项目实际业务口径确认后使用。" type="warning" show-icon :closable="false" />
 
     <div class="summary-grid">
       <div><strong>{{ workbench.summary?.meterCount || 0 }}</strong><span>仪表主档</span></div>
@@ -258,7 +258,7 @@ onMounted(loadWorkbench)
     </el-card>
 
     <el-card v-else-if="mode === 'share-preview'" class="workflow-card" shadow="never">
-      <template #header><div class="card-heading"><div><span class="section-kicker">VERSIONED SHARE</span><h3>公摊规则版本试算</h3></div><el-tag type="warning">合成假设口径</el-tag></div></template>
+      <template #header><div class="card-heading"><div><span class="section-kicker">VERSIONED SHARE</span><h3>公摊规则版本试算</h3></div><el-tag type="warning">待业务确认</el-tag></div></template>
       <el-form :model="shareForm" inline><el-form-item label="草稿批次"><el-select v-model="shareForm.batchId" style="width:230px"><el-option v-for="item in draftBatches" :key="item.id" :label="item.batchNo" :value="item.id" /></el-select></el-form-item><el-form-item label="有效规则"><el-select v-model="shareForm.ruleId" style="width:240px"><el-option v-for="item in rules" :key="item.id" :label="`${item.name} · V${item.activeVersionNo}`" :value="item.id" /></el-select></el-form-item><el-form-item label="待分摊用量"><el-input v-model="shareForm.totalUsage" type="number" style="width:150px" /></el-form-item><el-button plain type="primary" @click="previewShare">试算</el-button><el-button type="primary" :disabled="!shareItems.length" @click="applyShare">应用并固化快照</el-button></el-form>
       <el-table :data="shareItems" height="420"><el-table-column prop="assetName" label="资产" min-width="220" /><el-table-column prop="area" label="分摊依据（面积）" width="170" /><el-table-column prop="allocatedUsage" label="分摊用量" width="150" /></el-table>
     </el-card>

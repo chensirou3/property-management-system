@@ -14,7 +14,7 @@ public class PlatformController {
     Map<String, Object> runtime() {
         return Map.of(
                 "name", "物业管理系统",
-                "environment", "synthetic-data",
+                "environment", "formal-delivery",
                 "paymentAdapter", "simulator",
                 "invoiceAdapter", "simulator",
                 "bankAdapter", "simulator",

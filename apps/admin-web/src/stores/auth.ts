@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (!username.trim() || !password) throw new Error('请输入账号和密码')
       token.value = `mock-${crypto.randomUUID()}`
       user.value = {
-        id: 'synthetic-admin', username, displayName: username,
+        id: 'mock-admin', username, displayName: username,
         roles: ['PLATFORM_ADMIN'],
         permissions: mockPermissions,
         projectIds: ['30000000-0000-0000-0000-000000000001'],
@@ -59,7 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value || user.value) return
     if (token.value.startsWith('mock-')) {
       user.value = {
-        id: 'synthetic-admin', username: 'admin', displayName: '系统管理员', roles: ['PLATFORM_ADMIN'],
+        id: 'mock-admin', username: 'admin', displayName: '系统管理员', roles: ['PLATFORM_ADMIN'],
         permissions: mockPermissions,
         projectIds: ['30000000-0000-0000-0000-000000000001'],
         passwordChangeRequired: false,
@@ -80,7 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function loadProjects() {
     if (!token.value) return
     if (token.value.startsWith('mock-')) {
-      projects.value = [{ id: '30000000-0000-0000-0000-000000000001', name: '优山美地（合成示范项目）', status: 'ACTIVE' }]
+      projects.value = [{ id: 'mock-project', name: '本地测试项目', status: 'ACTIVE' }]
     } else {
       const { data } = await http.get('/data/communities', { params: { page: 1, size: 100, sort: 'name,asc', status: 'ACTIVE' } })
       projects.value = data.items

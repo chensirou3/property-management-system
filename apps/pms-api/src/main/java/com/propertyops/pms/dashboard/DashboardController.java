@@ -85,7 +85,7 @@ public class DashboardController {
                     OR (f.target_type='METER'
                         AND (f.meter_id IS NULL OR f.asset_id IS NOT NULL OR m.id IS NULL)))
                 """, params, Long.class));
-        quality.put("synthetic", true);
+        quality.put("demoData", false);
 
         return Map.of(
                 "communityId", communityId,

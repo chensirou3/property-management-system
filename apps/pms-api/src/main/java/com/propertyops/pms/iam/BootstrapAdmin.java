@@ -52,6 +52,13 @@ public class BootstrapAdmin implements ApplicationRunner {
         var ids = jdbc.queryForList("SELECT id FROM sys_user WHERE username = :username", parameters, String.class);
         String userId;
         if (ids.isEmpty()) {
+            var projectIds = jdbc.queryForList(
+                    "SELECT id FROM community WHERE status='ACTIVE' ORDER BY created_at, id",
+                    Map.of(), String.class);
+            if (projectIds.isEmpty()) {
+                log.info("Bootstrap administrator deferred because no project exists; use the one-time web setup");
+                return;
+            }
             passwordPolicy.validate(username, password);
             userId = UUID.randomUUID().toString();
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);

@@ -18,6 +18,8 @@ spring:
     enabled: true
     locations: classpath:db/migration
     validate-on-migrate: true
+    placeholders:
+      formalEmptyBaseline: ${PMS_FORMAL_EMPTY_BASELINE:false}
   data:
     redis:
       host: ${REDIS_HOST:localhost}

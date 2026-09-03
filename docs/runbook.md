@@ -1,5 +1,7 @@
 # 本地运行与运维手册
 
+> 当前正式交付默认启用 `PMS_FORMAL_EMPTY_BASELINE=true`。全新数据库执行 Flyway V1—V24 后只保留系统元数据，业务数据为空，并在网页完成一次性企业、项目和管理员配置。本文后部出现的 V23/合成种子计数是历史 QA 校验口径。
+
 ## 前置环境
 
 - Java 17、Maven 3.9；Node.js 22、npm；Docker Desktop / Compose。

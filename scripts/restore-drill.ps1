@@ -79,7 +79,7 @@ try {
     $productionConnectedVisitors = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM visitor_record WHERE production_connected=TRUE')
     $checksumMismatches = [int](Invoke-MySql $drillDatabase 'SELECT COUNT(*) FROM outbox_event WHERE payload_checksum<>SHA2(payload_json,256)')
 
-    if ($schemaVersion -ne 23) { throw "Expected Flyway v23, restored v$schemaVersion." }
+    if ($schemaVersion -ne 24) { throw "Expected Flyway v24, restored v$schemaVersion." }
     if ($tableCount -ne 91) { throw "Expected 91 base tables, restored $tableCount." }
     if ($reportCount -ne 22) { throw "Expected 22 enabled reports, restored $reportCount." }
     if ($adapterCount -ne 5 -or $productionReady -ne 0) { throw 'Fail-closed adapter policy reconciliation failed.' }

@@ -13,7 +13,7 @@ let loadGeneration = 0
 
 const stats = computed(() => [
   { label: '房屋资产', value: data.value.counts.rooms || '0', suffix: '套', icon: House, tone: 'blue', change: '服务端实时统计' },
-  { label: '客户档案', value: data.value.counts.customers || '0', suffix: '位', icon: User, tone: 'green', change: '合成隐私数据' },
+  { label: '客户档案', value: data.value.counts.customers || '0', suffix: '位', icon: User, tone: 'green', change: '服务端实时统计' },
   { label: '车位资产', value: data.value.counts.parking_spaces || '0', suffix: '个', icon: House, tone: 'amber', change: '服务端实时统计' },
   { label: '费用定义', value: data.value.counts.fee_definitions || '0', suffix: '项', icon: Money, tone: 'violet',
     change: `${data.value.counts.fee_standards || 0} 个计费标准 · ${data.value.counts.asset_allocations || 0} 条资产分配 · ${data.value.counts.meter_allocations || 0} 条仪表分配` },
@@ -36,7 +36,15 @@ const quality = computed(() => [
   violationCheck('费用分配无孤儿键', data.value.quality.orphan_allocations),
   { label: '仪表主档数量', value: null, status: `${data.value.counts.meters || 0} 条（实时统计）` },
 ])
-const meterNote = computed(() => `${activePeriod.value}使用模拟仪表与合成读数，不代表真实设备状态`)
+const meterNote = computed(() => `${activePeriod.value}计量数据以已审核记录为准；未接入生产 IoT 前不会自动生成读数`)
+const hasFinanceData = computed(() => ['receivable', 'received', 'outstanding']
+  .some((key) => Number(data.value.finance?.[key] || 0) > 0))
+const collectionRate = computed(() => Math.max(0, Math.min(100, Number(data.value.finance?.collection_rate || 0))))
+
+function formatAmount(value: unknown) {
+  const amount = Number(value ?? 0)
+  return Number.isFinite(amount) ? amount.toFixed(2) : '0.00'
+}
 
 async function load() {
   const generation = ++loadGeneration
@@ -70,8 +78,8 @@ watch(() => auth.currentProjectId, load, { immediate: true })
     <section class="welcome-card">
       <div>
         <span class="section-kicker">项目运营概览</span>
-        <h2>你好，{{ auth.currentProject?.name || '合成项目' }}的数据已经准备就绪</h2>
-        <p>当前为合成试点项目。核心资产规模按调查统计生成，个人信息均为新造测试值。</p>
+        <h2>{{ auth.currentProject?.name || '当前项目' }}运营数据概览</h2>
+        <p>当前项目使用独立数据库；请通过档案维护或数据迁移导入正式业务数据。</p>
       </div>
       <el-button type="primary" @click="load">刷新数据质量 <el-icon class="el-icon--right"><ArrowRight /></el-icon></el-button>
     </section>
@@ -96,13 +104,14 @@ watch(() => auth.currentProjectId, load, { immediate: true })
           </el-radio-group>
         </header>
         <div class="finance-strip">
-          <div><span>应收金额</span><strong>¥ {{ data.finance.receivable || '0.00' }}</strong><small>合成账期</small></div>
-          <div><span>实收金额</span><strong>¥ {{ data.finance.received || '0.00' }}</strong><small>本地流水</small></div>
-          <div><span>待收金额</span><strong>¥ {{ data.finance.outstanding || '0.00' }}</strong><small>余额守恒</small></div>
-          <div><span>收缴率</span><strong>{{ data.finance.collection_rate || '0.00' }}%</strong><small>演示口径</small></div>
+          <div><span>应收金额</span><strong>¥ {{ formatAmount(data.finance.receivable) }}</strong><small>当前统计周期</small></div>
+          <div><span>实收金额</span><strong>¥ {{ formatAmount(data.finance.received) }}</strong><small>本地流水</small></div>
+          <div><span>待收金额</span><strong>¥ {{ formatAmount(data.finance.outstanding) }}</strong><small>余额守恒</small></div>
+          <div><span>收缴率</span><strong>{{ formatAmount(data.finance.collection_rate) }}%</strong><small>实时计算</small></div>
         </div>
         <div class="chart-placeholder">
-          <div v-for="height in [42, 65, 54, 82, 73, 92, 68, 78, 88, 64, 74, 86]" :key="height" class="bar" :style="{ height: `${height}%` }"></div>
+          <el-progress v-if="hasFinanceData" type="dashboard" :percentage="collectionRate" :width="150" color="#2f7b65" />
+          <el-empty v-else description="暂无收费数据" :image-size="58" />
         </div>
         <p class="simulation-caption"><el-icon><Stopwatch /></el-icon>{{ meterNote }}</p>
       </article>

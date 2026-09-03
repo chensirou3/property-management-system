@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
-import { Check, Download, Refresh, Upload } from '@element-plus/icons-vue'
+import { Download, Refresh, Upload } from '@element-plus/icons-vue'
 import { http } from '../api/http'
 import DataGrid, { type DataGridColumn } from '../components/shared/DataGrid.vue'
 import QueryPanel from '../components/shared/QueryPanel.vue'
@@ -91,45 +91,6 @@ async function openDetail(row: Record<string, any>) {
   } finally {
     detailLoading.value = false
   }
-}
-
-function sampleRows(): SourceRow[] {
-  const suffix = new Date().toISOString().replace(/\D/g, '').slice(2, 14)
-  const result: SourceRow[] = [
-    { resourceType: 'PROJECT', sourceId: `SRC-PROJECT-${suffix}`, data: { name: `G4 验收项目 ${suffix}` } },
-    { resourceType: 'BUILDING', sourceId: `SRC-BUILDING-${suffix}`, data: {
-      projectSourceId: `SRC-PROJECT-${suffix}`, code: `MIG-B-${suffix}`, name: `迁移验收楼栋 ${suffix}`,
-      buildingType: 'RESIDENTIAL', floorCount: 10,
-    } },
-  ]
-  for (let index = 1; index <= 10; index += 1) {
-    const number = String(index).padStart(2, '0')
-    result.push({ resourceType: 'ASSET', sourceId: `SRC-ROOM-${suffix}-${number}`, data: {
-      buildingSourceId: `SRC-BUILDING-${suffix}`, assetType: 'ROOM', code: `MIG-R-${suffix}-${number}`,
-      displayName: `迁移验收房屋 ${number}`, floorNo: String(index), buildingArea: 80 + index,
-      usableArea: 60 + index, validFrom: '2026-08-25',
-    } })
-    result.push({ resourceType: 'CUSTOMER', sourceId: `SRC-CUSTOMER-${suffix}-${number}`, data: {
-      customerNo: `MIG-C-${suffix}-${number}`, displayName: `迁移验收客户 ${number}`,
-      customerType: 'PERSON', customerClass: 'OWNER', gender: 'UNKNOWN', remarks: 'G4 合成验收样本',
-    } })
-    result.push({ resourceType: 'RELATION', sourceId: `SRC-RELATION-${suffix}-${number}`, data: {
-      customerSourceId: `SRC-CUSTOMER-${suffix}-${number}`, assetSourceId: `SRC-ROOM-${suffix}-${number}`,
-      relationType: 'OWNER', primaryRelation: true, startDate: '2026-08-25',
-    } })
-  }
-  result.push({ resourceType: 'RELATION', sourceId: `SRC-INVALID-${suffix}`, data: {
-    customerSourceId: `SRC-MISSING-${suffix}`, assetSourceId: `SRC-ROOM-${suffix}-01`,
-    relationType: 'OWNER', primaryRelation: true, startDate: '2026-08-25',
-  } })
-  return result
-}
-
-function openSample() {
-  createRows.value = sampleRows()
-  createForm.sourceName = `G4-32条合格+1条隔离-${new Date().toISOString().slice(0, 10)}.json`
-  createForm.mappingVersion = 'property-v1'
-  createVisible.value = true
 }
 
 async function handleFile(file: UploadFile) {
@@ -282,7 +243,6 @@ onMounted(() => void load())
         <el-upload v-if="canImport" action="#" accept=".json,application/json" :auto-upload="false" :show-file-list="false" :on-change="handleFile">
           <el-button type="primary" :icon="Upload">上传 JSON</el-button>
         </el-upload>
-        <el-button v-if="canImport" :icon="Check" @click="openSample">载入 32+1 验收样本</el-button>
         <el-button v-if="canExport" :icon="Download" @click="downloadTemplate">下载字段模板</el-button>
         <el-button :icon="Refresh" @click="load">刷新</el-button>
       </template>

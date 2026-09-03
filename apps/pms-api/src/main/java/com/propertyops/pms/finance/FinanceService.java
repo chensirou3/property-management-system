@@ -691,7 +691,7 @@ public class FinanceService {
                      status, template_version, data_snapshot, snapshot_checksum, original_receipt_id,
                      event_reason, issued_at, created_at)
                 VALUES (:id, :communityId, :orderId, :segmentId, :sequenceNo, :number,
-                        'ISSUED', 'SYN-V2', :snapshot, :checksum, :originalReceiptId,
+                        'ISSUED', 'PMS-V2', :snapshot, :checksum, :originalReceiptId,
                         :reason, :now, :now)
                 """, new MapSqlParameterSource("id", receiptId).addValue("communityId", communityId)
                 .addValue("orderId", orderId).addValue("segmentId", number.segmentId())

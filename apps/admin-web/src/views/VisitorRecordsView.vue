@@ -22,7 +22,7 @@ const visitStatus = ref('')
 const dateRange = ref<string[]>([])
 const dialogVisible = ref(false)
 const submitting = ref(false)
-const form = reactive({ visitorNameMasked: '合成访客丁**', visitorMobileMasked: '136****0004', hostNameMasked: '合成住户丁**', assetName: '4号楼-1单元-0401', scheduledAt: dayjs().add(1, 'day').format('YYYY-MM-DD HH:mm:ss') })
+const form = reactive({ visitorNameMasked: '', visitorMobileMasked: '', hostNameMasked: '', assetName: '', scheduledAt: dayjs().add(1, 'day').format('YYYY-MM-DD HH:mm:ss') })
 
 const canWrite = computed(() => auth.hasPermission('visitor:write'))
 const canImport = computed(() => auth.hasPermission('visitor:import'))
@@ -53,7 +53,7 @@ function reset() {
 }
 
 function openRegister() {
-  Object.assign(form, { visitorNameMasked: '合成访客丁**', visitorMobileMasked: '136****0004', hostNameMasked: '合成住户丁**', assetName: '4号楼-1单元-0401', scheduledAt: dayjs().add(1, 'day').format('YYYY-MM-DD HH:mm:ss') })
+  Object.assign(form, { visitorNameMasked: '', visitorMobileMasked: '', hostNameMasked: '', assetName: '', scheduledAt: dayjs().add(1, 'day').format('YYYY-MM-DD HH:mm:ss') })
   dialogVisible.value = true
 }
 
@@ -102,11 +102,11 @@ function exportRows() {
 function validateImport(uploadFile: UploadFile) {
   if (!uploadFile.raw) return
   tasks.createImportValidationTask({
-    title: '访客模拟导入校验', sourcePath: '/security/visitor-records', projectId: auth.currentProjectId,
+    title: '访客导入校验', sourcePath: '/security/visitor-records', projectId: auth.currentProjectId,
     file: uploadFile.raw, expectedHeaders: ['访客姓名（脱敏）', '联系方式（脱敏）', '受访人（脱敏）', '访问房产', '预约时间'],
   })
   tasks.openDrawer()
-  ElMessage.info('文件仅进入模拟导入校验；不会连接真实门禁或写入未脱敏个人信息')
+  ElMessage.info('文件仅进入导入校验；不会连接真实门禁或写入未脱敏个人信息')
 }
 
 watch([() => auth.currentProjectId, page, pageSize], load, { immediate: true })
@@ -114,7 +114,7 @@ watch([() => auth.currentProjectId, page, pageSize], load, { immediate: true })
 
 <template>
   <section class="visitor-workbench">
-    <el-alert type="warning" :closable="false" show-icon title="当前仅使用 IOT_SIMULATOR：没有真实门禁连接，productionConnected=false；姓名与联系方式只接受合成或脱敏值。" />
+    <el-alert type="warning" :closable="false" show-icon title="当前仅使用 IOT_SIMULATOR：没有真实门禁连接，productionConnected=false；姓名与联系方式只接受脱敏值。" />
     <el-alert v-if="error" type="error" :closable="false" show-icon :title="error" />
 
     <el-card shadow="never">
@@ -153,11 +153,11 @@ watch([() => auth.currentProjectId, page, pageSize], load, { immediate: true })
           </template>
         </el-table-column>
       </el-table>
-      <div class="visitor-pagination"><span>共 {{ total }} 条合成脱敏记录</span><el-pagination v-model:current-page="page" v-model:page-size="pageSize" layout="sizes, prev, pager, next" :total="total" :page-sizes="[20,50,100]" /></div>
+      <div class="visitor-pagination"><span>共 {{ total }} 条脱敏记录</span><el-pagination v-model:current-page="page" v-model:page-size="pageSize" layout="sizes, prev, pager, next" :total="total" :page-sizes="[20,50,100]" /></div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" title="登记模拟访客" width="540px">
-      <el-alert type="info" :closable="false" show-icon title="只允许合成/脱敏值；此操作不会接触真实访客或门禁设备。" />
+    <el-dialog v-model="dialogVisible" title="登记访客（未接门禁）" width="540px">
+      <el-alert type="info" :closable="false" show-icon title="姓名和联系方式必须使用脱敏值；当前不会向门禁设备发送数据。" />
       <el-form label-position="top" class="register-form">
         <el-form-item label="访客姓名（脱敏）" required><el-input v-model="form.visitorNameMasked" /></el-form-item>
         <el-form-item label="联系方式（脱敏）" required><el-input v-model="form.visitorMobileMasked" placeholder="138****0001" /></el-form-item>

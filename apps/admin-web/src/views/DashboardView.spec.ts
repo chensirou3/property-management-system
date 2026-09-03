@@ -31,8 +31,8 @@ function mountDashboard(projectName: string, responseData: Record<string, any>) 
 describe('DashboardView', () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it('shows audited synthetic inventory and the simulator boundary', async () => {
-    const wrapper = mountDashboard('优山美地（合成示范项目）', {
+  it('shows project inventory and the production IoT boundary', async () => {
+    const wrapper = mountDashboard('正式项目', {
       counts: { rooms: '359', customers: 403, parking_spaces: '250', allocations: 773,
         asset_allocations: 743, meter_allocations: 30, fee_definitions: 22, fee_standards: 16, meters: 31 },
       finance: { receivable: '100.00', received: '50.00', outstanding: '50.00', collection_rate: '50.00' },
@@ -40,16 +40,16 @@ describe('DashboardView', () => {
       adapters: { payment: 'simulator' },
     })
     await flushPromises()
-    expect(wrapper.text()).toContain('优山美地')
+    expect(wrapper.text()).toContain('正式项目')
     expect(wrapper.text()).toContain('359')
     expect(wrapper.text()).toContain('743 条资产分配 · 30 条仪表分配')
     expect(wrapper.find('.quality-row').text()).toContain('房屋主档与明细一致性已通过')
     expect(wrapper.text()).toContain('31 条（实时统计）')
-    expect(wrapper.text()).toContain('模拟')
+    expect(wrapper.text()).toContain('未接入生产 IoT 前不会自动生成读数')
   })
 
   it('uses project-scoped violation counts instead of fixed inventory targets', async () => {
-    const wrapper = mountDashboard('海湾雅居（合成隔离项目）', {
+    const wrapper = mountDashboard('质量校验项目', {
       counts: { rooms: 1, customers: 1, parking_spaces: 1, allocations: 0,
         asset_allocations: 0, meter_allocations: 0, fee_definitions: 0, fee_standards: 0, meters: 1 },
       finance: { receivable: 0, received: 0, outstanding: 0, collection_rate: 0 },

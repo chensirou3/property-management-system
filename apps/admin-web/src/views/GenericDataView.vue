@@ -278,7 +278,7 @@ onBeforeUnmount(() => controller?.abort())
         <el-button v-if="canExport" :icon="Download" @click="createExport()">导出当前页</el-button>
         <el-button v-if="canPrint" :icon="Printer" @click="createPrint()">打印当前页</el-button>
       </template>
-      <template #summary><span class="record-summary">共 <strong>{{ total }}</strong> 条合成记录</span></template>
+      <template #summary><span class="record-summary">共 <strong>{{ total }}</strong> 条记录</span></template>
       <template #operations="{ row }">
         <el-button link type="primary" @click="openEdit(row)">查看</el-button>
         <el-button v-if="canWrite" link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
@@ -287,7 +287,7 @@ onBeforeUnmount(() => controller?.abort())
     </DataGrid>
 
     <el-drawer v-model="drawerVisible" :title="`${editing ? '编辑' : '新增'}${title}`" size="520px">
-      <el-alert type="info" :closable="false" show-icon title="本页面仅处理合成数据；修改使用乐观锁并记录审计。" />
+      <el-alert type="info" :closable="false" show-icon title="修改使用乐观锁并记录审计。" />
       <el-form label-position="top" class="drawer-form">
         <el-form-item v-for="field in schema?.form" :key="field.prop" :label="field.label" :required="field.required">
           <component :is="inputComponent(field)" v-model="form[field.prop]" style="width: 100%"

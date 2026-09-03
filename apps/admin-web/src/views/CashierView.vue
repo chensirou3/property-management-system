@@ -143,9 +143,12 @@ async function reverseLastPayment() {
 
 async function issueInvoice() {
   if (!lastPayment.value?.receiptId) return
+  const { value: title } = await ElMessageBox.prompt('请输入本次开票的购方名称。', '模拟开票', {
+    inputPattern: /\S+/, inputErrorMessage: '必须填写购方名称', confirmButtonText: '确认开票',
+  })
   try {
     const { data } = await http.post('/invoices:simulate', {
-      communityId: communityId.value, receiptId: lastPayment.value.receiptId, title: '本地演示客户',
+      communityId: communityId.value, receiptId: lastPayment.value.receiptId, title,
     })
     invoice.value = data
     ElMessage.success('模拟开票完成')

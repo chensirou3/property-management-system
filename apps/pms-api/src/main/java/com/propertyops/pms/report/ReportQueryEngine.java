@@ -203,7 +203,7 @@ public class ReportQueryEngine {
         response.put("drillDown", drillDown(code));
         response.put("appliedFilters", appliedFilters);
         response.put("filterSchemaVersion", 2);
-        response.put("syntheticEnvironment", true);
+        response.put("syntheticEnvironment", false);
         response.put("integrationMode", integrationMode(code));
         response.put("productionConnected", !Set.of(
                 "BILL_NOTIFICATIONS", "REMINDERS", "INVOICE_STATISTICS", "BANK_TRUST").contains(code));

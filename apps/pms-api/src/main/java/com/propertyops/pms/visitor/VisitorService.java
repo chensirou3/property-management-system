@@ -72,7 +72,7 @@ public class VisitorService {
         requireSimulatorReady();
         String id = UUID.randomUUID().toString();
         LocalDateTime now = now();
-        String visitNo = "SYN-VISIT-" + id.substring(0, 8).toUpperCase();
+        String visitNo = "VISIT-" + id.substring(0, 8).toUpperCase();
         jdbc.update("""
                 INSERT INTO visitor_record
                     (id,community_id,visit_no,visitor_name_masked,visitor_mobile_masked,host_name_masked,
@@ -143,8 +143,8 @@ public class VisitorService {
     }
 
     private void requireMasked(String value, String field) {
-        if (!value.contains("*") && !value.startsWith("合成")) {
-            throw new BusinessException("SENSITIVE_VALUE_NOT_MASKED", field + "必须使用合成或脱敏值", HttpStatus.UNPROCESSABLE_ENTITY);
+        if (!value.contains("*")) {
+            throw new BusinessException("SENSITIVE_VALUE_NOT_MASKED", field + "必须使用脱敏值", HttpStatus.UNPROCESSABLE_ENTITY);
         }
     }
 

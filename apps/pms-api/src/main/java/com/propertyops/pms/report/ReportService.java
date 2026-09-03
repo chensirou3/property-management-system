@@ -74,7 +74,7 @@ public class ReportService {
         if (replay != null) { requireSame(replay, hash); return withoutBlob(replay); }
         String id = UUID.randomUUID().toString();
         LocalDateTime now = now();
-        String watermark = "合成验收环境 | " + security.requirePrincipal().username() + " | " + now + " | " + code;
+        String watermark = "物业管理系统 | " + security.requirePrincipal().username() + " | " + now + " | " + code;
         jdbc.update("""
                 INSERT INTO report_export_job
                     (id,community_id,report_code,request_key,request_hash,export_format,filters_json,
@@ -147,7 +147,7 @@ public class ReportService {
         if (receipts.stream().anyMatch(row -> !"ISSUED".equals(row.get("status"))))
             throw conflict("只有已签发收据可以批量打印");
         String id = UUID.randomUUID().toString(); LocalDateTime now = now();
-        String watermark = "合成验收环境 | " + security.requirePrincipal().username() + " | " + now + " | RECEIPT";
+        String watermark = "物业管理系统 | " + security.requirePrincipal().username() + " | " + now + " | RECEIPT";
         jdbc.update("""
                 INSERT INTO receipt_print_job
                     (id,community_id,request_key,request_hash,output_format,template_version,watermark_text,

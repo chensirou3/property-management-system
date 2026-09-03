@@ -20,6 +20,7 @@ if (-not (Test-Path -LiteralPath $environmentFile)) {
         "PMS_CALLBACK_SIGNING_SECRET=$(New-PropertySystemSecret 48)"
         'PMS_BOOTSTRAP_ADMIN_USERNAME='
         'PMS_BOOTSTRAP_ADMIN_PASSWORD='
+        'PMS_FORMAL_EMPTY_BASELINE=true'
         'LOGIN_MAX_FAILURES=5'
         'LOGIN_WINDOW_MINUTES=15'
         'LOGIN_LOCK_MINUTES=15'

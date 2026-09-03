@@ -64,20 +64,23 @@ public class SetupService {
         String displayName = normalizeName(request.adminDisplayName(), "管理员姓名");
         passwordPolicy.validate(username, request.adminPassword());
 
-        String enterpriseId = requiredId("SELECT id FROM enterprise ORDER BY created_at, id LIMIT 1 FOR UPDATE");
-        String communityId = jdbc.query("""
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        String enterpriseId = optionalId(
+                "SELECT id FROM enterprise ORDER BY created_at, id LIMIT 1 FOR UPDATE", Map.of());
+        boolean createEnterprise = enterpriseId == null;
+        if (createEnterprise) {
+            enterpriseId = UUID.randomUUID().toString();
+        }
+        String communityId = optionalId("""
                 SELECT id FROM community
                  WHERE enterprise_id=:enterpriseId
                  ORDER BY created_at, id LIMIT 1 FOR UPDATE
-                """, Map.of("enterpriseId", enterpriseId), rs -> {
-            if (!rs.next()) {
-                throw new BusinessException("SETUP_BASELINE_MISSING", "初始化基线不存在，请重新部署干净数据库",
-                        HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            return rs.getString(1);
-        });
+                """, Map.of("enterpriseId", enterpriseId));
+        boolean createCommunity = communityId == null;
+        if (createCommunity) {
+            communityId = UUID.randomUUID().toString();
+        }
         String userId = UUID.randomUUID().toString();
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("enterpriseId", enterpriseId)
@@ -91,29 +94,124 @@ public class SetupService {
                 .addValue("roleId", ADMIN_ROLE_ID)
                 .addValue("now", now);
 
-        jdbc.update("""
-                UPDATE enterprise
-                   SET name=:companyName, status='ACTIVE', version=version+1, updated_at=:now
-                 WHERE id=:enterpriseId
-                """, parameters);
-        jdbc.update("""
-                UPDATE community
-                   SET name=CASE WHEN id=:communityId THEN :projectName ELSE name END,
-                       source_system=CASE WHEN id=:communityId THEN 'LOCAL_SETUP' ELSE source_system END,
-                       source_id=CASE WHEN id=:communityId THEN 'LOCAL-COMMUNITY-001' ELSE source_id END,
-                       status=CASE WHEN id=:communityId THEN 'ACTIVE' ELSE 'INACTIVE' END,
-                       version=version+1, updated_at=:now
-                 WHERE enterprise_id=:enterpriseId
-                """, parameters);
+        if (createEnterprise) {
+            jdbc.update("""
+                    INSERT INTO enterprise
+                        (id, code, name, status, version, created_at, updated_at)
+                    VALUES
+                        (:enterpriseId, 'LOCAL-ENTERPRISE-001', :companyName, 'ACTIVE', 0, :now, :now)
+                    """, parameters);
+        } else {
+            jdbc.update("""
+                    UPDATE enterprise
+                       SET name=:companyName, status='ACTIVE', version=version+1, updated_at=:now
+                     WHERE id=:enterpriseId
+                    """, parameters);
+        }
+
+        if (createCommunity) {
+            jdbc.update("""
+                    INSERT INTO community
+                        (id, enterprise_id, source_system, source_id, name, managed_area, status,
+                         version, created_at, updated_at)
+                    VALUES
+                        (:communityId, :enterpriseId, 'LOCAL_SETUP', 'LOCAL-COMMUNITY-001',
+                         :projectName, 0, 'ACTIVE', 0, :now, :now)
+                    """, parameters);
+        } else {
+            jdbc.update("""
+                    UPDATE community
+                       SET name=CASE WHEN id=:communityId THEN :projectName ELSE name END,
+                           source_system=CASE WHEN id=:communityId THEN 'LOCAL_SETUP' ELSE source_system END,
+                           source_id=CASE WHEN id=:communityId THEN 'LOCAL-COMMUNITY-001' ELSE source_id END,
+                           status=CASE WHEN id=:communityId THEN 'ACTIVE' ELSE 'INACTIVE' END,
+                           version=version+1, updated_at=:now
+                     WHERE enterprise_id=:enterpriseId
+                    """, parameters);
+        }
+
+        String headquartersId = optionalId("""
+                SELECT id FROM organization_unit
+                 WHERE enterprise_id=:enterpriseId AND community_id IS NULL
+                 ORDER BY created_at, id LIMIT 1 FOR UPDATE
+                """, Map.of("enterpriseId", enterpriseId));
+        if (headquartersId == null) {
+            headquartersId = UUID.randomUUID().toString();
+            parameters.addValue("headquartersId", headquartersId);
+            jdbc.update("""
+                    INSERT INTO organization_unit
+                        (id, enterprise_id, parent_id, community_id, code, name, organization_type,
+                         sort_order, status, version, created_at, updated_at)
+                    VALUES
+                        (:headquartersId, :enterpriseId, NULL, NULL, 'HQ', CONCAT(:companyName, '总部'),
+                         'COMPANY', 10, 'ACTIVE', 0, :now, :now)
+                    """, parameters);
+        } else {
+            parameters.addValue("headquartersId", headquartersId);
+            jdbc.update("""
+                    UPDATE organization_unit
+                       SET name=CONCAT(:companyName, '总部'), status='ACTIVE', version=version+1,
+                           updated_at=:now
+                     WHERE id=:headquartersId
+                    """, parameters);
+        }
+
+        String projectOrganizationId = optionalId("""
+                SELECT id FROM organization_unit
+                 WHERE enterprise_id=:enterpriseId AND community_id=:communityId
+                 ORDER BY created_at, id LIMIT 1 FOR UPDATE
+                """, Map.of("enterpriseId", enterpriseId, "communityId", communityId));
+        if (projectOrganizationId == null) {
+            parameters.addValue("projectOrganizationId", UUID.randomUUID().toString());
+            jdbc.update("""
+                    INSERT INTO organization_unit
+                        (id, enterprise_id, parent_id, community_id, code, name, organization_type,
+                         sort_order, status, version, created_at, updated_at)
+                    VALUES
+                        (:projectOrganizationId, :enterpriseId, :headquartersId, :communityId, 'PROJECT',
+                         CONCAT(:projectName, '项目部'), 'PROJECT', 20, 'ACTIVE', 0, :now, :now)
+                    """, parameters);
+        } else {
+            parameters.addValue("projectOrganizationId", projectOrganizationId);
+            jdbc.update("""
+                    UPDATE organization_unit
+                       SET parent_id=:headquartersId, name=CONCAT(:projectName, '项目部'), status='ACTIVE',
+                           version=version+1, updated_at=:now
+                     WHERE id=:projectOrganizationId
+                    """, parameters);
+        }
         jdbc.update("""
                 UPDATE organization_unit
-                   SET name=CASE
-                         WHEN community_id=:communityId THEN CONCAT(:projectName, '项目部')
-                         WHEN community_id IS NULL THEN CONCAT(:companyName, '总部')
-                         ELSE name END,
-                       status=CASE WHEN community_id IS NULL OR community_id=:communityId THEN 'ACTIVE' ELSE 'INACTIVE' END,
+                   SET status=CASE
+                         WHEN id IN (:headquartersId, :projectOrganizationId) THEN 'ACTIVE'
+                         ELSE 'INACTIVE' END,
                        version=version+1, updated_at=:now
                  WHERE enterprise_id=:enterpriseId
+                   AND id NOT IN (:headquartersId, :projectOrganizationId)
+                """, parameters);
+
+        jdbc.update("""
+                INSERT INTO dashboard_widget_configuration
+                    (id, community_id, role_code, widget_code, widget_name, metric_code, position_code,
+                     visible, refresh_interval_seconds, display_order, status, published_at, version,
+                     created_at, updated_at)
+                SELECT UUID(), :communityId, 'ALL', seed.widget_code, seed.widget_name, seed.metric_code,
+                       seed.position_code, seed.visible, seed.refresh_seconds, seed.display_order,
+                       'PUBLISHED', :now, 0, :now, :now
+                  FROM (
+                        SELECT 'ASSET_SUMMARY' widget_code, '资产概览' widget_name,
+                               'ASSET_COUNTS' metric_code, 'SUMMARY' position_code,
+                               TRUE visible, 300 refresh_seconds, 1 display_order
+                        UNION ALL SELECT 'FINANCE_OVERVIEW', '收费概览', 'COLLECTION_RATE', 'MAIN', TRUE, 300, 2
+                        UNION ALL SELECT 'DATA_QUALITY', '数据质量', 'DATA_QUALITY', 'SIDE', TRUE, 600, 3
+                        UNION ALL SELECT 'INTEGRATION_STATUS', '集成状态', 'INTEGRATION_STATUS', 'SIDE', FALSE, 600, 4
+                       ) seed
+                 WHERE NOT EXISTS (
+                       SELECT 1 FROM dashboard_widget_configuration existing
+                        WHERE existing.community_id=:communityId
+                          AND existing.role_code='ALL'
+                          AND existing.widget_code=seed.widget_code
+                 )
                 """, parameters);
         jdbc.update("""
                 INSERT INTO sys_user
@@ -159,14 +257,8 @@ public class SetupService {
         return normalized;
     }
 
-    private String requiredId(String sql) {
-        return jdbc.query(sql, Map.of(), rs -> {
-            if (!rs.next()) {
-                throw new BusinessException("SETUP_BASELINE_MISSING", "初始化基线不存在，请重新部署干净数据库",
-                        HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            return rs.getString(1);
-        });
+    private String optionalId(String sql, Map<String, ?> parameters) {
+        return jdbc.query(sql, parameters, rs -> rs.next() ? rs.getString(1) : null);
     }
 
     public record SetupStatus(boolean initialized, String deploymentMode,

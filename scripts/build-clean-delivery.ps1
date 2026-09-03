@@ -69,14 +69,16 @@ try {
     $commit = (& git -c "safe.directory=$repoGit" -C $repo rev-parse HEAD).Trim()
     $manifestPath = Join-Path $deliveryDirectory 'DELIVERY-MANIFEST.txt'
     $manifest = @(
-        'Property Management System clean delivery manifest'
+        'Property Management System formal empty-data delivery manifest'
         "DeliveryName: $DeliveryName"
         "BuiltAtUtc: $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
         "GitCommit: $commit"
         "FileCountBeforeManifest: $($fileHashes.Count)"
         "TotalBytesBeforeManifest: $(($fileHashes | Measure-Object -Property Length -Sum).Sum)"
         'Excluded: .git, .env, credentials, node_modules, target, dist, caches, tests, E2E, snapshots, reports'
-        'SampleData: 33 Raw / 32 Canonical / 1 Quarantine / 31 Production / 9 reconciliations / rollback remaining 0'
+        'BusinessDataBaseline: empty on a new installation (PMS_FORMAL_EMPTY_BASELINE=true)'
+        'SampleDataPolicy: optional manual-import workbook only; never preloaded or automatically imported'
+        'OptionalSampleExpectedResult: 33 Raw / 32 Canonical / 1 Quarantine / 31 Production / 9 reconciliations / rollback remaining 0'
         ''
         'FILES (sha256  bytes  relative-path)'
     ) + ($fileHashes | ForEach-Object { "$($_.Sha256)  $($_.Length)  $($_.RelativePath)" })

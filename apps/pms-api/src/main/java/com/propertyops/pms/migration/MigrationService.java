@@ -551,7 +551,7 @@ public class MigrationService {
             case "ASSET" -> {
                 result.put("buildingSourceId", required(data, "buildingSourceId", errors));
                 String type = optional(data, "assetType", "ROOM").toUpperCase(Locale.ROOT);
-                if (!type.equals("ROOM")) errors.add("G4 首批迁移仅支持 ROOM 资产");
+                if (!type.equals("ROOM")) errors.add("首批迁移仅支持 ROOM 资产");
                 result.put("assetType", type);
                 String code = required(data, "code", errors);
                 result.put("code", code);

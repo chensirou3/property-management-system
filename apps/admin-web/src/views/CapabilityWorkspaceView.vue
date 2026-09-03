@@ -45,26 +45,6 @@ const errorMessage = computed(() => acceptanceState.value === 'request-error' ? 
 const displayRows = computed(() => ['normal'].includes(acceptanceState.value) ? rows.value : [])
 const pagedRows = computed(() => displayRows.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))
 
-function exampleValue(field: PageField, index: number) {
-  if (field.type === 'money') return (index + 1) * 128.35
-  if (['number', 'area'].includes(field.type)) return (index + 1) * 10
-  if (field.type === 'percent') return 72.5 + index * 3.1
-  if (field.type === 'date') return `2026-08-${String(index + 10).padStart(2, '0')}`
-  if (field.type === 'datetime') return `2026-08-${String(index + 10).padStart(2, '0')} 09:${String(index * 7).padStart(2, '0')}:00`
-  if (field.type === 'month') return '2026-08'
-  if (field.type === 'status') return ['PENDING', 'PROCESSING', 'COMPLETED', 'PARTIAL_FAILED'][index % 4]
-  if (field.type === 'masked') return `合成***${String(index + 1).padStart(2, '0')}`
-  if (field.type === 'selection') return false
-  return `${field.label}·结构样例${index + 1}`
-}
-
-function buildStructuralRows() {
-  rows.value = Array.from({ length: 7 }, (_, index) => Object.fromEntries([
-    ['id', `${catalogPage.value?.pageNo || 0}-${index + 1}`],
-    ...(catalogPage.value?.columns || []).map((field) => [field.key, exampleValue(field, index)]),
-  ]))
-}
-
 function inputType(field: PageField) {
   if (field.type === 'date-range') return 'daterange'
   if (field.type === 'month-range') return 'monthrange'
@@ -79,16 +59,14 @@ function applyQuery() {
   page.value = 1
   queryTimer = window.setTimeout(() => {
     localLoading.value = false
-    const keyword = Object.values(values).filter(Boolean).join(' ').trim().toLowerCase()
-    buildStructuralRows()
-    if (keyword) rows.value = rows.value.filter((row) => JSON.stringify(row).toLowerCase().includes(keyword))
+    rows.value = []
   }, 120)
 }
 
 function reset() {
   Object.keys(values).forEach((key) => delete values[key])
   page.value = 1
-  buildStructuralRows()
+  rows.value = []
   void router.replace({ query: Object.fromEntries(Object.entries(route.query).filter(([key]) => key === '__state')) })
 }
 
@@ -108,7 +86,7 @@ function restoreFilter() {
 }
 
 function onSort({ prop, order }: { prop: string; order: string | null }) {
-  if (!order) return buildStructuralRows()
+  if (!order) return
   rows.value = [...rows.value].sort((left, right) => String(left[prop] ?? '').localeCompare(String(right[prop] ?? ''), 'zh-CN') * (order === 'descending' ? -1 : 1))
 }
 
@@ -143,14 +121,14 @@ function clearSelection() {
 
 function reload() {
   void router.replace({ query: Object.fromEntries(Object.entries(route.query).filter(([key]) => key !== '__state')) })
-  buildStructuralRows()
+  rows.value = []
 }
 
 watch(() => route.path, () => {
   Object.keys(values).forEach((key) => delete values[key])
   selectedRows.value = []
   page.value = 1
-  buildStructuralRows()
+  rows.value = []
 }, { immediate: true })
 onBeforeUnmount(() => window.clearTimeout(queryTimer))
 </script>
@@ -158,12 +136,12 @@ onBeforeUnmount(() => window.clearTimeout(queryTimer))
 <template>
   <section v-if="catalogPage" class="capability-page">
     <el-alert type="info" :closable="false" show-icon class="capability-note"
-      :title="`页面 ${catalogPage.pageNo}/49 · ${catalogPage.sourceRef} · 当前显示脱敏结构演练数据，业务闭环按 Goal ${catalogPage.wave} 波次阶段接入。`" />
+      :title="`页面 ${catalogPage.pageNo}/49 · 当前数据库暂无记录；请通过相应业务流程或数据迁移导入。`" />
     <el-alert v-if="isExternal" type="warning" :closable="false" show-icon class="capability-note"
       title="当前仅启用可替换模拟适配器，未连接生产支付、发票、银行、通知或设备通道。" />
     <el-alert v-if="acceptanceState === 'validation-error'" type="error" :closable="false" show-icon class="capability-note" title="校验失败：请检查必填条件和字段格式。" />
     <el-alert v-if="acceptanceState === 'conflict'" type="warning" :closable="false" show-icon class="capability-note" title="数据版本冲突：记录已被其他操作更新，请刷新后重试。" />
-    <el-alert v-if="acceptanceState === 'partial-failure'" type="warning" :closable="false" show-icon class="capability-note" title="批量任务部分失败：5 条成功，2 条失败；失败明细可从任务中心下载。" />
+    <el-alert v-if="acceptanceState === 'partial-failure'" type="warning" :closable="false" show-icon class="capability-note" title="批量任务部分失败；失败明细可从任务中心下载。" />
 
     <el-result v-if="acceptanceState === 'forbidden'" icon="warning" title="无权访问" sub-title="当前账号缺少此页面的读取权限。">
       <template #extra><el-button type="primary" @click="router.push(returnPath)">返回可用工作台</el-button></template>

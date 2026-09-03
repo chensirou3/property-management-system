@@ -235,7 +235,7 @@ function logout() {
         </div>
         <div class="heading-status">
           <span class="status-dot"></span>
-          合成测试环境 · 外部通道模拟
+          本地独立部署 · 外部通道按配置运行
         </div>
       </div>
 
