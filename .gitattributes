@@ -1,0 +1,11 @@
+/.github/** export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
+/apps/admin-web/e2e/** export-ignore
+/apps/admin-web/playwright.config.ts export-ignore
+/apps/admin-web/src/test/** export-ignore
+/apps/pms-api/src/test/** export-ignore
+/scripts/tests/** export-ignore
+**/*.spec.ts export-ignore
+**/*.test.ts export-ignore
+**/*-snapshots/** export-ignore

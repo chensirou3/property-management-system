@@ -1,0 +1,405 @@
+{
+  "sourceName": "PMS3-交付验收-32条合格+1条隔离-20260903-D01.json",
+  "mappingVersion": "property-v1-delivery-01",
+  "rows": [
+    {
+      "resourceType": "PROJECT",
+      "sourceId": "SRC-PROJECT-20260903-D01",
+      "data": {
+        "name": "交付验收项目 20260903-D01"
+      }
+    },
+    {
+      "resourceType": "BUILDING",
+      "sourceId": "SRC-BUILDING-20260903-D01",
+      "data": {
+        "projectSourceId": "SRC-PROJECT-20260903-D01",
+        "code": "MIG-B-20260903-D01",
+        "name": "交付验收楼栋 D01",
+        "buildingType": "RESIDENTIAL",
+        "floorCount": 10
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-01",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-01",
+        "displayName": "交付验收房屋 01",
+        "floorNo": "1",
+        "buildingArea": 81,
+        "usableArea": 61,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-01",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-01",
+        "displayName": "交付验收客户 01",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-01",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-01",
+        "assetSourceId": "SRC-ROOM-20260903-D01-01",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-02",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-02",
+        "displayName": "交付验收房屋 02",
+        "floorNo": "2",
+        "buildingArea": 82,
+        "usableArea": 62,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-02",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-02",
+        "displayName": "交付验收客户 02",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-02",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-02",
+        "assetSourceId": "SRC-ROOM-20260903-D01-02",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-03",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-03",
+        "displayName": "交付验收房屋 03",
+        "floorNo": "3",
+        "buildingArea": 83,
+        "usableArea": 63,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-03",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-03",
+        "displayName": "交付验收客户 03",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-03",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-03",
+        "assetSourceId": "SRC-ROOM-20260903-D01-03",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-04",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-04",
+        "displayName": "交付验收房屋 04",
+        "floorNo": "4",
+        "buildingArea": 84,
+        "usableArea": 64,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-04",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-04",
+        "displayName": "交付验收客户 04",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-04",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-04",
+        "assetSourceId": "SRC-ROOM-20260903-D01-04",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-05",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-05",
+        "displayName": "交付验收房屋 05",
+        "floorNo": "5",
+        "buildingArea": 85,
+        "usableArea": 65,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-05",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-05",
+        "displayName": "交付验收客户 05",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-05",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-05",
+        "assetSourceId": "SRC-ROOM-20260903-D01-05",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-06",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-06",
+        "displayName": "交付验收房屋 06",
+        "floorNo": "6",
+        "buildingArea": 86,
+        "usableArea": 66,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-06",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-06",
+        "displayName": "交付验收客户 06",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-06",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-06",
+        "assetSourceId": "SRC-ROOM-20260903-D01-06",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-07",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-07",
+        "displayName": "交付验收房屋 07",
+        "floorNo": "7",
+        "buildingArea": 87,
+        "usableArea": 67,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-07",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-07",
+        "displayName": "交付验收客户 07",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-07",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-07",
+        "assetSourceId": "SRC-ROOM-20260903-D01-07",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-08",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-08",
+        "displayName": "交付验收房屋 08",
+        "floorNo": "8",
+        "buildingArea": 88,
+        "usableArea": 68,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-08",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-08",
+        "displayName": "交付验收客户 08",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-08",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-08",
+        "assetSourceId": "SRC-ROOM-20260903-D01-08",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-09",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-09",
+        "displayName": "交付验收房屋 09",
+        "floorNo": "9",
+        "buildingArea": 89,
+        "usableArea": 69,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-09",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-09",
+        "displayName": "交付验收客户 09",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-09",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-09",
+        "assetSourceId": "SRC-ROOM-20260903-D01-09",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "ASSET",
+      "sourceId": "SRC-ROOM-20260903-D01-10",
+      "data": {
+        "buildingSourceId": "SRC-BUILDING-20260903-D01",
+        "assetType": "ROOM",
+        "code": "MIG-R-20260903-D01-10",
+        "displayName": "交付验收房屋 10",
+        "floorNo": "10",
+        "buildingArea": 90,
+        "usableArea": 70,
+        "validFrom": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "CUSTOMER",
+      "sourceId": "SRC-CUSTOMER-20260903-D01-10",
+      "data": {
+        "customerNo": "MIG-C-20260903-D01-10",
+        "displayName": "交付验收客户 10",
+        "customerType": "PERSON",
+        "customerClass": "OWNER",
+        "gender": "UNKNOWN",
+        "remarks": "交付验收合成样本，不含真实个人信息"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-RELATION-20260903-D01-10",
+      "data": {
+        "customerSourceId": "SRC-CUSTOMER-20260903-D01-10",
+        "assetSourceId": "SRC-ROOM-20260903-D01-10",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    },
+    {
+      "resourceType": "RELATION",
+      "sourceId": "SRC-INVALID-20260903-D01",
+      "data": {
+        "customerSourceId": "SRC-MISSING-20260903-D01",
+        "assetSourceId": "SRC-ROOM-20260903-D01-01",
+        "relationType": "OWNER",
+        "primaryRelation": true,
+        "startDate": "2026-09-03"
+      }
+    }
+  ]
+}

@@ -44,3 +44,5 @@
 G1 登录/壳层与 G2—G10 49 页三个固定视口的像素基线、摘要和受控更新规则见 `docs/visual-baselines.md`；最终 49 页四态矩阵、停止条件和外部门禁见 `docs/acceptance-report.md`，部署与恢复基线见 `docs/deployment-security.md`。
 
 跨设备复制、数据库导出/恢复、新设备启动和完整验收见 `docs/设备迁移与项目交接手册-2026-08-23.md`。
+
+面向交付接收人的首次启动、账号配置和 32+1 模拟数据导入步骤见 `delivery/PMS3交付版使用说明.md`；可直接上传的 JSON 样例位于 `delivery/sample-data/`。

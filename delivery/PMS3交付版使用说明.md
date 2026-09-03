@@ -1,0 +1,225 @@
+# PMS3 交付版使用说明
+
+版本：`v0.1.0-internal-rc.1`
+
+交付日期：2026-09-03
+
+适用范围：本地部署、内部演示、人工验收和后续二次开发。当前支付、发票、银行、IoT 与访客通道仍为明确的模拟/禁用模式，不代表生产系统已经接通。
+
+## 1. 交付内容
+
+解压后的根目录包含：
+
+```text
+PMS3-交付版-2026-09-03
+├─ apps
+│  ├─ admin-web                  Vue 3 管理端
+│  └─ pms-api                   Spring Boot API 与 Flyway 数据迁移
+├─ deploy                       MySQL 与生产部署示例
+├─ docs                         架构、接口、安全、验收与运维文档
+├─ delivery
+│  ├─ PMS3交付版使用说明.md     本文
+│  ├─ 交付清单.md               交付边界和验收结论
+│  └─ sample-data
+│     ├─ PMS3-migration-sample-32-valid-1-invalid.json
+│     └─ PMS3模拟导入数据-32条合格1条隔离.xlsx
+├─ scripts                      备份、恢复、安全扫描与部署校验脚本
+├─ .env.example                 不含密码的环境模板
+├─ docker-compose.yml           本地四服务编排
+└─ README.md                    项目总览
+```
+
+纯净分发包明确不包含：`.env`、账号密码、JWT/回调密钥、Git 历史、`node_modules`、Maven `target`、前端 `dist`、测试结果、扫描缓存、E2E/单测源码和视觉截图基线。
+
+## 2. 运行前准备
+
+推荐环境：
+
+- Windows 10/11、macOS 或 Linux；
+- Docker Desktop 或 Docker Engine，包含 Compose v2；
+- 至少 8 GB 内存和约 10 GB 可用磁盘；
+- 默认端口未被占用：Web `5174`、API `8088`、MySQL `3307`、Redis `6379`。
+
+建议解压到不受 OneDrive 同步影响的英文短路径，例如：
+
+```text
+C:\work\pms3-delivery
+```
+
+## 3. 首次配置账号和秘密
+
+在项目根目录复制环境模板：
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+至少替换以下值：
+
+```dotenv
+MYSQL_PASSWORD=<新的数据库业务密码>
+MYSQL_ROOT_PASSWORD=<新的数据库管理员密码>
+REDIS_PASSWORD=<新的 Redis 密码>
+JWT_SECRET=<至少 32 位的独立随机字符串>
+PMS_CALLBACK_SIGNING_SECRET=<另一条至少 32 位的独立随机字符串>
+PMS_BOOTSTRAP_ADMIN_USERNAME=<首次管理员账号>
+PMS_BOOTSTRAP_ADMIN_PASSWORD=<首次管理员密码>
+```
+
+管理员密码必须为 12—200 字符，同时包含大写字母、小写字母、数字和符号，且不能包含完整登录账号。不要把本文中的占位符原样使用，也不要沿用目标网站、邮箱或其他系统密码。
+
+账号和密码的规则：
+
+- 全新数据库第一次启动时，系统按照 `.env` 的 `PMS_BOOTSTRAP_ADMIN_USERNAME` 和 `PMS_BOOTSTRAP_ADMIN_PASSWORD` 创建本地平台管理员；
+- `.env` 被 Git 忽略且不在交付 ZIP 中，应通过密码管理器单独交接；
+- 数据库中已有同名账号时，修改 `.env` 不会覆盖数据库密码；
+- 若需更换账号密码，应在系统的账号管理页面操作，不要直接修改数据库密码哈希。
+
+## 4. 启动和访问
+
+在项目根目录运行：
+
+```powershell
+docker compose config --quiet
+docker compose build --pull
+docker compose up -d
+docker compose ps
+```
+
+四个服务应全部启动，MySQL、Redis 和 API 最终显示 `healthy`。然后访问：
+
+- 管理端：<http://localhost:5174>
+- API 健康检查：<http://localhost:8088/actuator/health>
+
+登录后先确认页面顶部的当前项目。所有档案、迁移、费用、账务和报表请求都会在服务端再次校验项目范围。
+
+常用运维命令：
+
+```powershell
+docker compose ps
+docker compose logs --tail 200 api
+docker compose restart api web
+docker compose stop
+docker compose down
+```
+
+不要随意执行 `docker compose down -v`；`-v` 会删除本地 MySQL/Redis 数据卷，只能在明确要重建全新测试库时使用，并应先备份。
+
+## 5. 模拟数据导入：文件怎么选
+
+系统“数据迁移”页面当前只接受 `.json`：
+
+```text
+delivery/sample-data/PMS3-migration-sample-32-valid-1-invalid.json
+```
+
+Excel 文件用于人工审阅、字段映射和记录验收结果，不能直接上传：
+
+```text
+delivery/sample-data/PMS3模拟导入数据-32条合格1条隔离.xlsx
+```
+
+Excel 内含 5 张表：使用说明、导入明细、字段字典、验收预期、文件与重测。实际上传时仍以 JSON 文件为准。
+
+## 6. 完整导入验收步骤
+
+1. 登录管理端并选择准备接收测试数据的项目。
+2. 从左侧菜单进入“系统管理 → 数据迁移”，路由为 `/system/migrations`。
+3. 点击“上传 JSON”，选择 `PMS3-migration-sample-32-valid-1-invalid.json`。
+4. 创建批次弹窗应显示：`PROJECT 1`、`BUILDING 1`、`ASSET 10`、`CUSTOMER 10`、`RELATION 11`，共 33 条。
+5. 点击“写入 Raw 层”。此时只保存不可变来源证据，尚未写入生产业务表。
+6. 打开批次详情并点击“执行校验”。预期：
+   - 批次状态为 `PARTIAL_FAILED`；
+   - Raw `33`；
+   - Quarantine `1`；
+   - Canonical `32`；
+   - Staging `32`；
+   - 错误行为 `SRC-INVALID-20260903-D01`；
+   - 错误原因包含“CUSTOMER 引用不存在”。
+7. 点击“审批批次”，明确确认只执行 32 条合格记录。审批要求 `PLATFORM_ADMIN` 角色和 `migration:write` 权限。
+8. 点击“写入生产层”并确认。预期生产写入 `31` 条、映射跳过 `1` 条。项目行只映射到当前项目，不新建项目；实际写入为 1 栋楼、10 套房屋、10 个客户和 10 条客户房屋关系。
+9. 点击“执行对账”。预期 9 项对账全部为 `MATCHED`，差异均为 0，其中建筑面积合计 `855.00`、可用面积合计 `655.00`、孤儿关系和重复有效关系均为 0。
+10. 在详情底部复制完整回滚凭证，点击“逆序回滚”，填写回滚原因后确认。预期状态为 `ROLLED_BACK`，`ROLLBACK_REMAINING_TARGET_COUNT` 为 0 且状态 `MATCHED`。Raw、隔离错误、映射、状态轨迹和审计证据会继续保留。
+
+## 7. 为什么样例故意包含一条错误
+
+最后一条 `RELATION` 引用了不存在的客户 `SRC-MISSING-20260903-D01`。它用于同时验证：
+
+- 错误行能进入 Quarantine；
+- 合格行仍可按“部分执行”继续审批；
+- 错误关系不会进入 Staging 或 Production；
+- 生产层不会产生孤儿关系；
+- 对账和逆序回滚能够闭环。
+
+不要为了让 33 条全部写入而修正这条错误；本次样例的验收目标就是“32 条合格 + 1 条隔离”。
+
+## 8. 重复测试和幂等规则
+
+系统使用 `rows` 的 SHA-256 与 `mappingVersion` 识别相同来源。同一内容和同一映射版本再次上传会安全返回原批次，而不会重复创建。
+
+- 如果上一次已经完整回滚：复制 JSON，并把顶层 `mappingVersion` 从 `property-v1-delivery-01` 改为 `property-v1-delivery-02`、`03`……即可创建新批次；
+- 如果上一次没有回滚：优先先回滚；确需让多批测试数据并存时，除修改 `mappingVersion` 外，还要全文替换 `20260903-D01` 为新的唯一后缀；
+- 替换来源标识时必须保持所有引用一致，尤其是 `projectSourceId`、`buildingSourceId`、`customerSourceId` 和 `assetSourceId`；
+- 单批最多 500 行；资源执行顺序固定为 `PROJECT → BUILDING → ASSET → CUSTOMER → RELATION`。
+
+## 9. 导入真实业务数据前的最低要求
+
+模拟样例通过只证明迁移机制可用，不等于真实生产迁移已经完成。真实数据进入系统前至少应完成：
+
+1. 数据所有者书面授权和个人信息处理范围确认；
+2. 字段映射版本评审，手机号、证件号等敏感字段脱敏/加密方案评审；
+3. 在隔离环境做全量预校验，修正重复编码、非法面积、断裂引用和关系重叠；
+4. 对 Raw、Quarantine、Canonical、Staging 和 Production 五层分别留存计数及校验和；
+5. 平台管理员审批后才能执行，执行后核对 9 项迁移对账；
+6. 完成至少一次回滚演练、一次增量演练和新旧系统平行核对；
+7. 正式切换前完成备份、停写窗口、回滚授权和业务 UAT 签字。
+
+## 10. 备份与恢复
+
+正式保留数据前，参考 `docs/设备迁移与项目交接手册-2026-08-23.md` 和 `docs/deployment-security.md`。项目提供：
+
+```powershell
+pwsh -File scripts/backup-mysql.ps1
+pwsh -File scripts/restore-drill.ps1
+```
+
+不要复制 Docker 卷目录来代替逻辑备份，也不要修改已经执行过的 Flyway SQL 文件。数据库结构升级只能新增 Flyway 版本。
+
+## 11. 常见问题
+
+### Docker 构建无法下载基础镜像
+
+确认 Docker Hub 网络可用，再执行 `docker compose build --pull`。公司网络需要代理时，应在 Docker Desktop 中配置代理，不要把代理账号写入源码。
+
+### 端口被占用
+
+在 `.env` 调整 `PMS_API_PORT`、`PMS_MYSQL_HOST_PORT` 或 `PMS_REDIS_HOST_PORT`。本地 Web 可调整 `PMS_WEB_PORT`；生产部署示例要求 Web 端口保持 `5174`。
+
+### 登录失败
+
+连续失败会触发账号/IP 限流。确认使用当前数据库中的密码；若数据库已存在，`.env` 的 bootstrap 密码不会重置原账号。
+
+### 上传 Excel 没有反应
+
+迁移中心只接受 JSON。请上传同目录的 `.json` 文件，Excel 仅用于人工核对。
+
+### 校验结果不是 32 合格、1 隔离
+
+优先检查是否复用了未回滚批次、目标项目里是否已经存在相同楼栋/房屋/客户编码，以及 JSON 内所有 `D01` 引用是否被一致修改。
+
+### 权限不足
+
+上传/校验需要 `migration:import`；查看需要 `migration:read`；审批、执行、对账和回滚需要 `migration:write`；审批和回滚还必须是 `PLATFORM_ADMIN`。
+
+## 12. 交付验收建议
+
+交付接收人至少完成以下人工检查：
+
+- 从全新目录创建 `.env` 并启动四个服务；
+- 使用自设管理员账号登录，检查项目选择器和主要菜单；
+- 按第 6 节完整跑通导入、隔离、审批、写入、对账和回滚；
+- 检查 ZIP 中没有 `.env`、密码、Git 历史、依赖缓存和测试产物；
+- 保存交付 ZIP 的 SHA-256，与 `DELIVERY-MANIFEST.txt` 核对一致。
+
+更完整的系统运行、页面、API、安全和设备迁移资料见 `docs/runbook.md`、`docs/api-reference.md`、`docs/acceptance-report.md`、`docs/deployment-security.md` 和 `docs/设备迁移与项目交接手册-2026-08-23.md`。
