@@ -37,7 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class IntegrationGovernanceIntegrationTest {
     private static final String PROJECT = "30000000-0000-0000-0000-000000000001";
     private static final String USERNAME = "integration-governance-admin";
-    private static final String PASSWORD = "integration-governance-admin-password";
+    private static final String PASSWORD = "GovernanceFixture-2026!";
     private static final String CALLBACK_SECRET = "integration-callback-test-secret-with-more-than-32-characters";
 
     @Container

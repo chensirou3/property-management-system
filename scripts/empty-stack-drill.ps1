@@ -74,7 +74,7 @@ try {
     $queryCommand = 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot "$MYSQL_DATABASE" -N -B -e "' + $verificationSql + '"'
     $verification = (& docker exec $mysqlContainer sh -lc $queryCommand).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'The isolated database verification query failed.' }
-    if ($verification -ne '20|90|22|5|0|4|3|0') { throw "Unexpected isolated database invariants: $verification" }
+    if ($verification -ne '22|90|22|5|0|4|3|0') { throw "Unexpected isolated database invariants: $verification" }
 
     $health = Invoke-RestMethod -Uri "http://127.0.0.1:$ApiPort/actuator/health/readiness" -TimeoutSec 15
     if ($health.status -ne 'UP') { throw 'The isolated API readiness probe is not UP.' }
@@ -84,7 +84,7 @@ try {
     [pscustomobject]@{
         Status = 'PASSED'
         ProjectName = $projectName
-        FlywayVersion = 20
+        FlywayVersion = 22
         BaseTables = 90
         EnabledReports = 22
         AdapterPolicies = 5

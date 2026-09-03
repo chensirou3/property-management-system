@@ -23,6 +23,19 @@ test('dashboard and core archive data are backed by the API', async ({ page }) =
   await expect(page.locator('.record-summary')).toContainText('359')
 })
 
+test('dashboard quality is target-aware and follows the selected project', async ({ page }) => {
+  await expect(page.locator('.quality-row').filter({ hasText: '费用分配无孤儿键' })).toContainText('已通过')
+  await expect(page.locator('.stat-card').filter({ hasText: '费用定义' })).toContainText('743 条资产分配 · 30 条仪表分配')
+
+  await page.locator('.project-select').click()
+  await page.getByRole('option', { name: '海湾雅居（合成隔离项目）' }).click()
+
+  await expect(page.locator('.welcome-card')).toContainText('海湾雅居（合成隔离项目）')
+  await expect(page.locator('.stat-card').filter({ hasText: '房屋资产' })).toContainText('1套')
+  await expect(page.locator('.quality-row').filter({ hasText: '房屋主档与明细一致性' })).toContainText('已通过')
+  await expect(page.locator('.quality-row').filter({ hasText: '仪表主档数量' })).toContainText('1 条（实时统计）')
+})
+
 test('receivable, cashier and meter workflow pages load real data', async ({ page }) => {
   await page.goto('/fees/receivables')
   await expect(page.getByRole('heading', { name: '选择账期与计费资产' })).toBeVisible()

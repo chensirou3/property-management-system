@@ -15,6 +15,6 @@ pms:
     jwt-secret: test-only-secret-with-at-least-thirty-two-characters
     access-token-minutes: 30
   bootstrap:
-    admin-password: test-only-password
+    admin-password: TestFixture-2026!Secure
   integrations:
     callback-signing-secret: test-only-callback-secret-with-at-least-thirty-two-characters

@@ -11,8 +11,10 @@ import { pageFor, type PageField } from '../config/pageCatalog'
 import { http } from '../api/http'
 import { useAuthStore } from '../stores/auth'
 import { reportCodeByPath } from '../config/reporting'
+import { serializeReportFilters } from '../config/reportFilters'
 
 type Row = Record<string, any>
+type FilterOption = { value: string; label: string }
 
 const operationalPaths = new Set([
   '/reports/transaction-summary', '/reports/transaction-details', '/finance/payments', '/finance/arrears',
@@ -27,9 +29,11 @@ const values = reactive<Record<string, any>>({})
 const report = ref<Row>({})
 const rows = ref<Row[]>([])
 const selectedRows = ref<Row[]>([])
+const visibleColumnKeys = ref<string[]>([])
 const exportJobs = ref<Row[]>([])
 const printJobs = ref<Row[]>([])
 const notificationBatches = ref<Row[]>([])
+const remoteFilterOptions = ref<Record<string, FilterOption[]>>({})
 const loading = ref(false)
 const taskLoading = ref(false)
 const page = ref(1)
@@ -38,6 +42,9 @@ const exportFormat = ref('XLSX')
 const receiptFormat = ref('PDF')
 const showOperations = ref(false)
 let pollTimer: number | undefined
+let reportLoadGeneration = 0
+let taskLoadGeneration = 0
+let filterOptionLoadGeneration = 0
 
 const columns = computed<DataGridColumn[]>(() => (catalogPage.value?.columns || []).filter((field) => field.type !== 'selection').map((field) => ({
   prop: field.key,
@@ -47,6 +54,12 @@ const columns = computed<DataGridColumn[]>(() => (catalogPage.value?.columns || 
   sortable: true,
   sortKey: field.key,
 })))
+const selectedExportColumns = computed(() => {
+  const renderable = new Set(columns.value.map((column) => column.prop))
+  const visible = visibleColumnKeys.value.filter((key) => renderable.has(key))
+  return visible.length ? visible : [...renderable]
+})
+const filterStorageKey = computed(() => `pms-report-filter:${communityId.value || 'no-project'}:${route.path}`)
 const numericTotals = computed(() => report.value.summary?.numericTotals || {})
 const canExport = computed(() => auth.hasPermission(catalogPage.value?.permissions.export))
 const canPrint = computed(() => auth.hasPermission(catalogPage.value?.permissions.print))
@@ -55,10 +68,40 @@ const canOperate = computed(() => operationalPaths.has(route.path))
 const isReceiptPrint = computed(() => reportCode.value === 'RECEIPT_BATCH_PRINT')
 const isNotification = computed(() => reportCode.value === 'BILL_NOTIFICATIONS')
 const isBankSimulator = computed(() => reportCode.value === 'BANK_TRUST')
+const hasUnavailableOrganizationScope = computed(() => new Set([
+  '/reports/collection-rate', '/reports/arrears-clearance-rate',
+  '/reports/collection-clearance-summary', '/reports/comprehensive-query',
+]).has(route.path))
 const reportRowKey = computed(() => {
   const available = report.value.columns || []
   return available.find((key: string) => /Id$/.test(key)) || available.find((key: string) => /No$/.test(key)) || available[0] || 'id'
 })
+const filterOptions: Record<string, string[]> = {
+  paymentChannel: ['CASH', 'BANK_TRANSFER', 'QR_SIMULATOR', 'CASH_SIMULATOR', 'SIMULATOR', 'PREPAYMENT'],
+  receiptStatus: ['ISSUED', 'VOIDED', 'REPLACED', 'RED_CORRECTED'],
+  adjustmentType: ['DISCOUNT', 'WAIVER', 'CREDIT', 'DEBIT', 'VOID'],
+  discountType: ['DISCOUNT', 'WAIVER', 'CREDIT'],
+  entryType: ['TOP_UP', 'DEDUCT', 'REVERSAL'],
+  channel: ['SMS_SIMULATOR', 'WECHAT_SIMULATOR', 'EMAIL_SIMULATOR'],
+  deliveryStatus: ['SENT_SIMULATED', 'FAILED'],
+  reminderType: ['ARREARS'],
+  subjectType: ['ALL', 'BILL', 'PAYMENT'],
+  invoiceType: ['ISSUE', 'REPLACE', 'RED'],
+  invoiceStatus: ['SIMULATED', 'REPLACED', 'RED_CORRECTED', 'FAILED'],
+}
+const statusOptionsByReport: Record<string, string[]> = {
+  TRANSACTION_DETAILS: ['SUCCESS', 'FAILED'],
+  PAYMENTS: ['SUCCESS', 'FAILED'],
+  BILLS: ['UNPAID', 'PARTIAL', 'PAID', 'VOID', 'VOIDED'],
+  DEPOSITS: ['ACTIVE', 'REFUNDED', 'LOCKED'],
+  ADJUSTMENTS: ['PENDING', 'APPLIED', 'REJECTED'],
+}
+
+function optionsFor(key: string): FilterOption[] {
+  const remote = remoteFilterOptions.value[key]
+  const values = key === 'status' ? statusOptionsByReport[reportCode.value] || [] : filterOptions[key] || []
+  return remote || values.map((value) => ({ value, label: value }))
+}
 
 function inputType(field: PageField) {
   if (field.type === 'date-range') return 'daterange'
@@ -69,35 +112,32 @@ function inputType(field: PageField) {
 }
 
 function filters() {
-  const result: Record<string, string> = {}
-  for (const [key, raw] of Object.entries(values)) {
-    if (raw === undefined || raw === null || raw === '') continue
-    if (Array.isArray(raw)) {
-      if (/period/i.test(key)) { result.periodFrom = raw[0]; result.periodTo = raw[1] }
-      else { result.from = raw[0]; result.to = raw[1] }
-    } else if (/billingPeriod/i.test(key)) {
-      result.periodFrom = String(raw); result.periodTo = String(raw)
-    } else if (/date$/i.test(key)) {
-      result.from = String(raw); result.to = String(raw)
-    } else if (key === 'keyword' || key === 'subjectType') result[key] = String(raw)
-    else result.status = String(raw)
-  }
-  return result
+  return serializeReportFilters(catalogPage.value?.query || [], values)
+}
+
+function runQuery() {
+  page.value = 1
+  void load()
 }
 
 async function load() {
-  if (!communityId.value || !reportCode.value) return
+  const generation = ++reportLoadGeneration
+  const requestedCommunityId = communityId.value
+  const requestedReportCode = reportCode.value
+  if (!requestedCommunityId || !requestedReportCode) return
   loading.value = true
   try {
-    const { data } = await http.get(`/reports/${reportCode.value}`, {
-      params: { communityId: communityId.value, ...filters(), page: page.value, size: pageSize.value },
+    const { data } = await http.get(`/reports/${requestedReportCode}`, {
+      params: { communityId: requestedCommunityId, ...filters(), page: page.value, size: pageSize.value },
     })
+    if (generation !== reportLoadGeneration || communityId.value !== requestedCommunityId || reportCode.value !== requestedReportCode) return
     report.value = data
     rows.value = data.rows
   } catch (error: any) {
+    if (generation !== reportLoadGeneration || communityId.value !== requestedCommunityId || reportCode.value !== requestedReportCode) return
     ElMessage.error(error.response?.data?.message || '报表查询失败')
   } finally {
-    loading.value = false
+    if (generation === reportLoadGeneration) loading.value = false
   }
 }
 
@@ -119,13 +159,26 @@ function changePageSize(value: number) {
 }
 
 function saveFilter() {
-  localStorage.setItem(`pms-report-filter:${route.path}`, JSON.stringify(values))
+  localStorage.setItem(filterStorageKey.value, JSON.stringify(values))
   ElMessage.success('筛选条件已保存到本机')
 }
 
 function restoreFilter() {
-  try { Object.assign(values, JSON.parse(localStorage.getItem(`pms-report-filter:${route.path}`) || '{}')); void load() }
-  catch { ElMessage.warning('已清除损坏的筛选条件') }
+  try {
+    const restored = JSON.parse(localStorage.getItem(filterStorageKey.value) || '{}')
+    if (!restored || Array.isArray(restored) || typeof restored !== 'object') throw new Error('invalid filter snapshot')
+    const allowedKeys = new Set((catalogPage.value?.query || []).map((field) => field.key))
+    Object.keys(values).forEach((key) => delete values[key])
+    Object.entries(restored).forEach(([key, value]) => {
+      if (allowedKeys.has(key)) values[key] = value
+    })
+    page.value = 1
+    void load()
+  } catch {
+    localStorage.removeItem(filterStorageKey.value)
+    Object.keys(values).forEach((key) => delete values[key])
+    ElMessage.warning('已清除损坏的筛选条件')
+  }
 }
 
 async function createExport() {
@@ -134,7 +187,7 @@ async function createExport() {
   try {
     await http.post('/report-jobs', {
       communityId: communityId.value, reportCode: reportCode.value, format: exportFormat.value,
-      filters: filters(), selectedColumns: [],
+      filters: filters(), selectedColumns: selectedExportColumns.value,
     }, { headers: { 'Idempotency-Key': crypto.randomUUID() } })
     ElMessage.success('异步导出任务已入队，可在下方下载完成制品')
     await loadTasks(); startPolling()
@@ -157,7 +210,7 @@ async function createReceiptPrint() {
 }
 
 async function sendSimulatedNotification() {
-  const period = filters().periodFrom || new Date().toISOString().slice(0, 7)
+  const period = filters().billingPeriodFrom || new Date().toISOString().slice(0, 7)
   taskLoading.value = true
   try {
     await http.post('/notification-batches', {
@@ -171,14 +224,43 @@ async function sendSimulatedNotification() {
 }
 
 async function loadTasks() {
-  if (!communityId.value) return
-  const requests: Promise<any>[] = [http.get('/report-jobs', { params: { communityId: communityId.value } })]
-  if (isReceiptPrint.value) requests.push(http.get('/receipt-print-jobs', { params: { communityId: communityId.value } }))
-  if (isNotification.value) requests.push(http.get('/notification-batches', { params: { communityId: communityId.value } }))
+  const generation = ++taskLoadGeneration
+  const requestedCommunityId = communityId.value
+  const requestedReportCode = reportCode.value
+  const requestedReceiptPrint = isReceiptPrint.value
+  const requestedNotification = isNotification.value
+  if (!requestedCommunityId) return
+  const requests: Promise<any>[] = [http.get('/report-jobs', { params: { communityId: requestedCommunityId } })]
+  if (requestedReceiptPrint) requests.push(http.get('/receipt-print-jobs', { params: { communityId: requestedCommunityId } }))
+  if (requestedNotification) requests.push(http.get('/notification-batches', { params: { communityId: requestedCommunityId } }))
   const responses = await Promise.all(requests)
-  exportJobs.value = responses[0].data.filter((job: Row) => job.report_code === reportCode.value)
-  if (isReceiptPrint.value) printJobs.value = responses[1].data
-  if (isNotification.value) notificationBatches.value = responses.at(-1)?.data || []
+  if (generation !== taskLoadGeneration || communityId.value !== requestedCommunityId || reportCode.value !== requestedReportCode) return
+  exportJobs.value = responses[0].data.filter((job: Row) => job.report_code === requestedReportCode)
+  printJobs.value = requestedReceiptPrint ? responses[1].data : []
+  notificationBatches.value = requestedNotification ? responses.at(-1)?.data || [] : []
+}
+
+async function loadFilterOptions() {
+  const generation = ++filterOptionLoadGeneration
+  const requestedCommunityId = communityId.value
+  const requestedReportCode = reportCode.value
+  remoteFilterOptions.value = {}
+  if (!requestedCommunityId) return
+  const keys = new Set((catalogPage.value?.query || []).map((field) => field.key))
+  if (!keys.has('feeDefinitionId') && !keys.has('cashierId')) return
+  try {
+    const { data } = await http.get('/reports/filter-options', {
+      params: { communityId: requestedCommunityId, reportCode: requestedReportCode },
+    })
+    if (generation !== filterOptionLoadGeneration || communityId.value !== requestedCommunityId || reportCode.value !== requestedReportCode) return
+    remoteFilterOptions.value = {
+      feeDefinitionId: Array.isArray(data.feeDefinitionId) ? data.feeDefinitionId : [],
+      cashierId: Array.isArray(data.cashierId) ? data.cashierId : [],
+    }
+  } catch (error: any) {
+    if (generation !== filterOptionLoadGeneration || communityId.value !== requestedCommunityId || reportCode.value !== requestedReportCode) return
+    ElMessage.error(error.response?.data?.message || '报表筛选选项加载失败')
+  }
 }
 
 function startPolling() {
@@ -204,10 +286,12 @@ function taskType(status: string) {
   return 'warning'
 }
 
-watch([communityId, () => route.path], async () => {
+watch([communityId, () => route.path], async ([, currentPath], previous) => {
   Object.keys(values).forEach((key) => delete values[key])
   selectedRows.value = []; page.value = 1; showOperations.value = false
-  await Promise.all([load(), loadTasks()])
+  report.value = {}; rows.value = []; exportJobs.value = []; printJobs.value = []; notificationBatches.value = []
+  if (!previous || previous[1] !== currentPath) visibleColumnKeys.value = []
+  await Promise.all([load(), loadTasks(), loadFilterOptions()])
 }, { immediate: true })
 onMounted(() => startPolling())
 onBeforeUnmount(() => window.clearInterval(pollTimer))
@@ -216,7 +300,9 @@ onBeforeUnmount(() => window.clearInterval(pollTimer))
 <template>
   <section v-if="catalogPage" class="report-page">
     <el-alert v-if="isBankSimulator" type="warning" :closable="false" show-icon
-      title="银行托收协议尚未授权：当前页面只展示 BANK_TRUST_SIMULATOR，提交数与成功数不会被描述为生产结果。" />
+      title="银行托收协议尚未授权：当前只展示 BANK_TRUST_SIMULATOR 能力状态，尚无可按日期、通道或对账状态查询的托收批次数据。" />
+    <el-alert v-else-if="hasUnavailableOrganizationScope" type="warning" :closable="false" show-icon
+      title="当前报表严格按顶部所选项目隔离；系统尚无“组织—资产责任范围”模型，因此不提供会被忽略的组织范围筛选。" />
     <el-alert v-else type="info" :closable="false" show-icon
       title="数据来自项目隔离的后端读模型；客户姓名默认脱敏，导出、打印、下载和通知均持久化留痕。" />
 
@@ -238,11 +324,15 @@ onBeforeUnmount(() => window.clearInterval(pollTimer))
     <FinancialOperationsView v-if="showOperations && canOperate" />
 
     <template v-else>
-      <QueryPanel :loading="loading" @query="load" @reset="reset" @save="saveFilter" @restore="restoreFilter">
+      <QueryPanel :loading="loading" @query="runQuery" @reset="reset" @save="saveFilter" @restore="restoreFilter">
         <el-form-item v-for="field in catalogPage.query" :key="field.key" :label="field.label">
           <el-date-picker v-if="inputType(field)" v-model="values[field.key]" :type="inputType(field) as any"
             :value-format="field.type.includes('month') ? 'YYYY-MM' : 'YYYY-MM-DD'" clearable :placeholder="field.label" :start-placeholder="`${field.label}开始`"
             :end-placeholder="`${field.label}结束`" style="width:220px" />
+          <el-select v-else-if="field.type === 'select'" v-model="values[field.key]" clearable filterable
+            :placeholder="field.label" style="width:190px">
+            <el-option v-for="option in optionsFor(field.key)" :key="option.value" :label="option.label" :value="option.value" />
+          </el-select>
           <el-input v-else v-model="values[field.key]" clearable :placeholder="field.label" style="width:190px">
             <template v-if="field.type === 'text'" #prefix><el-icon><Search /></el-icon></template>
           </el-input>
@@ -260,6 +350,7 @@ onBeforeUnmount(() => window.clearInterval(pollTimer))
 
       <DataGrid :page="page" :page-size="pageSize" :rows="rows" :columns="columns" :loading="loading" :row-key="reportRowKey"
         :total="report.total || 0" :storage-key="`governed:${route.path}`" @selection-change="selectedRows = $event"
+        @visible-columns-change="visibleColumnKeys = $event"
         @reload="load" @update:page="changePage" @update:page-size="changePageSize">
         <template #toolbar>
           <el-button v-if="isNotification && canNotify" type="primary" :loading="taskLoading" @click="sendSimulatedNotification">发送模拟通知</el-button>

@@ -11,6 +11,12 @@ import jakarta.validation.constraints.Size;
 public final class ReportModels {
     private ReportModels() {}
 
+    public record FilterOption(String value, String label) {}
+
+    public record ReportFilterOptions(
+            List<FilterOption> feeDefinitionId,
+            List<FilterOption> cashierId) {}
+
     public record CreateExportJob(
             @NotBlank String communityId,
             @NotBlank String reportCode,

@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +40,7 @@ class MeterGovernanceIntegrationTest {
     private static final String SHARE_RULE = "62000000-0000-0000-0000-000000000001";
     private static final String METER_STANDARD = "71000000-0000-0000-0000-000000000019";
     private static final String ADMIN_USERNAME = "meter-integration-admin";
-    private static final String ADMIN_PASSWORD = "meter-integration-admin-password";
+    private static final String ADMIN_PASSWORD = "MeterFixture-2026!Secure";
 
     @Container
     private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")
@@ -171,9 +173,10 @@ class MeterGovernanceIntegrationTest {
         assertThat(chargeJson.path("shareRuleVersionId").isMissingNode()).isTrue();
         assertThat(chargeJson.path("originalReadingSnapshot").path("shareRuleVersionNo").asInt()).isEqualTo(1);
 
+        String currentUtcPeriod = YearMonth.now(ZoneOffset.UTC).toString();
         JsonNode iotBatch = postOk(token, "/api/v1/meter-reading-batches", body(
                 "communityId", PROJECT, "batchNo", "G7-IOT-" + suffix,
-                "readingPeriod", "2026-08", "sourceType", "IOT_SIMULATOR"), "g7-iot-" + suffix);
+                "readingPeriod", currentUtcPeriod, "sourceType", "IOT_SIMULATOR"), "g7-iot-" + suffix);
         String iotBatchId = iotBatch.path("id").asText();
         postRequest(token, "/api/v1/meter-readings:import-simulated?communityId=" + PROJECT
                 + "&batchId=" + iotBatchId, List.of(METER_TWO), null)

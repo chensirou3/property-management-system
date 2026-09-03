@@ -1492,6 +1492,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["filterOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/catalog": {
         parameters: {
             query?: never;
@@ -2869,6 +2885,14 @@ export interface components {
         LoginRequest: {
             username: string;
             password: string;
+        };
+        FilterOption: {
+            value?: string;
+            label?: string;
+        };
+        ReportFilterOptions: {
+            feeDefinitionId?: components["schemas"]["FilterOption"][];
+            cashierId?: components["schemas"]["FilterOption"][];
         };
         AssetNode: {
             id?: string;
@@ -6070,9 +6094,29 @@ export interface operations {
                 page?: number;
                 size?: number;
                 columns?: string;
-                all: {
-                    [key: string]: string;
-                };
+                dateFrom?: string;
+                dateTo?: string;
+                paymentChannel?: string;
+                cashierId?: string;
+                transactionNo?: string;
+                status?: string;
+                receiptStatus?: string;
+                keyword?: string;
+                billingPeriodFrom?: string;
+                billingPeriodTo?: string;
+                feeDefinitionId?: string;
+                channel?: string;
+                deliveryStatus?: string;
+                arrearsPeriodFrom?: string;
+                arrearsPeriodTo?: string;
+                subjectType?: string;
+                discountType?: string;
+                entryType?: string;
+                reminderType?: string;
+                invoiceType?: string;
+                invoiceStatus?: string;
+                settlementDate?: string;
+                adjustmentType?: string;
             };
             header?: never;
             path: {
@@ -6089,6 +6133,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": Record<string, never>;
+                };
+            };
+        };
+    };
+    filterOptions: {
+        parameters: {
+            query: {
+                communityId: string;
+                reportCode: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportFilterOptions"];
                 };
             };
         };

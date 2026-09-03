@@ -5,11 +5,11 @@ const password = process.env.PMS_E2E_PASSWORD
 const dashboardVisualFixture = {
   communityId: '30000000-0000-0000-0000-000000000001',
   counts: { rooms: 359, customers: 403, parking_spaces: 250, meters: 31,
-    fee_definitions: 23, fee_standards: 17, allocations: 743 },
+    fee_definitions: 23, fee_standards: 17, allocations: 773, asset_allocations: 743, meter_allocations: 30 },
   finance: { receivable: 2468.84, received: 241.26, outstanding: 2227.58,
-    bill_count: 360, collection_rate: 9.77 },
-  quality: { orphan_customer_relations: 0, orphan_allocations: 0, synthetic: true },
-  adapters: { payment: 'simulator', invoice: 'simulator', iot: 'simulator', java110: 'disabled' },
+    bill_count: 360, collection_rate: 9.77, metricSource: 'COLLECTION_RATE' },
+  quality: { room_detail_mismatches: 0, orphan_customer_relations: 0, orphan_allocations: 0, synthetic: true },
+  adapters: { payment: 'simulator', invoice: 'simulator', bank: 'simulator', iot: 'simulator', java110: 'disabled' },
 }
 
 const targetViewports = [

@@ -7,6 +7,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Set;
 
+import jakarta.validation.Validation;
+import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.Test;
 
 class JwtServiceTest {
@@ -30,5 +32,19 @@ class JwtServiceTest {
         assertThat(verified.authorities()).contains("ROLE_PROJECT_MANAGER", "property:read");
         assertThat(verifiedToken.sessionVersion()).isEqualTo(7);
         assertThat(token.expiresAt()).isEqualTo(Instant.parse("2035-07-20T00:30:00Z"));
+    }
+
+    @Test
+    void rejectsLoginProtectionSettingsThatWouldDisableLockout() {
+        SecurityProperties properties = new SecurityProperties();
+        properties.setLoginMaxFailures(0);
+        properties.setLoginWindowMinutes(0);
+        properties.setLoginLockMinutes(0);
+
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            assertThat(factory.getValidator().validate(properties))
+                    .extracting(violation -> violation.getPropertyPath().toString())
+                    .containsExactlyInAnyOrder("loginMaxFailures", "loginWindowMinutes", "loginLockMinutes");
+        }
     }
 }

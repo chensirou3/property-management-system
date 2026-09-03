@@ -9,32 +9,55 @@ const activePeriod = ref('本月')
 const loading = ref(false)
 const error = ref('')
 const data = ref<any>({ counts: {}, finance: {}, quality: {}, adapters: {} })
+let loadGeneration = 0
 
 const stats = computed(() => [
   { label: '房屋资产', value: data.value.counts.rooms || '0', suffix: '套', icon: House, tone: 'blue', change: '服务端实时统计' },
   { label: '客户档案', value: data.value.counts.customers || '0', suffix: '位', icon: User, tone: 'green', change: '合成隐私数据' },
-  { label: '车位资产', value: data.value.counts.parking_spaces || '0', suffix: '个', icon: House, tone: 'amber', change: `${data.value.counts.allocations || 0} 条费用分配` },
-  { label: '费用定义', value: data.value.counts.fee_definitions || '0', suffix: '项', icon: Money, tone: 'violet', change: `${data.value.counts.fee_standards || 0} 个计费标准` },
+  { label: '车位资产', value: data.value.counts.parking_spaces || '0', suffix: '个', icon: House, tone: 'amber', change: '服务端实时统计' },
+  { label: '费用定义', value: data.value.counts.fee_definitions || '0', suffix: '项', icon: Money, tone: 'violet',
+    change: `${data.value.counts.fee_standards || 0} 个计费标准 · ${data.value.counts.asset_allocations || 0} 条资产分配 · ${data.value.counts.meter_allocations || 0} 条仪表分配` },
 ])
+
+function violationCheck(label: string, rawValue: unknown) {
+  if (rawValue === null || rawValue === undefined || rawValue === '') return { label, value: 0, status: '待加载' }
+  const violations = Number(rawValue)
+  if (!Number.isFinite(violations)) return { label, value: 0, status: '待加载' }
+  return {
+    label,
+    value: violations === 0 ? 100 : 0,
+    status: violations === 0 ? '已通过' : `存在异常（${violations} 项）`,
+  }
+}
+
 const quality = computed(() => [
-  { label: '房屋与项目数量对账', value: Number(data.value.counts.rooms) === 359 ? 100 : 0, status: Number(data.value.counts.rooms) === 359 ? '已通过' : '需复核' },
-  { label: '客户关系无孤儿键', value: data.value.quality.orphan_customer_relations === 0 ? 100 : 0, status: data.value.quality.orphan_customer_relations === 0 ? '已通过' : '存在异常' },
-  { label: '费用分配无孤儿键', value: data.value.quality.orphan_allocations === 0 ? 100 : 0, status: data.value.quality.orphan_allocations === 0 ? '已通过' : '存在异常' },
-  { label: '仪表扩展样本', value: Math.min(100, Number(data.value.counts.meters || 0) / 31 * 100), status: `${data.value.counts.meters || 0} 条` },
+  violationCheck('房屋主档与明细一致性', data.value.quality.room_detail_mismatches),
+  violationCheck('客户关系无孤儿键', data.value.quality.orphan_customer_relations),
+  violationCheck('费用分配无孤儿键', data.value.quality.orphan_allocations),
+  { label: '仪表主档数量', value: null, status: `${data.value.counts.meters || 0} 条（实时统计）` },
 ])
 const meterNote = computed(() => `${activePeriod.value}使用模拟仪表与合成读数，不代表真实设备状态`)
 
 async function load() {
-  if (!auth.currentProjectId) return
+  const generation = ++loadGeneration
+  const requestedProjectId = auth.currentProjectId
+  if (!requestedProjectId) {
+    data.value = { counts: {}, finance: {}, quality: {}, adapters: {} }
+    error.value = ''
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = ''
   try {
-    const response = await http.get('/dashboard', { params: { communityId: auth.currentProjectId } })
+    const response = await http.get('/dashboard', { params: { communityId: requestedProjectId } })
+    if (generation !== loadGeneration || auth.currentProjectId !== requestedProjectId) return
     data.value = response.data
   } catch (reason: any) {
+    if (generation !== loadGeneration || auth.currentProjectId !== requestedProjectId) return
     error.value = reason.response?.data?.message || '看板加载失败'
   } finally {
-    loading.value = false
+    if (generation === loadGeneration) loading.value = false
   }
 }
 
@@ -89,7 +112,7 @@ watch(() => auth.currentProjectId, load, { immediate: true })
         <div class="quality-list">
           <div v-for="item in quality" :key="item.label" class="quality-row">
             <div class="quality-label"><span>{{ item.label }}</span><strong>{{ item.status }}</strong></div>
-            <el-progress :percentage="item.value" :stroke-width="7" :show-text="false" :color="item.value < 50 ? '#d29a38' : '#2f7b65'" />
+            <el-progress v-if="item.value !== null" :percentage="item.value" :stroke-width="7" :show-text="false" :color="item.value < 50 ? '#d29a38' : '#2f7b65'" />
           </div>
         </div>
       </article>

@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Parameter;
+
 @RestController
 @RequestMapping("/api/v1")
 public class ReportController {
@@ -31,10 +33,39 @@ public class ReportController {
     @GetMapping("/reports/catalog")
     Object catalog(@RequestParam String communityId) { return reports.catalog(communityId); }
 
+    @GetMapping(value = "/reports/filter-options", produces = MediaType.APPLICATION_JSON_VALUE)
+    ReportModels.ReportFilterOptions filterOptions(@RequestParam String communityId, @RequestParam String reportCode) {
+        return reports.filterOptions(communityId, reportCode);
+    }
+
     @GetMapping("/reports/{code}")
     Object query(@PathVariable String code, @RequestParam String communityId,
                  @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "50") int size,
-                 @RequestParam(required = false) String columns, @RequestParam Map<String, String> all) {
+                 @RequestParam(required = false) String columns,
+                 @RequestParam(name = "dateFrom", required = false) String dateFrom,
+                 @RequestParam(name = "dateTo", required = false) String dateTo,
+                 @RequestParam(name = "paymentChannel", required = false) String paymentChannel,
+                 @RequestParam(name = "cashierId", required = false) String cashierId,
+                 @RequestParam(name = "transactionNo", required = false) String transactionNo,
+                 @RequestParam(name = "status", required = false) String status,
+                 @RequestParam(name = "receiptStatus", required = false) String receiptStatus,
+                 @RequestParam(name = "keyword", required = false) String keyword,
+                 @RequestParam(name = "billingPeriodFrom", required = false) String billingPeriodFrom,
+                 @RequestParam(name = "billingPeriodTo", required = false) String billingPeriodTo,
+                 @RequestParam(name = "feeDefinitionId", required = false) String feeDefinitionId,
+                 @RequestParam(name = "channel", required = false) String channel,
+                 @RequestParam(name = "deliveryStatus", required = false) String deliveryStatus,
+                 @RequestParam(name = "arrearsPeriodFrom", required = false) String arrearsPeriodFrom,
+                 @RequestParam(name = "arrearsPeriodTo", required = false) String arrearsPeriodTo,
+                 @RequestParam(name = "subjectType", required = false) String subjectType,
+                 @RequestParam(name = "discountType", required = false) String discountType,
+                 @RequestParam(name = "entryType", required = false) String entryType,
+                 @RequestParam(name = "reminderType", required = false) String reminderType,
+                 @RequestParam(name = "invoiceType", required = false) String invoiceType,
+                 @RequestParam(name = "invoiceStatus", required = false) String invoiceStatus,
+                 @RequestParam(name = "settlementDate", required = false) String settlementDate,
+                 @RequestParam(name = "adjustmentType", required = false) String adjustmentType,
+                 @Parameter(hidden = true) @RequestParam Map<String, String> all) {
         Map<String, String> filters = new LinkedHashMap<>(all);
         List.of("communityId", "page", "size", "columns").forEach(filters::remove);
         List<String> selected = columns == null || columns.isBlank() ? List.of()

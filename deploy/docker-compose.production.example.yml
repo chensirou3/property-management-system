@@ -1,12 +1,89 @@
+name: pms3-production
+
 services:
-  api:
+  mysql:
+    image: ${PMS_MYSQL_IMAGE:?set PMS_MYSQL_IMAGE to registry/repository@sha256:digest}
+    platform: ${PMS_TARGET_PLATFORM:?set PMS_TARGET_PLATFORM to the Linux Docker host platform, for example linux/amd64}
+    pull_policy: always
+    restart: unless-stopped
     environment:
-      MYSQL_PASSWORD: null
-      REDIS_PASSWORD: null
-      JWT_SECRET: null
-      PMS_CALLBACK_SIGNING_SECRET: null
-      PMS_BOOTSTRAP_ADMIN_PASSWORD: null
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-pms3_replica}
+      MYSQL_USER: ${MYSQL_USER:-pms3}
+      MYSQL_PASSWORD_FILE: /run/secrets/MYSQL_PASSWORD
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/MYSQL_ROOT_PASSWORD
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    secrets:
+      - source: pms_mysql_password
+        target: MYSQL_PASSWORD
+      - source: pms_mysql_root_password
+        target: MYSQL_ROOT_PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$(cat /run/secrets/MYSQL_ROOT_PASSWORD) mysqladmin ping -h localhost -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - data
+
+  redis:
+    image: ${PMS_REDIS_IMAGE:?set PMS_REDIS_IMAGE to registry/repository@sha256:digest}
+    platform: ${PMS_TARGET_PLATFORM:?set PMS_TARGET_PLATFORM to the Linux Docker host platform, for example linux/amd64}
+    pull_policy: always
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        password="$$(cat /run/secrets/REDIS_PASSWORD)"
+        test -n "$$password"
+        test "$$(printf '%s' "$$password" | tr -d '\r\n')" = "$$password"
+        password_sha256="$$(printf '%s' "$$password" | sha256sum)"
+        password_sha256="$${password_sha256%% *}"
+        test "$${#password_sha256}" -eq 64
+        printf 'user default on #%s resetkeys resetchannels ~pms3:* &pms3:* nocommands -@dangerous -@admin +auth +hello +ping +info +quit +select +client|setname +client|setinfo +get +mget +set +mset +setnx +getdel +getex +del +unlink +exists +expire +pexpire +expireat +pexpireat +persist +ttl +pttl +incr +incrby +incrbyfloat +decr +decrby +hget +hgetall +hmget +hset +hsetnx +hdel +hexists +hlen +hincrby +hincrbyfloat +lpush +rpush +lpop +rpop +lrange +llen +lrem +ltrim +sadd +srem +smembers +sismember +scard +zadd +zrem +zrange +zrangebyscore +zrevrange +zscore +zcard +zcount +multi +exec +discard +watch +unwatch\n' "$$password_sha256" > /run/pms-redis/users.acl
+        printf 'appendonly yes\naclfile /run/pms-redis/users.acl\n' > /run/pms-redis/redis.conf
+        unset password password_sha256
+        chown redis:redis /run/pms-redis /run/pms-redis/users.acl /run/pms-redis/redis.conf
+        chmod 0700 /run/pms-redis
+        chmod 0400 /run/pms-redis/users.acl /run/pms-redis/redis.conf
+        exec docker-entrypoint.sh redis-server /run/pms-redis/redis.conf
+    tmpfs:
+      - /run/pms-redis:rw,noexec,nosuid,nodev,size=1m,mode=0700
+    volumes:
+      - redis-data:/data
+    secrets:
+      - source: pms_redis_password
+        target: REDIS_PASSWORD
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /run/secrets/REDIS_PASSWORD)\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - data
+
+  api:
+    image: ${PMS_API_IMAGE:?set PMS_API_IMAGE to registry/repository@sha256:digest}
+    platform: ${PMS_TARGET_PLATFORM:?set PMS_TARGET_PLATFORM to the Linux Docker host platform, for example linux/amd64}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      MYSQL_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-pms3_replica}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      MYSQL_USER: ${MYSQL_USER:-pms3}
+      REDIS_HOST: redis
+      PMS_CALLBACK_MAX_SKEW_SECONDS: ${PMS_CALLBACK_MAX_SKEW_SECONDS:-300}
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+      PMS_BOOTSTRAP_ADMIN_USERNAME: ${PMS_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      LOGIN_MAX_FAILURES: "5"
+      LOGIN_WINDOW_MINUTES: "15"
+      LOGIN_LOCK_MINUTES: "15"
+      PMS_API_PORT: 8088
       SPRINGDOC_API_DOCS_ENABLED: "false"
       SPRINGDOC_SWAGGER_UI_ENABLED: "false"
     secrets:
@@ -20,15 +97,62 @@ services:
         target: PMS_CALLBACK_SIGNING_SECRET
       - source: pms_bootstrap_admin_password
         target: PMS_BOOTSTRAP_ADMIN_PASSWORD
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8088/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - frontend
+      - data
+
+  web:
+    image: ${PMS_WEB_IMAGE:?set PMS_WEB_IMAGE to registry/repository@sha256:digest}
+    platform: ${PMS_TARGET_PLATFORM:?set PMS_TARGET_PLATFORM to the Linux Docker host platform, for example linux/amd64}
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      # Production validation requires this to resolve to 5174 so the host TLS upstream cannot drift.
+      # The variable exists only so the isolated CI smoke project can avoid a host-port collision.
+      - "127.0.0.1:${PMS_WEB_PORT:-5174}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/login | grep -q '<div id=\"app\"'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - ingress
+      - frontend
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  ingress:
+  frontend:
+    internal: true
+  data:
+    internal: true
 
 secrets:
   pms_mysql_password:
-    external: true
+    file: ${PMS_SECRET_DIR:?set PMS_SECRET_DIR to a controlled directory outside the repository}/MYSQL_PASSWORD
+  pms_mysql_root_password:
+    file: ${PMS_SECRET_DIR:?set PMS_SECRET_DIR to a controlled directory outside the repository}/MYSQL_ROOT_PASSWORD
   pms_redis_password:
-    external: true
+    file: ${PMS_SECRET_DIR:?set PMS_SECRET_DIR to a controlled directory outside the repository}/REDIS_PASSWORD
   pms_jwt_secret:
-    external: true
+    file: ${PMS_SECRET_DIR:?set PMS_SECRET_DIR to a controlled directory outside the repository}/JWT_SECRET
   pms_callback_signing_secret:
-    external: true
+    file: ${PMS_SECRET_DIR:?set PMS_SECRET_DIR to a controlled directory outside the repository}/PMS_CALLBACK_SIGNING_SECRET
   pms_bootstrap_admin_password:
-    external: true
+    file: ${PMS_SECRET_DIR:?set PMS_SECRET_DIR to a controlled directory outside the repository}/PMS_BOOTSTRAP_ADMIN_PASSWORD

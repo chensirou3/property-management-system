@@ -12,9 +12,13 @@ test('G6 cashier and immutable ledger complete the governed financial lifecycle'
   const headers = { Authorization: `Bearer ${token}` }
   const suffix = Date.now().toString(36)
 
-  const bills = await apiJson(page.request, `/api/v1/finance/bills?communityId=${project}&status=UNPAID&size=50`, headers)
-  const eligible = bills.items.filter((bill: Record<string, any>) => bill.customer_name && Number(bill.outstanding_amount) >= 10)
-  expect(eligible.length).toBeGreaterThanOrEqual(4)
+  const bills = await apiJson(page.request, `/api/v1/finance/bills?communityId=${project}&size=200`, headers)
+  const eligible = bills.items.filter((bill: Record<string, any>) =>
+    bill.customer_name
+    && Number(bill.outstanding_amount) >= 10
+    && !['PAID', 'VOID', 'VOIDED'].includes(String(bill.status)),
+  )
+  expect(eligible.length).toBeGreaterThanOrEqual(3)
 
   await page.goto('/finance/bills')
   await expect(page.getByRole('heading', { name: '应收管理', exact: true, level: 1 })).toBeVisible()
@@ -70,7 +74,7 @@ test('G6 cashier and immutable ledger complete the governed financial lifecycle'
   expect(Number(refunded.balanceAfter)).toBe(0)
 
   const adjustment = await apiJson(page.request, '/api/v1/finance/adjustments', headers, {
-    communityId: project, billId: eligible[3].id, adjustmentType: 'WAIVER', amount: 0.5,
+    communityId: project, billId: eligible[0].id, adjustmentType: 'WAIVER', amount: 0.5,
     reason: 'G6 E2E 小额减免审批',
   }, `e2e-g6-adjustment-${suffix}`)
   const appliedAdjustment = await apiJson(page.request, `/api/v1/finance/adjustments/${adjustment.id}:approve`, headers,
@@ -78,7 +82,7 @@ test('G6 cashier and immutable ledger complete the governed financial lifecycle'
   expect(appliedAdjustment.status).toBe('APPLIED')
 
   const secondOrder = await apiJson(page.request, '/api/v1/payment-orders', headers, {
-    communityId: project, paymentMethod: 'BANK_TRANSFER', bills: [{ billId: eligible[3].id, amount: 2.22 }],
+    communityId: project, paymentMethod: 'BANK_TRANSFER', bills: [{ billId: eligible[0].id, amount: 2.22 }],
   }, `e2e-g6-invoice-payment-${suffix}`)
   const secondConfirmed = await apiJson(page.request,
     `/api/v1/payment-orders/${secondOrder.orderId}:confirm-simulated?communityId=${project}`, headers, {})
@@ -94,6 +98,10 @@ test('G6 cashier and immutable ledger complete the governed financial lifecycle'
     `/api/v1/finance/receipts/${secondConfirmed.receiptId}:replace`, headers,
     { communityId: project, reason: 'G6 E2E 收据换开' })
   expect(replacementReceipt.original_receipt_id).toBe(secondConfirmed.receiptId)
+  const restoredInvoicePayment = await apiJson(page.request,
+    `/api/v1/payment-transactions/${secondConfirmed.transactionId}:reverse`, headers,
+    { communityId: project, reason: 'G6 E2E 发票流程结束后恢复账单' })
+  expect(restoredInvoicePayment.status).toBe('REVERSED')
 
   const settlementDate = new Date(Date.UTC(2000, 0, 1) + (Date.now() % 8_000) * 86400000).toISOString().slice(0, 10)
   const settlement = await apiJson(page.request, '/api/v1/finance/settlements', headers,

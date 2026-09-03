@@ -22,15 +22,18 @@ public class BootstrapAdmin implements ApplicationRunner {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordPolicy passwordPolicy;
     private final String username;
     private final String password;
 
     public BootstrapAdmin(NamedParameterJdbcTemplate jdbc,
                           PasswordEncoder passwordEncoder,
+                          PasswordPolicy passwordPolicy,
                           @Value("${pms.bootstrap.admin-username:admin}") String username,
                           @Value("${pms.bootstrap.admin-password:}") String password) {
         this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
+        this.passwordPolicy = passwordPolicy;
         this.username = username;
         this.password = password;
     }
@@ -46,6 +49,7 @@ public class BootstrapAdmin implements ApplicationRunner {
         var ids = jdbc.queryForList("SELECT id FROM sys_user WHERE username = :username", parameters, String.class);
         String userId;
         if (ids.isEmpty()) {
+            passwordPolicy.validate(username, password);
             userId = UUID.randomUUID().toString();
             LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
             jdbc.update("""

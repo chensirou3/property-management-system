@@ -35,7 +35,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class FinalCapabilityIntegrationTest {
     private static final String PROJECT = "30000000-0000-0000-0000-000000000001";
     private static final String USERNAME = "g10-capability-admin";
-    private static final String PASSWORD = "g10-capability-admin-password";
+    private static final String PASSWORD = "CapabilityFixture-2026!";
 
     @Container
     private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")

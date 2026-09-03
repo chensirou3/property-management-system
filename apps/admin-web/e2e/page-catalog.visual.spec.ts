@@ -17,6 +17,15 @@ const governedPageByCode = new Map(Object.entries(reportCodeByPath).map(([path, 
 
 const username = process.env.PMS_E2E_USERNAME || 'admin'
 const password = process.env.PMS_E2E_PASSWORD
+const dashboardVisualFixture = {
+  communityId: '30000000-0000-0000-0000-000000000001',
+  counts: { rooms: 359, customers: 403, parking_spaces: 250, meters: 31,
+    fee_definitions: 23, fee_standards: 17, allocations: 773, asset_allocations: 743, meter_allocations: 30 },
+  finance: { receivable: 2468.84, received: 241.26, outstanding: 2227.58,
+    bill_count: 360, collection_rate: 9.77, metricSource: 'COLLECTION_RATE' },
+  quality: { room_detail_mismatches: 0, orphan_customer_relations: 0, orphan_allocations: 0, synthetic: true },
+  adapters: { payment: 'simulator', invoice: 'simulator', bank: 'simulator', iot: 'simulator', java110: 'disabled' },
+}
 const visualBills = [
   { id: 'visual-bill-1', asset_id: 'visual-asset-1', customer_id: 'visual-customer-1', bill_no: 'VIS-BILL-202608-0001', asset_code: 'R0801', customer_name: '视觉客户 0001', billing_period: '2026-08', original_amount: 128.5, adjustment_amount: -8.5, total_amount: 120, paid_amount: 20, outstanding_amount: 100, due_date: '2026-08-31', status: 'PARTIAL' },
   { id: 'visual-bill-2', asset_id: 'visual-asset-2', customer_id: 'visual-customer-2', bill_no: 'VIS-BILL-202608-0002', asset_code: 'R0802', customer_name: '视觉客户 0002', billing_period: '2026-08', original_amount: 96, adjustment_amount: 0, total_amount: 96, paid_amount: 0, outstanding_amount: 96, due_date: '2026-08-31', status: 'UNPAID' },
@@ -127,6 +136,13 @@ for (const viewport of targetViewports) {
     test.setTimeout(600_000)
     if (!password) throw new Error('PMS_E2E_PASSWORD is required; do not commit a local password')
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
+    await page.route(/\/api\/v1\/dashboard(?:\?.*)?$/, async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dashboardVisualFixture) })
+      } else {
+        await route.continue()
+      }
+    })
     await installFixtureRoutes(page, '**/api/v1/finance/**', financialVisualFixtures)
     await installFixtureRoutes(page, '**/api/v1/cashier/**', cashierVisualFixtures)
     await page.route('**/api/v1/meter-workbench*', async (route) => {

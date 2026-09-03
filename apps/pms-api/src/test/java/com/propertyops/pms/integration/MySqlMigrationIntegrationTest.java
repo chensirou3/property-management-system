@@ -29,8 +29,8 @@ class MySqlMigrationIntegrationTest {
         var result = flyway.migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.migrationsExecuted).isEqualTo(20);
-        assertThat(result.targetSchemaVersion).isEqualTo("20");
+        assertThat(result.migrationsExecuted).isEqualTo(22);
+        assertThat(result.targetSchemaVersion).isEqualTo("22");
         try (var connection = DriverManager.getConnection(
                 MYSQL.getJdbcUrl(), MYSQL.getUsername(), MYSQL.getPassword());
              var statement = connection.createStatement()) {

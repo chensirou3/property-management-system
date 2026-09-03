@@ -3,6 +3,12 @@ name: verify
 on:
   push:
   pull_request:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   backend:
@@ -42,13 +48,635 @@ jobs:
 
   compose-definition:
     runs-on: ubuntu-latest
+    env:
+      PMS_TARGET_PLATFORM: linux/amd64
     steps:
       - uses: actions/checkout@v4
       - name: Validate Compose definition
         env:
-          MYSQL_PASSWORD: ci-generated-placeholder
-          MYSQL_ROOT_PASSWORD: ci-generated-root-placeholder
-          REDIS_PASSWORD: ci-generated-redis-placeholder
-          JWT_SECRET: ci-placeholder-secret-at-least-32-characters
-          PMS_BOOTSTRAP_ADMIN_PASSWORD: ci-generated-admin-placeholder
+          MYSQL_PASSWORD: CiMysqlApp-7vK3mN8q
+          MYSQL_ROOT_PASSWORD: CiMysqlRoot-4xJ9pQ2w
+          REDIS_PASSWORD: CiRedis-6tR2cW8y
+          JWT_SECRET: CiJwt-7vK3mN8qP2wR5tY9cH4sL6xD8fB1zQ
+          PMS_BOOTSTRAP_ADMIN_PASSWORD: CiBootstrap-9wF4mT7q!
         run: docker compose config --quiet
+      - name: Validate independent production Compose security contract
+        shell: pwsh
+        env:
+          PMS_API_IMAGE: registry.example.invalid/pms-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          PMS_WEB_IMAGE: registry.example.invalid/pms-web@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          PMS_MYSQL_IMAGE: registry.example.invalid/pms-mysql@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          PMS_REDIS_IMAGE: registry.example.invalid/redis@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          PMS_SECRET_DIR: /tmp/pms3-ci-secret-contract
+        run: |
+          & ./scripts/validate-production-deployment.ps1 -ConfigOnly -SkipSecretFileContentChecks
+      - name: Reject mutable production image tags
+        shell: pwsh
+        env:
+          PMS_API_IMAGE: registry.example.invalid/pms-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          PMS_WEB_IMAGE: registry.example.invalid/pms-web@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          PMS_MYSQL_IMAGE: registry.example.invalid/pms-mysql@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          PMS_REDIS_IMAGE: registry.example.invalid/redis@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          PMS_SECRET_DIR: /tmp/pms3-ci-secret-contract
+        run: |
+          $env:PMS_API_IMAGE = 'registry.example.invalid/pms-api:latest'
+          $rejected = $false
+          try {
+            & ./scripts/validate-production-deployment.ps1 -ConfigOnly -SkipSecretFileContentChecks
+          } catch {
+            $rejected = $true
+          }
+          if (-not $rejected) {
+            throw 'Production validation accepted a mutable image tag.'
+          }
+      - name: Reject unsafe production ports, topology, mounts, and privileges
+        shell: pwsh
+        env:
+          PMS_API_IMAGE: registry.example.invalid/pms-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          PMS_WEB_IMAGE: registry.example.invalid/pms-web@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          PMS_MYSQL_IMAGE: registry.example.invalid/pms-mysql@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          PMS_REDIS_IMAGE: registry.example.invalid/redis@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+        run: |
+          $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) "pms3-port-validator-$([guid]::NewGuid().ToString('N'))"
+          try {
+            [void][IO.Directory]::CreateDirectory($fixtureRoot)
+            $env:PMS_SECRET_DIR = Join-Path $fixtureRoot 'secrets'
+            $source = [IO.File]::ReadAllText((Resolve-Path './deploy/docker-compose.production.example.yml'))
+
+            function Assert-ProductionComposeRejected {
+              param(
+                [Parameter(Mandatory)] [string]$Name,
+                [Parameter(Mandatory)] [string]$InvalidSource,
+                [Parameter(Mandatory)] [string]$ExpectedMessage
+              )
+              if ($InvalidSource -ceq $source) { throw "Unable to construct invalid Compose fixture: $Name" }
+              $invalidComposePath = Join-Path $fixtureRoot "docker-compose.$Name.invalid.yml"
+              [IO.File]::WriteAllText($invalidComposePath, $InvalidSource, [Text.UTF8Encoding]::new($false))
+              $rejected = $false
+              try {
+                & ./scripts/validate-production-deployment.ps1 `
+                  -ComposeFile $invalidComposePath `
+                  -ConfigOnly `
+                  -SkipSecretFileContentChecks
+              } catch {
+                if (-not $_.Exception.Message.Contains($ExpectedMessage, [StringComparison]::OrdinalIgnoreCase)) { throw }
+                $rejected = $true
+              }
+              if (-not $rejected) { throw "Production validation accepted invalid fixture: $Name" }
+            }
+
+            function Add-ServiceSetting {
+              param(
+                [Parameter(Mandatory)] [string]$ServiceName,
+                [Parameter(Mandatory)] [string]$Yaml
+              )
+              $pattern = "(?m)^  $([regex]::Escape($ServiceName)):\r?$"
+              return [regex]::new($pattern).Replace($source, "  ${ServiceName}:`n$Yaml", 1)
+            }
+
+            function Assert-ActionRejected {
+              param(
+                [Parameter(Mandatory)] [string]$Name,
+                [Parameter(Mandatory)] [scriptblock]$Action,
+                [Parameter(Mandatory)] [string]$ExpectedMessage
+              )
+              $rejected = $false
+              try {
+                & $Action
+              } catch {
+                if (-not $_.Exception.Message.Contains($ExpectedMessage, [StringComparison]::OrdinalIgnoreCase)) { throw }
+                $rejected = $true
+              }
+              if (-not $rejected) { throw "Production validation accepted invalid runtime fixture: $Name" }
+            }
+
+            $wildcardBind = $source.Replace(
+              '127.0.0.1:${PMS_WEB_PORT:-5174}:8080',
+              '0.0.0.0:${PMS_WEB_PORT:-5174}:8080')
+            Assert-ProductionComposeRejected 'wildcard-bind' $wildcardBind 'exactly 127.0.0.1'
+
+            $ipv6Bind = $source.Replace(
+              '127.0.0.1:${PMS_WEB_PORT:-5174}:8080',
+              '[::1]:${PMS_WEB_PORT:-5174}:8080')
+            Assert-ProductionComposeRejected 'ipv6-bind' $ipv6Bind 'exactly 127.0.0.1'
+
+            $ephemeralBind = $source.Replace(
+              '127.0.0.1:${PMS_WEB_PORT:-5174}:8080',
+              '127.0.0.1:0:8080')
+            Assert-ProductionComposeRejected 'ephemeral-bind' $ephemeralBind 'fixed integer'
+
+            $wrongTlsPort = $source.Replace(
+              '127.0.0.1:${PMS_WEB_PORT:-5174}:8080',
+              '127.0.0.1:5175:8080')
+            Assert-ProductionComposeRejected 'tls-port-drift' $wrongTlsPort 'exactly 5174'
+
+            $externalFrontend = [regex]::Replace(
+              $source,
+              '(?m)^  frontend:\r?\n    internal: true$',
+              "  frontend:`n    internal: false")
+            Assert-ProductionComposeRejected 'external-frontend' $externalFrontend 'frontend network must set internal'
+
+            $sharedIngress = [regex]::new('(?m)^  ingress:\r?$').Replace(
+              $source,
+              "  ingress:`n    external: true`n    name: shared-ingress",
+              1)
+            Assert-ProductionComposeRejected 'shared-ingress' $sharedIngress 'project-owned'
+
+            $privilegedApi = Add-ServiceSetting 'api' '    privileged: true'
+            Assert-ProductionComposeRejected 'privileged-api' $privilegedApi 'privileged'
+
+            $capAddedApi = Add-ServiceSetting 'api' "    cap_add:`n      - SYS_ADMIN"
+            Assert-ProductionComposeRejected 'cap-add-api' $capAddedApi 'cap_add'
+
+            $hostBindApi = Add-ServiceSetting 'api' "    volumes:`n      - /tmp:/host-tmp:ro"
+            Assert-ProductionComposeRejected 'host-bind-api' $hostBindApi 'host bind mounts'
+
+            $dockerSocketApi = Add-ServiceSetting 'api' "    volumes:`n      - /var/run/docker.sock:/var/run/docker.sock"
+            Assert-ProductionComposeRejected 'docker-socket-api' $dockerSocketApi 'Docker socket mounts'
+
+            $engineApiSocket = Add-ServiceSetting 'api' '    use_api_socket: true'
+            Assert-ProductionComposeRejected 'engine-api-socket' $engineApiSocket 'use_api_socket'
+
+            $hostPidApi = Add-ServiceSetting 'api' '    pid: host'
+            Assert-ProductionComposeRejected 'host-pid-api' $hostPidApi 'pid overrides'
+
+            $commandOverrideApi = Add-ServiceSetting 'api' '    command: ["sh", "-c", "sleep infinity"]'
+            Assert-ProductionComposeRejected 'command-override-api' $commandOverrideApi 'must not override'
+
+            $healthcheckOverrideApi = $source.Replace(
+              'wget -q -O - http://localhost:8088/actuator/health | grep -q UP',
+              'true')
+            Assert-ProductionComposeRejected 'healthcheck-override-api' $healthcheckOverrideApi 'healthcheck.test'
+
+            $redisEntrypointOverride = $source.Replace(
+              'exec docker-entrypoint.sh redis-server /run/pms-redis/redis.conf',
+              'exec redis-server --protected-mode no')
+            Assert-ProductionComposeRejected 'redis-entrypoint-override' $redisEntrypointOverride 'exact reviewed ACL bootstrap'
+
+            $disabledLoginLockout = $source.Replace('LOGIN_MAX_FAILURES: "5"', 'LOGIN_MAX_FAILURES: "0"')
+            Assert-ProductionComposeRejected 'disabled-login-lockout' $disabledLoginLockout 'must remain locked'
+
+            $apiMysqlUrlLine = '      MYSQL_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-pms3_replica}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true'
+            $relaxedSecurityOverride = $source.Replace(
+              $apiMysqlUrlLine,
+              "      PMS_SECURITY_LOGIN_MAX_FAILURES: `"20`"`n$apiMysqlUrlLine")
+            Assert-ProductionComposeRejected 'relaxed-security-property' $relaxedSecurityOverride 'services.api.environment properties'
+
+            $springJsonOverride = $source.Replace(
+              $apiMysqlUrlLine,
+              "      SPRING_APPLICATION_JSON: '{}'`n$apiMysqlUrlLine")
+            Assert-ProductionComposeRejected 'spring-application-json' $springJsonOverride 'services.api.environment properties'
+
+            $javaOptionsOverride = $source.Replace(
+              $apiMysqlUrlLine,
+              "      JAVA_TOOL_OPTIONS: -Dpms.security.login-max-failures=20`n$apiMysqlUrlLine")
+            Assert-ProductionComposeRejected 'java-tool-options' $javaOptionsOverride 'services.api.environment properties'
+
+            $volumeDriverBind = [regex]::new('(?m)^  mysql-data:\r?$').Replace(
+              $source,
+              "  mysql-data:`n    driver: local`n    driver_opts:`n      type: none`n      o: bind`n      device: /tmp",
+              1)
+            Assert-ProductionComposeRejected 'volume-driver-bind' $volumeDriverBind 'driver_opts'
+
+            . ./scripts/validate-production-deployment.ps1
+
+            # Keep the runtime process gate covered for PowerShell's 0/1/N
+            # pipeline-unwrapping behavior and Compose entrypoint semantics.
+            Assert-ExactStringSequence $null $null 'runtime-null-sequence'
+            Assert-ExactStringSequence @('one') @('one') 'runtime-single-sequence'
+            Assert-ExactStringSequence @('one', 'two') @('one', 'two') 'runtime-multi-sequence'
+
+            $renderedRuntimeCompose = (
+              (& docker compose --project-name pms3-production `
+                -f ./deploy/docker-compose.production.example.yml `
+                config --format json) -join "`n"
+            ) | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to render runtime process fixtures.' }
+
+            function New-RuntimeHealthFixture {
+              param([Parameter(Mandatory)] [object]$Healthcheck)
+              return [pscustomobject]@{
+                Test = @($Healthcheck.test)
+                Interval = Convert-ComposeDurationToNanoseconds ([string]$Healthcheck.interval) 'runtime-fixture.interval'
+                Timeout = Convert-ComposeDurationToNanoseconds ([string]$Healthcheck.timeout) 'runtime-fixture.timeout'
+                Retries = [int]$Healthcheck.retries
+              }
+            }
+
+            function New-RuntimeEnvironmentFixture {
+              param(
+                [AllowNull()] [object]$ImageEnvironment,
+                [AllowNull()] [object]$ServiceEnvironment
+              )
+              $entries = [Collections.Generic.List[string]]::new()
+              foreach ($entry in @($ImageEnvironment)) { $entries.Add([string]$entry) }
+              if ($null -ne $ServiceEnvironment) {
+                foreach ($property in $ServiceEnvironment.PSObject.Properties) {
+                  $entries.Add("$($property.Name)=$($property.Value)")
+                }
+              }
+              return @($entries)
+            }
+
+            $apiRuntimeService = $renderedRuntimeCompose.services.api
+            $apiRuntimeImage = [pscustomobject]@{
+              Entrypoint = @('java', '-jar', '/app/app.jar')
+              Cmd = $null
+              Env = @('PATH=/usr/bin', 'JAVA_HOME=/opt/java')
+            }
+            $apiRuntimeContainer = [pscustomobject]@{
+              Entrypoint = @('java', '-jar', '/app/app.jar')
+              Cmd = $null
+              Healthcheck = (New-RuntimeHealthFixture $apiRuntimeService.healthcheck)
+              Env = @(New-RuntimeEnvironmentFixture $apiRuntimeImage.Env $apiRuntimeService.environment)
+            }
+            Assert-RunningProcessContract $apiRuntimeContainer $apiRuntimeImage $apiRuntimeService 'api-fixture'
+            Assert-RunningEnvironmentContract $apiRuntimeContainer $apiRuntimeImage $apiRuntimeService 'api-fixture'
+
+            $redisRuntimeService = $renderedRuntimeCompose.services.redis
+            $redisRuntimeImage = [pscustomobject]@{
+              Entrypoint = @('/usr/local/bin/docker-entrypoint.sh')
+              Cmd = @('redis-server')
+              Env = @('PATH=/usr/bin')
+            }
+            $redisRuntimeContainer = [pscustomobject]@{
+              Entrypoint = @($redisRuntimeService.entrypoint)
+              Cmd = $null
+              Healthcheck = (New-RuntimeHealthFixture $redisRuntimeService.healthcheck)
+              Env = @($redisRuntimeImage.Env)
+            }
+            Assert-RunningProcessContract $redisRuntimeContainer $redisRuntimeImage $redisRuntimeService 'redis-fixture'
+            Assert-RunningEnvironmentContract $redisRuntimeContainer $redisRuntimeImage $redisRuntimeService 'redis-fixture'
+            $redisRuntimeContainer.Cmd = @('redis-server')
+            Assert-ActionRejected 'runtime-redis-image-command' {
+              Assert-RunningProcessContract $redisRuntimeContainer $redisRuntimeImage $redisRuntimeService 'redis-fixture'
+            } 'must contain exactly 0 ordered value'
+            $apiRuntimeContainer.Env += 'SPRING_APPLICATION_JSON={}'
+            Assert-ActionRejected 'runtime-extra-environment' {
+              Assert-RunningEnvironmentContract $apiRuntimeContainer $apiRuntimeImage $apiRuntimeService 'api-fixture'
+            } 'Config.Env keys'
+
+            $runtimeSecretPath = Join-Path $fixtureRoot 'runtime-secret'
+            [IO.File]::WriteAllText($runtimeSecretPath, 'fixture', [Text.UTF8Encoding]::new($false))
+            $runtimeContainer = [pscustomobject]@{
+              HostConfig = [pscustomobject]@{
+                Privileged = $false
+                CapAdd = $null
+                DeviceRequests = $null
+                Devices = @()
+                GroupAdd = $null
+                SecurityOpt = @()
+                PidMode = ''
+                IpcMode = 'private'
+                CgroupnsMode = 'private'
+                UsernsMode = ''
+                UTSMode = ''
+              }
+              Mounts = @(
+                [pscustomobject]@{ Type = 'volume'; Name = 'fixture_mysql_data'; Destination = '/var/lib/mysql'; RW = $true },
+                [pscustomobject]@{ Type = 'bind'; Source = $runtimeSecretPath; Destination = '/run/secrets/MYSQL_PASSWORD'; RW = $false }
+              )
+            }
+            Assert-RunningContainerPrivilegeBoundary $runtimeContainer 'mysql-fixture'
+            Assert-RunningContainerMountBoundary `
+              -Container $runtimeContainer `
+              -ServiceName 'mysql-fixture' `
+              -ExpectedPersistentVolumes @{ 'mysql-data' = '/var/lib/mysql' } `
+              -ConfiguredVolumeNames @{ 'mysql-data' = 'fixture_mysql_data' } `
+              -ExpectedSecrets @{ pms_mysql_password = 'MYSQL_PASSWORD' } `
+              -ConfiguredSecretPaths @{ pms_mysql_password = $runtimeSecretPath }
+
+            $runtimeContainer.HostConfig.Privileged = $true
+            Assert-ActionRejected 'runtime-privileged' {
+              Assert-RunningContainerPrivilegeBoundary $runtimeContainer 'api-fixture'
+            } 'must not be privileged'
+            $runtimeContainer.HostConfig.Privileged = $false
+            $runtimeContainer.HostConfig.CapAdd = @('SYS_ADMIN')
+            Assert-ActionRejected 'runtime-cap-add' {
+              Assert-RunningContainerPrivilegeBoundary $runtimeContainer 'api-fixture'
+            } 'CapAdd'
+            $runtimeContainer.HostConfig.CapAdd = $null
+            $runtimeContainer.Mounts += [pscustomobject]@{
+              Type = 'bind'; Source = '/var/run/docker.sock'; Destination = '/var/run/docker.sock'; RW = $true
+            }
+            Assert-ActionRejected 'runtime-docker-socket' {
+              Assert-RunningContainerMountBoundary `
+                -Container $runtimeContainer `
+                -ServiceName 'mysql-fixture' `
+                -ExpectedPersistentVolumes @{ 'mysql-data' = '/var/lib/mysql' } `
+                -ConfiguredVolumeNames @{ 'mysql-data' = 'fixture_mysql_data' } `
+                -ExpectedSecrets @{ pms_mysql_password = 'MYSQL_PASSWORD' } `
+                -ConfiguredSecretPaths @{ pms_mysql_password = $runtimeSecretPath }
+            } 'unexpected mount count'
+          } finally {
+            if (Test-Path -LiteralPath $fixtureRoot) {
+              $resolvedFixtureRoot = [IO.Path]::GetFullPath($fixtureRoot)
+              $resolvedTempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+              if (-not $resolvedFixtureRoot.StartsWith($resolvedTempRoot, [StringComparison]::OrdinalIgnoreCase) -or
+                  -not [IO.Path]::GetFileName($resolvedFixtureRoot).StartsWith('pms3-port-validator-', [StringComparison]::Ordinal)) {
+                throw "Refusing to remove unexpected fixture path: $resolvedFixtureRoot"
+              }
+              Remove-Item -Recurse -Force -LiteralPath $resolvedFixtureRoot
+            }
+          }
+      - name: Validate trusted proxy header boundary
+        shell: pwsh
+        run: |
+          $tlsConfig = [IO.File]::ReadAllText((Resolve-Path './deploy/nginx-tls.conf.example'))
+          $requiredServerHeaders = @(
+            'proxy_set_header Host $host;',
+            'proxy_set_header X-Real-IP $remote_addr;',
+            'proxy_set_header X-Forwarded-For $remote_addr;',
+            'proxy_set_header Forwarded "";',
+            'proxy_set_header Connection "";',
+            'proxy_set_header X-Request-Id $request_id;',
+            'proxy_set_header X-Forwarded-Proto https;'
+          )
+          foreach ($header in $requiredServerHeaders) {
+            if ([regex]::Matches($tlsConfig, [regex]::Escape($header)).Count -ne 1) {
+              throw "TLS proxy header must occur exactly once at server scope: $header"
+            }
+          }
+          $firstLocation = $tlsConfig.IndexOf('    location ', [StringComparison]::Ordinal)
+          $lastProxyHeader = $tlsConfig.LastIndexOf('    proxy_set_header ', [StringComparison]::Ordinal)
+          if ($firstLocation -lt 0 -or $lastProxyHeader -lt 0 -or $lastProxyHeader -gt $firstLocation -or
+              $tlsConfig.Contains('$proxy_add_x_forwarded_for', [StringComparison]::Ordinal)) {
+            throw 'All trusted TLS proxy headers must be declared together at server scope before any location.'
+          }
+
+          $webConfig = [IO.File]::ReadAllText((Resolve-Path './apps/admin-web/nginx.conf'))
+          if (-not $webConfig.Contains('proxy_set_header X-Forwarded-For $http_x_forwarded_for;', [StringComparison]::Ordinal) -or
+              -not $webConfig.Contains('proxy_set_header Forwarded "";', [StringComparison]::Ordinal) -or
+              $webConfig.Contains('$proxy_add_x_forwarded_for', [StringComparison]::Ordinal)) {
+            throw 'Web proxy must forward only the trusted outer X-Forwarded-For value and clear Forwarded.'
+          }
+      - name: Reject forged v3 container scan evidence
+        shell: pwsh
+        env:
+          PMS_API_IMAGE: registry.example.invalid/pms-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          PMS_WEB_IMAGE: registry.example.invalid/pms-web@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          PMS_MYSQL_IMAGE: registry.example.invalid/pms-mysql@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          PMS_REDIS_IMAGE: registry.example.invalid/redis@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+        run: |
+          $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) "pms3-validator-$([guid]::NewGuid().ToString('N'))"
+          $secretDirectory = Join-Path $fixtureRoot 'secrets'
+          $evidencePath = Join-Path $fixtureRoot 'summary.json'
+          try {
+            [void][IO.Directory]::CreateDirectory($secretDirectory)
+            $secretValues = [ordered]@{
+              MYSQL_PASSWORD = 'CiMysqlApp-7vK3mN8q'
+              MYSQL_ROOT_PASSWORD = 'CiMysqlRoot-4xJ9pQ2w'
+              REDIS_PASSWORD = 'CiRedis-6tR2cW8y'
+              JWT_SECRET = 'CiJwt-7vK3mN8qP2wR5tY9cH4sL6xD8fB1zQ'
+              PMS_CALLBACK_SIGNING_SECRET = 'CiCallback-8qB3vN7mK2xW6pR4tY9cH5sL1dF7zQ'
+              PMS_BOOTSTRAP_ADMIN_PASSWORD = 'CiBootstrap-9wF4mT7q!'
+            }
+            foreach ($entry in $secretValues.GetEnumerator()) {
+              [IO.File]::WriteAllText((Join-Path $secretDirectory $entry.Key), $entry.Value, [Text.UTF8Encoding]::new($false))
+            }
+            & chmod 700 $fixtureRoot $secretDirectory
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to restrict CI secret fixture directory permissions.' }
+            $secretPaths = @((Get-ChildItem -File -LiteralPath $secretDirectory).FullName)
+            & chmod 444 @secretPaths
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to restrict CI secret fixture file permissions.' }
+            $env:PMS_SECRET_DIR = $secretDirectory
+
+            function Write-V3Fixture {
+              param([Parameter(Mandatory)] [string]$Mode)
+              $now = [DateTimeOffset]::UtcNow
+              $createdAt = $now.AddMinutes(-1).ToString('o')
+              $images = @($env:PMS_API_IMAGE, $env:PMS_WEB_IMAGE, $env:PMS_MYSQL_IMAGE, $env:PMS_REDIS_IMAGE)
+              $entries = @()
+              for ($index = 0; $index -lt $images.Count; $index++) {
+                $imageId = "sha256:$([string]($index + 1) * 64)"
+                $osResult = [ordered]@{
+                  Target = 'rootfs'; Class = 'os-pkgs'; Type = 'alpine'
+                  Packages = @([ordered]@{ Name = 'busybox'; Version = '1.36.1' })
+                  Vulnerabilities = @()
+                }
+                $results = @($osResult)
+                if ($index -eq 0) {
+                  $results += [ordered]@{
+                    Target = 'app.jar'; Class = 'lang-pkgs'; Type = 'jar'
+                    Packages = @([ordered]@{ Name = 'spring-core'; Version = '6.2.0' })
+                    Vulnerabilities = @()
+                  }
+                }
+                if ($Mode -ceq 'empty-target' -and $index -eq 0) { $results = @() }
+                $architecture = if ($Mode -ceq 'platform-mismatch' -and $index -eq 0) { 'arm64' } else { 'amd64' }
+                $raw = [ordered]@{
+                  SchemaVersion = 2
+                  ArtifactName = $imageId
+                  ArtifactType = 'container_image'
+                  CreatedAt = $createdAt
+                  Metadata = [ordered]@{
+                    ImageID = $imageId
+                    RepoDigests = @($images[$index])
+                    OS = [ordered]@{ Family = 'alpine'; Name = '3.23' }
+                    ImageConfig = [ordered]@{ architecture = $architecture; os = 'linux' }
+                  }
+                  Trivy = [ordered]@{ Version = '0.64.1' }
+                  Results = $results
+                }
+                $reportFile = "image-$index.json"
+                $reportPath = Join-Path $fixtureRoot $reportFile
+                [IO.File]::WriteAllText($reportPath, ($raw | ConvertTo-Json -Depth 10) + "`n", [Text.UTF8Encoding]::new($false))
+                $reportSha256 = (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant()
+                $targets = @($results | ForEach-Object {
+                  [ordered]@{ Target = $_.Target; Class = $_.Class; Type = $_.Type; PackageCount = @($_.Packages).Count }
+                })
+                $entries += [ordered]@{
+                  Image = $images[$index]; ImageId = $imageId; RepoDigests = @($images[$index])
+                  Platform = 'linux/amd64'; Critical = 0; High = 0
+                  ReportFile = $reportFile; ReportSha256 = $reportSha256
+                  ReportCreatedAtUtc = $createdAt; RawSchemaVersion = 2; Targets = $targets
+                }
+                if ($Mode -ceq 'raw-tamper' -and $index -eq 0) {
+                  [IO.File]::AppendAllText($reportPath, "`n", [Text.UTF8Encoding]::new($false))
+                }
+              }
+              $evidence = [ordered]@{
+                SchemaVersion = if ($Mode -ceq 'old-schema') { 2 } else { 3 }
+                GeneratedAtUtc = $now.ToString('o')
+                TrivyImage = 'aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969'
+                TrivyVersion = 'Version: 0.64.1'
+                VulnerabilityDatabase = [ordered]@{ Version = 2; UpdatedAt = $now.AddHours(-2).ToString('o'); DownloadedAt = $now.AddHours(-1).ToString('o'); NextUpdate = $now.AddHours(12).ToString('o') }
+                JavaDatabase = [ordered]@{ Version = 1; UpdatedAt = $now.AddHours(-2).ToString('o'); DownloadedAt = $now.AddHours(-1).ToString('o'); NextUpdate = $now.AddHours(12).ToString('o') }
+                Images = $entries
+              }
+              if ($Mode -ceq 'unsafe-report-path') { $entries[0]['ReportFile'] = '../image-0.json' }
+              [IO.File]::WriteAllText($evidencePath, ($evidence | ConvertTo-Json -Depth 12) + "`n", [Text.UTF8Encoding]::new($false))
+            }
+
+            function Assert-EvidenceRejected {
+              param([string]$Mode, [string]$ExpectedMessage)
+              Write-V3Fixture $Mode
+              $rejected = $false
+              try { & ./scripts/validate-production-deployment.ps1 -EvidencePath $evidencePath }
+              catch {
+                if (-not $_.Exception.Message.Contains($ExpectedMessage, [StringComparison]::OrdinalIgnoreCase)) { throw }
+                $rejected = $true
+              }
+              if (-not $rejected) { throw "Production validation accepted forged evidence mode: $Mode" }
+            }
+
+            Assert-EvidenceRejected 'old-schema' 'SchemaVersion must be integer 3'
+            Assert-EvidenceRejected 'raw-tamper' 'ReportSha256 does not match'
+            Assert-EvidenceRejected 'platform-mismatch' 'platform mismatch'
+            Assert-EvidenceRejected 'empty-target' 'no analysis targets'
+            Assert-EvidenceRejected 'unsafe-report-path' 'safe relative JSON basename'
+          } finally {
+            if (Test-Path -LiteralPath $fixtureRoot) {
+              Remove-Item -Recurse -Force -LiteralPath $fixtureRoot
+            }
+          }
+
+  windows-acl-contract:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce Windows secret ACL allowlist
+        shell: pwsh
+        run: |
+          . ./scripts/validate-production-deployment.ps1
+          $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) "pms3-acl-$([guid]::NewGuid().ToString('N'))"
+          $validSecretFile = Join-Path $fixtureRoot 'JWT_SECRET'
+          $writeSecretFile = Join-Path $fixtureRoot 'WRITE_SECRET'
+          $otherSecretFile = Join-Path $fixtureRoot 'OTHER_SECRET'
+          $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User
+          function Set-TestAcl {
+            param([string]$Path, [Security.AccessControl.FileSystemRights]$Rights, [Security.Principal.IdentityReference]$Identity = $currentSid)
+            $acl = if (Test-Path -LiteralPath $Path -PathType Container) {
+              [Security.AccessControl.DirectorySecurity]::new()
+            } else {
+              [Security.AccessControl.FileSecurity]::new()
+            }
+            $acl.SetAccessRuleProtection($true, $false)
+            $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($Identity, $Rights, 'Allow'))
+            Set-Acl -LiteralPath $Path -AclObject $acl
+          }
+          function Assert-Rejected {
+            param([scriptblock]$Action, [string]$Expected)
+            $rejected = $false
+            try { & $Action } catch {
+              if (-not $_.Exception.Message.Contains($Expected, [StringComparison]::OrdinalIgnoreCase)) { throw }
+              $rejected = $true
+            }
+            if (-not $rejected) { throw "ACL validator accepted invalid ACL: $Expected" }
+          }
+          # The hosted runner is disposable. These fixtures are intentionally not
+          # unlocked again after proving that a read-only protected DACL is accepted.
+          [void][IO.Directory]::CreateDirectory($fixtureRoot)
+          foreach ($path in @($validSecretFile, $writeSecretFile, $otherSecretFile)) {
+            [IO.File]::WriteAllText($path, 'fixture')
+          }
+          Assert-Rejected { Assert-RestrictedWindowsAcl $fixtureRoot 'fixture directory' } 'disable inherited'
+
+          Set-TestAcl $writeSecretFile ([Security.AccessControl.FileSystemRights]::FullControl)
+          Assert-Rejected { Assert-RestrictedWindowsAcl $writeSecretFile 'fixture file' } 'write, delete, or ACL-changing'
+          Set-TestAcl $otherSecretFile ([Security.AccessControl.FileSystemRights]::Read) ([Security.Principal.SecurityIdentifier]::new('S-1-1-0'))
+          Assert-Rejected { Assert-RestrictedWindowsAcl $otherSecretFile 'fixture file' } 'unapproved Windows principal'
+
+          [IO.File]::SetAttributes($validSecretFile, [IO.FileAttributes]::ReadOnly)
+          Set-TestAcl $validSecretFile ([Security.AccessControl.FileSystemRights]::Read)
+          Assert-RestrictedWindowsAcl $validSecretFile 'fixture file'
+          Assert-ReadOnlyWindowsSecret $validSecretFile 'fixture file'
+          Set-TestAcl $fixtureRoot ([Security.AccessControl.FileSystemRights]::ReadAndExecute)
+          Assert-RestrictedWindowsAcl $fixtureRoot 'fixture directory'
+
+  container-security:
+    needs: [backend, frontend, compose-definition, windows-acl-contract]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve immutable base image digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .artifacts/security
+
+          resolve_image() {
+            local image="$1"
+            local resolved
+            docker pull "$image" >/dev/null
+            resolved="$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')"
+            if [[ ! "$resolved" =~ @sha256:[0-9a-f]{64}$ ]]; then
+              echo "Unable to resolve an immutable digest for $image" >&2
+              return 1
+            fi
+            printf '%s\n' "$resolved"
+          }
+
+          maven_build_image="$(resolve_image 'maven:3.9.9-eclipse-temurin-17')"
+          api_runtime_image="$(resolve_image 'eclipse-temurin:17-jre-alpine')"
+          node_build_image="$(resolve_image 'node:22.16-alpine')"
+          web_runtime_image="$(resolve_image 'nginxinc/nginx-unprivileged:1.29-alpine')"
+          mysql_base_image="$(resolve_image 'mysql:8.4')"
+          redis_image="$(resolve_image 'redis:7.4-alpine')"
+
+          {
+            echo "MAVEN_BUILD_IMAGE=$maven_build_image"
+            echo "API_RUNTIME_IMAGE=$api_runtime_image"
+            echo "NODE_BUILD_IMAGE=$node_build_image"
+            echo "WEB_RUNTIME_IMAGE=$web_runtime_image"
+            echo "MYSQL_BASE_IMAGE=$mysql_base_image"
+            echo "REDIS_IMAGE=$redis_image"
+          } >> "$GITHUB_ENV"
+
+          printf '%s\n' \
+            "MAVEN_BUILD_IMAGE=$maven_build_image" \
+            "API_RUNTIME_IMAGE=$api_runtime_image" \
+            "NODE_BUILD_IMAGE=$node_build_image" \
+            "WEB_RUNTIME_IMAGE=$web_runtime_image" \
+            "MYSQL_BASE_IMAGE=$mysql_base_image" \
+            "REDIS_IMAGE=$redis_image" \
+            > .artifacts/security/base-images.txt
+      - name: Build uncached security candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          security_refresh="${GITHUB_SHA}-${GITHUB_RUN_ID}"
+          docker build --pull --no-cache \
+            --build-arg "MAVEN_BUILD_IMAGE=$MAVEN_BUILD_IMAGE" \
+            --build-arg "API_RUNTIME_IMAGE=$API_RUNTIME_IMAGE" \
+            --build-arg "PMS_SECURITY_REFRESH=$security_refresh" \
+            --tag pms3-replica-api:ci \
+            apps/pms-api
+          docker build --pull --no-cache \
+            --build-arg "NODE_BUILD_IMAGE=$NODE_BUILD_IMAGE" \
+            --build-arg "WEB_RUNTIME_IMAGE=$WEB_RUNTIME_IMAGE" \
+            --build-arg "PMS_SECURITY_REFRESH=$security_refresh" \
+            --tag pms3-replica-web:ci \
+            apps/admin-web
+          docker build --pull --no-cache \
+            --build-arg "MYSQL_BASE_IMAGE=$MYSQL_BASE_IMAGE" \
+            --tag pms3-replica-mysql:ci \
+            deploy/mysql
+      - name: Smoke production Compose file-backed secrets on Linux
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PMS_API_IMAGE='pms3-replica-api:ci'
+          export PMS_WEB_IMAGE='pms3-replica-web:ci'
+          export PMS_MYSQL_IMAGE='pms3-replica-mysql:ci'
+          export PMS_REDIS_IMAGE="$REDIS_IMAGE"
+          bash ./scripts/smoke-production-compose-linux.sh
+      - name: Scan exact candidate image IDs
+        shell: pwsh
+        run: |
+          & ./scripts/scan-container-images.ps1 -Images @(
+            'pms3-replica-api:ci'
+            'pms3-replica-web:ci'
+            'pms3-replica-mysql:ci'
+            $env:REDIS_IMAGE
+          )
+      - name: Upload image security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-security-${{ github.sha }}
+          path: |
+            .artifacts/security/base-images.txt
+            .artifacts/security/trivy/*.json
+          if-no-files-found: warn

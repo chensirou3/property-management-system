@@ -27,7 +27,13 @@ describe('49-page delivery catalog', () => {
 
   it('defines query, columns, permissions, operations, states and acceptance assumptions per page', () => {
     for (const page of pageCatalog) {
-      expect(page.query.length, `${page.title} query model`).toBeGreaterThan(0)
+      if (page.path === '/finance/bank-trust') {
+        // BANK_TRUST is an explicit capability-only simulator until a bank
+        // protocol is authorized; exposing inert batch filters would be false.
+        expect(page.query, `${page.title} capability-only query model`).toEqual([])
+      } else {
+        expect(page.query.length, `${page.title} query model`).toBeGreaterThan(0)
+      }
       expect(page.columns.length, `${page.title} column model`).toBeGreaterThan(0)
       expect(page.permissions.read, `${page.title} read permission`).toMatch(/^[a-z-]+:[a-z-]+$/)
       expect(page.operations.length, `${page.title} operations`).toBeGreaterThan(0)

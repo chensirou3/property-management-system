@@ -41,7 +41,7 @@ class IamProjectIsolationIntegrationTest {
     private static final String PROJECT_MANAGER_ROLE = "10000000-0000-0000-0000-000000000002";
     private static final String SEEDED_EMPLOYEE = "34000000-0000-0000-0000-000000000001";
     private static final String ADMIN_USERNAME = "integration-admin";
-    private static final String ADMIN_PASSWORD = "integration-admin-password";
+    private static final String ADMIN_PASSWORD = "IsolationFixture-2026!";
     private static final String EMPLOYEE_USERNAME = "integration-project-manager";
     private static final String EMPLOYEE_PASSWORD = "Integration-Employee-2026!";
     private static final String CHANGED_PASSWORD = "Changed-Employee-2026!";
@@ -140,7 +140,21 @@ class IamProjectIsolationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(609));
 
+        mockMvc.perform(get("/api/v1/dashboard")
+                        .header("Authorization", bearer(employeeToken))
+                        .param("communityId", PRIMARY_PROJECT))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.communityId").value(PRIMARY_PROJECT))
+                .andExpect(jsonPath("$.quality.room_detail_mismatches").value(0))
+                .andExpect(jsonPath("$.quality.orphan_allocations").value(0));
+
         mockMvc.perform(get("/api/v1/data/assets")
+                        .header("Authorization", bearer(employeeToken))
+                        .param("communityId", ISOLATED_PROJECT))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PROJECT_ACCESS_DENIED"));
+
+        mockMvc.perform(get("/api/v1/dashboard")
                         .header("Authorization", bearer(employeeToken))
                         .param("communityId", ISOLATED_PROJECT))
                 .andExpect(status().isForbidden())

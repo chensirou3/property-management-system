@@ -38,7 +38,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class FeeReceivableIntegrationTest {
     private static final String PROJECT = "30000000-0000-0000-0000-000000000001";
     private static final String ADMIN_USERNAME = "fee-integration-admin";
-    private static final String ADMIN_PASSWORD = "fee-integration-admin-password";
+    private static final String ADMIN_PASSWORD = "FeeFixture-2026!Secure";
 
     @Container
     private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.4")

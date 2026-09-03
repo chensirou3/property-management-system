@@ -57,13 +57,16 @@ test('G8 governed reports, exports, receipt printing and notification evidence c
   expect(createHash('sha256').update(artifactBytes).digest('hex')).toBe(exportJob!.artifact_checksum)
 
   const receiptReportBefore = await apiJson(page.request,
-    `/api/v1/reports/RECEIPT_BATCH_PRINT?communityId=${project}&page=1&size=10`, headers)
+    `/api/v1/reports/RECEIPT_BATCH_PRINT?communityId=${project}&receiptStatus=ISSUED&page=1&size=10`, headers)
   expect(receiptReportBefore.rows.length, '至少需要一张已签发收据用于浏览器打印验收').toBeGreaterThan(0)
   const receipt = receiptReportBefore.rows[0]
   const existingPrints = await apiJson(page.request, `/api/v1/receipt-print-jobs?communityId=${project}`, headers)
   const existingPrintIds = new Set(existingPrints.map((job: Record<string, any>) => job.id))
   await page.goto('/finance/receipt-batch-print')
   await expect(page.getByRole('columnheader', { name: '收据号' })).toBeVisible()
+  await page.getByRole('combobox', { name: '收据状态' }).click()
+  await page.getByRole('option', { name: 'ISSUED', exact: true }).click()
+  await page.getByRole('button', { name: '查询', exact: true }).click()
   const row = page.getByRole('row').filter({ hasText: receipt.receiptNo }).first()
   await expect(row).toBeVisible()
   await row.locator('.el-checkbox').click()

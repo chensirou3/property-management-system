@@ -1,4 +1,5 @@
-FROM mysql:8.4
+ARG MYSQL_BASE_IMAGE=mysql:8.4
+FROM ${MYSQL_BASE_IMAGE}
 
 # Patch the vendor OS packages and remove administration-only runtimes that are
 # not required by the PMS server process. The container runs directly as the

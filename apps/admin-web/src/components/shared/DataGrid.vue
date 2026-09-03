@@ -44,6 +44,7 @@ const emit = defineEmits<{
   'update:page': [value: number]
   'update:pageSize': [value: number]
   'selection-change': [rows: Record<string, unknown>[]]
+  'visible-columns-change': [columns: string[]]
   'sort-change': [value: { prop: string; order: string | null }]
   reload: []
 }>()
@@ -63,6 +64,7 @@ function restoreColumns() {
   } catch {
     visibleColumns.value = [...available]
   }
+  emit('visible-columns-change', [...visibleColumns.value])
 }
 
 function display(value: unknown) {
@@ -82,6 +84,7 @@ function isMoney(column: DataGridColumn) {
 function updateColumns(value: string[]) {
   visibleColumns.value = value.length ? value : [props.columns[0]?.prop].filter(Boolean)
   localStorage.setItem(storageName.value, JSON.stringify(visibleColumns.value))
+  emit('visible-columns-change', [...visibleColumns.value])
 }
 
 function clearSelection() {

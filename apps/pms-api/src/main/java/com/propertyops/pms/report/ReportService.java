@@ -46,6 +46,10 @@ public class ReportService {
 
     public List<Map<String, Object>> catalog(String communityId) { return engine.catalog(communityId); }
 
+    public ReportModels.ReportFilterOptions filterOptions(String communityId, String reportCode) {
+        return engine.filterOptions(communityId, reportCode);
+    }
+
     public Map<String, Object> query(String communityId, String code, Map<String, String> filters,
                                      List<String> columns, int page, int size) {
         return engine.execute(communityId, code, filters, columns, page, size);
@@ -57,14 +61,17 @@ public class ReportService {
         write(request.communityId(), exportPermission(code));
         String key = requireKey(idempotencyKey);
         String format = exportFormat(request.format());
+        // Validate and normalize before hashing, replay comparison and persistence so
+        // the online query and the asynchronous artifact use the same filter contract.
+        Map<String, Object> validation = engine.executeTrusted(request.communityId(), code, request.filters(), request.selectedColumns(), 1, 1);
+        @SuppressWarnings("unchecked") Map<String, String> normalizedFilters =
+                (Map<String, String>) validation.get("appliedFilters");
+        @SuppressWarnings("unchecked") List<String> columns = (List<String>) validation.get("columns");
         String requestJson = json(Map.of("communityId", request.communityId(), "reportCode", code,
-                "format", format, "filters", new TreeMap<>(request.filters()), "selectedColumns", request.selectedColumns()));
+                "format", format, "filters", new TreeMap<>(normalizedFilters), "selectedColumns", columns));
         String hash = sha256(requestJson);
         Map<String, Object> replay = replay("report_export_job", request.communityId(), key);
         if (replay != null) { requireSame(replay, hash); return withoutBlob(replay); }
-        // Execute metadata/allow-list validation before accepting the task.
-        Map<String, Object> validation = engine.executeTrusted(request.communityId(), code, request.filters(), request.selectedColumns(), 1, 1);
-        @SuppressWarnings("unchecked") List<String> columns = (List<String>) validation.get("columns");
         String id = UUID.randomUUID().toString();
         LocalDateTime now = now();
         String watermark = "合成验收环境 | " + security.requirePrincipal().username() + " | " + now + " | " + code;
@@ -75,7 +82,7 @@ public class ReportService {
                 VALUES (:id,:communityId,:code,:key,:hash,:format,:filters,:columns,:watermark,'QUEUED',:userId,:now)
                 """, new MapSqlParameterSource("id", id).addValue("communityId", request.communityId())
                 .addValue("code", code).addValue("key", key).addValue("hash", hash).addValue("format", format)
-                .addValue("filters", json(new TreeMap<>(request.filters()))).addValue("columns", json(columns))
+                .addValue("filters", json(new TreeMap<>(normalizedFilters))).addValue("columns", json(columns))
                 .addValue("watermark", watermark).addValue("userId", security.requirePrincipal().userId()).addValue("now", now));
         exportEvent(id, request.communityId(), "QUEUED", Map.of("format", format, "reportCode", code));
         audit.success(request.communityId(), "report-export:queue", "report-export-job", id,
