@@ -8,6 +8,40 @@ function New-PropertySystemSecret([int]$bytes = 32) {
     return ([BitConverter]::ToString($buffer) -replace '-', '').ToLowerInvariant()
 }
 
+function Find-DockerCli {
+    $command = Get-Command docker.exe -ErrorAction SilentlyContinue
+    if ($command) { return $command.Source }
+
+    $candidates = @(
+        (Join-Path $env:ProgramFiles 'Docker\Docker\resources\bin\docker.exe')
+        (Join-Path $env:LOCALAPPDATA 'Docker\resources\bin\docker.exe')
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+    return $null
+}
+
+function Find-DockerDesktop {
+    $candidates = @(
+        (Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe')
+        (Join-Path $env:LOCALAPPDATA 'Docker\Docker Desktop.exe')
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return (Resolve-Path -LiteralPath $candidate).Path
+        }
+    }
+    return $null
+}
+
+function Test-DockerEngine([string]$dockerCli) {
+    & $dockerCli info *> $null
+    return $LASTEXITCODE -eq 0
+}
+
 $environmentFile = Join-Path $PSScriptRoot '.env'
 if (-not (Test-Path -LiteralPath $environmentFile)) {
     $lines = @(
@@ -34,18 +68,57 @@ if (-not (Test-Path -LiteralPath $environmentFile)) {
     Write-Host '已生成本机技术密钥。管理员账号和密码将在网页中创建。' -ForegroundColor Green
 }
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    throw '未找到 Docker。请先安装并启动 Docker Desktop。'
+$dockerCli = Find-DockerCli
+if (-not $dockerCli) {
+    throw '未找到 Docker CLI。请先安装 Docker Desktop，完成首次安装设置后重新双击本启动文件。'
 }
 
-docker info *> $null
-if ($LASTEXITCODE -ne 0) { throw 'Docker Desktop 尚未就绪，请启动后重试。' }
+if (-not (Test-DockerEngine $dockerCli)) {
+    $dockerDesktop = Find-DockerDesktop
+    if (-not $dockerDesktop) {
+        throw 'Docker 引擎尚未运行，且未找到 Docker Desktop。请手动启动 Docker 服务后重试。'
+    }
 
-docker compose config --quiet
+    $dockerDesktopProcess = Get-Process -Name 'Docker Desktop' -ErrorAction SilentlyContinue
+    if (-not $dockerDesktopProcess) {
+        Write-Host 'Docker Desktop 尚未运行，正在自动启动……' -ForegroundColor Cyan
+        Start-Process -FilePath $dockerDesktop -WindowStyle Hidden
+    } else {
+        Write-Host 'Docker Desktop 正在启动，等待引擎就绪……' -ForegroundColor Cyan
+    }
+
+    $dockerDeadline = [DateTime]::UtcNow.AddMinutes(4)
+    $dockerReady = $false
+    $nextProgressAt = [DateTime]::UtcNow
+    while ([DateTime]::UtcNow -lt $dockerDeadline) {
+        if (Test-DockerEngine $dockerCli) {
+            $dockerReady = $true
+            break
+        }
+        if ([DateTime]::UtcNow -ge $nextProgressAt) {
+            Write-Host '正在等待 Docker Desktop 完成初始化……'
+            $nextProgressAt = [DateTime]::UtcNow.AddSeconds(15)
+        }
+        Start-Sleep -Seconds 3
+    }
+    if (-not $dockerReady) {
+        throw 'Docker Desktop 在 4 分钟内未就绪。请手动打开 Docker Desktop，完成许可确认/首次设置并确认引擎运行后重试。'
+    }
+}
+
+$containerOs = (& $dockerCli info --format '{{.OSType}}' 2>$null).Trim()
+if ($LASTEXITCODE -ne 0 -or $containerOs -ne 'linux') {
+    throw '物业管理系统需要 Docker Linux 容器。请将 Docker Desktop 切换为 Linux containers 后重试。'
+}
+
+& $dockerCli compose version *> $null
+if ($LASTEXITCODE -ne 0) { throw '未检测到 Docker Compose v2。请升级 Docker Desktop 后重试。' }
+
+& $dockerCli compose config --quiet
 if ($LASTEXITCODE -ne 0) { throw 'Docker Compose 配置校验失败。' }
 
 Write-Host '正在构建并启动物业管理系统，首次运行可能需要几分钟……' -ForegroundColor Cyan
-docker compose up -d --build
+& $dockerCli compose up -d --build
 if ($LASTEXITCODE -ne 0) { throw '系统启动失败，请执行 docker compose logs api 查看原因。' }
 
 $deadline = [DateTime]::UtcNow.AddMinutes(5)
