@@ -15,7 +15,7 @@
     <artifactId>pms-api</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>pms-api</name>
-    <description>Independent PMS3 property management replica API</description>
+    <description>Property management system API</description>
 
     <properties>
         <java.version>17</java.version>

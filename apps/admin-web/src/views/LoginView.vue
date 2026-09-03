@@ -32,8 +32,8 @@ async function submit() {
     <header class="login-header">
       <div class="login-header-brand">
         <span class="cloud-mark">物</span>
-        <strong>物业云</strong>
-        <span class="login-product-name">物业管理系统</span>
+        <strong>物业管理系统</strong>
+        <span class="login-product-name">综合运营平台</span>
       </div>
       <nav class="login-nav" aria-label="产品导航">
         <span class="active">首页</span>
@@ -46,7 +46,7 @@ async function submit() {
 
     <section class="login-banner" aria-label="产品简介">
       <div class="login-banner-copy">
-        <p>PROPERTY MANAGEMENT CLOUD</p>
+        <p>PROPERTY MANAGEMENT SYSTEM</p>
         <h1>项目、资产、收费一体化管理</h1>
         <span>以统一工作台承载物业运营的日常业务流程</span>
       </div>
@@ -68,11 +68,11 @@ async function submit() {
             <el-input v-model="password" :prefix-icon="Lock" type="password" show-password autocomplete="current-password" aria-label="密码" placeholder="请输入密码" @keyup.enter="submit" />
           </el-form-item>
           <el-button type="primary" native-type="submit" :loading="loading" class="login-submit">登录</el-button>
-          <p class="login-environment-note">本地重构环境 · 数据与外部通道均按安全边界运行</p>
+          <p class="login-environment-note">本地部署环境 · 数据与外部通道均按安全边界运行</p>
         </el-form>
       </section>
     </main>
 
-    <footer class="login-footer">物业管理系统 · 独立重构版本</footer>
+    <footer class="login-footer">物业管理系统 · 单项目独立部署</footer>
   </div>
 </template>

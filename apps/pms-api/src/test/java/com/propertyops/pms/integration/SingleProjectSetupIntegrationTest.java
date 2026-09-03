@@ -98,6 +98,12 @@ class SingleProjectSetupIntegrationTest {
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.items[0].name").value(PROJECT));
 
+        mockMvc.perform(get("/api/v1/iam/projects")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value(PROJECT));
+
         mockMvc.perform(post("/api/v1/data/communities")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)

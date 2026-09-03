@@ -4,7 +4,7 @@
 
     [string]$OutputParent,
 
-    [string]$DeliveryName = 'PMS3-交付版-2026-09-03-rc2'
+    [string]$DeliveryName = '物业管理系统-交付版-2026-09-03'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -49,7 +49,7 @@ try {
     if (-not (Test-Path -LiteralPath $sampleDirectory)) {
         New-Item -ItemType Directory -Path $sampleDirectory | Out-Null
     }
-    Copy-Item -LiteralPath $workbookResolved -Destination (Join-Path $sampleDirectory 'PMS3模拟导入数据-32条合格1条隔离.xlsx')
+    Copy-Item -LiteralPath $workbookResolved -Destination (Join-Path $sampleDirectory '物业管理系统-模拟导入数据-32条合格1条隔离.xlsx')
 
     $forbiddenDirectories = @('.git', 'node_modules', 'target', 'dist', 'coverage', 'playwright-report', 'test-results', '.artifacts', '.tools', 'e2e')
     $forbidden = Get-ChildItem -LiteralPath $deliveryDirectory -Recurse -Force | Where-Object {
@@ -69,7 +69,7 @@ try {
     $commit = (& git -c "safe.directory=$repoGit" -C $repo rev-parse HEAD).Trim()
     $manifestPath = Join-Path $deliveryDirectory 'DELIVERY-MANIFEST.txt'
     $manifest = @(
-        'PMS3 clean delivery manifest'
+        'Property Management System clean delivery manifest'
         "DeliveryName: $DeliveryName"
         "BuiltAtUtc: $([DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))"
         "GitCommit: $commit"

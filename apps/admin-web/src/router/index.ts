@@ -147,7 +147,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  document.title = `${String(to.meta.title || '物业管理平台')} - 物业管理平台`
+  document.title = `${String(to.meta.title || '物业管理系统')} - 物业管理系统`
   const setup = useSetupStore()
   try {
     const setupStatus = await setup.loadStatus()

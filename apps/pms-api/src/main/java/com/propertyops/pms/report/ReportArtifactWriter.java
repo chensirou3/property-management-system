@@ -110,7 +110,7 @@ public class ReportArtifactWriter {
     }
 
     private byte[] pdf(String title, String watermark, int rowCount) {
-        String visible = "PMS3 SYNTHETIC REPORT | " + ascii(title) + " | rows=" + rowCount + " | " + ascii(watermark);
+        String visible = "PROPERTY MANAGEMENT SYSTEM SYNTHETIC REPORT | " + ascii(title) + " | rows=" + rowCount + " | " + ascii(watermark);
         String stream = "BT /F1 10 Tf 36 800 Td (" + visible.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") + ") Tj ET";
         List<String> objects = List.of(
                 "<< /Type /Catalog /Pages 2 0 R >>",

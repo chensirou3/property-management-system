@@ -13,7 +13,7 @@ public class PlatformController {
     @GetMapping("/runtime")
     Map<String, Object> runtime() {
         return Map.of(
-                "name", "物业管理平台",
+                "name", "物业管理系统",
                 "environment", "synthetic-data",
                 "paymentAdapter", "simulator",
                 "invoiceAdapter", "simulator",

@@ -50,7 +50,7 @@ function cancel() {
     <header class="password-change-header">
       <div class="login-header-brand">
         <span class="cloud-mark">物</span>
-        <strong>物业云</strong>
+        <strong>物业管理系统</strong>
         <span class="login-product-name">账号安全</span>
       </div>
     </header>

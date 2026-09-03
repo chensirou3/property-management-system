@@ -1,7 +1,7 @@
 ﻿$ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 
-function New-PmsSecret([int]$bytes = 32) {
+function New-PropertySystemSecret([int]$bytes = 32) {
     $buffer = New-Object byte[] $bytes
     $generator = [Security.Cryptography.RandomNumberGenerator]::Create()
     try { $generator.GetBytes($buffer) } finally { $generator.Dispose() }
@@ -13,11 +13,11 @@ if (-not (Test-Path -LiteralPath $environmentFile)) {
     $lines = @(
         'MYSQL_DATABASE=pms3_replica'
         'MYSQL_USER=pms3'
-        "MYSQL_PASSWORD=$(New-PmsSecret)"
-        "MYSQL_ROOT_PASSWORD=$(New-PmsSecret)"
-        "REDIS_PASSWORD=$(New-PmsSecret)"
-        "JWT_SECRET=$(New-PmsSecret 48)"
-        "PMS_CALLBACK_SIGNING_SECRET=$(New-PmsSecret 48)"
+        "MYSQL_PASSWORD=$(New-PropertySystemSecret)"
+        "MYSQL_ROOT_PASSWORD=$(New-PropertySystemSecret)"
+        "REDIS_PASSWORD=$(New-PropertySystemSecret)"
+        "JWT_SECRET=$(New-PropertySystemSecret 48)"
+        "PMS_CALLBACK_SIGNING_SECRET=$(New-PropertySystemSecret 48)"
         'PMS_BOOTSTRAP_ADMIN_USERNAME='
         'PMS_BOOTSTRAP_ADMIN_PASSWORD='
         'LOGIN_MAX_FAILURES=5'

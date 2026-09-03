@@ -497,7 +497,10 @@ public class IamAdminService {
     public List<ProjectView> projects() {
         requireRead();
         return jdbc.query("""
-                SELECT id, enterprise_id, name, status FROM community ORDER BY name
+                SELECT id, enterprise_id, name, status
+                  FROM community
+                 WHERE status='ACTIVE'
+                 ORDER BY name
                 """, Map.of(), (rs, row) -> new ProjectView(rs.getString("id"), rs.getString("enterprise_id"),
                 rs.getString("name"), rs.getString("status")));
     }

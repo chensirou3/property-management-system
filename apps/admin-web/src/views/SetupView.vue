@@ -63,7 +63,7 @@ async function submit() {
     <header class="login-header">
       <div class="login-header-brand">
         <span class="cloud-mark">物</span>
-        <strong>物业云</strong>
+        <strong>物业管理系统</strong>
         <span class="login-product-name">首次配置</span>
       </div>
       <div class="setup-mode-badge">单项目 · 独立数据库</div>

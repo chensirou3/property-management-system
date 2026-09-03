@@ -33,7 +33,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
-const currentTitle = computed(() => String(route.meta.title || '物业管理平台'))
+const currentTitle = computed(() => String(route.meta.title || '物业管理系统'))
 const homeItem = computed(() => firstAuthorizedNavigationItem(auth.user?.permissions))
 const visibleNavigation = computed(() => navigation.map((group) => ({
   ...group,
@@ -129,7 +129,7 @@ function logout() {
     <header class="topbar">
       <div class="topbar-brand">
         <span class="cloud-mark">物</span>
-        <strong>物业云</strong>
+        <strong>物业管理系统</strong>
         <sup>®</sup>
       </div>
       <button class="menu-toggle" type="button" aria-label="展开或收起菜单" @click="collapsed = !collapsed">
